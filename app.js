@@ -2,22 +2,18 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import pinoHttp from 'pino-http';
 
+// 🛰️ Importaciones de infraestructura (Ajustadas a la raíz)
 import logger from './src/core/logger/logger.js'; 
+import httpLogger from './src/core/logger/httpLogger.js'; // Usamos tu versión mejorada
 import apiRoutes from './src/routes/index.js';
-import { globalErrorHandler } from './core/middlewares/error.middleware.js';
+import { globalErrorHandler } from './src/core/middlewares/error.middleware.js';
 
 const app = express();
 
-// 1. 📊 Logging primero para trazar cada request desde el inicio
-app.use(pinoHttp({ 
-  logger,
-  // Evita loguear el health check para no ensuciar los logs de producción
-  autoLogging: {
-    ignore: (req) => req.url === '/health'
-  }
-}));
+// 1. 📊 Radar de Tráfico (Middleware de pino-http personalizado)
+// Lo ponemos primero para capturar métricas de tiempo de respuesta incluso si la petición falla
+app.use(httpLogger);
 
 // 2. 🔐 Seguridad HTTP base
 app.use(helmet());
@@ -28,8 +24,8 @@ const corsOptions = {
     ? process.env.CORS_ORIGIN 
     : '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // Necesario si usas cookies o sesiones
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
+  credentials: true 
 };
 app.use(cors(corsOptions));
 
@@ -37,21 +33,22 @@ app.use(cors(corsOptions));
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  standardHeaders: true, // Retorna info de límites en los headers
+  standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas peticiones, intenta más tarde.' }
 });
 
-// Aplicamos limitador solo a la API, no al health check
+// Aplicamos limitador solo a la API
 app.use('/api/', generalLimiter);
 
-// 5. 📦 Parsing con límites estrictos
+// 5. 📦 Parsing con límites estrictos (Protección contra ataques DoS)
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// 6. ❤️ Health check (fuera del prefijo de API y logs para eficiencia)
+// 6. ❤️ Health check 
+// (Render usará /api/v1/health si lo configuraste así en el router dinámico)
 app.get('/health', (_req, res) => {
-  res.status(200).send('OK'); // Más rápido que .json()
+  res.status(200).send('OK'); 
 });
 
 // 7. 🔀 Rutas de Negocio
@@ -60,13 +57,12 @@ app.use('/api/v1', apiRoutes);
 // 8. 🔍 Captura de rutas no encontradas (404)
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Not Found',
+    status: 'fail',
     message: `La ruta ${req.originalUrl} no existe en este servidor.`
   });
 });
 
 // 9. ❌ Middleware de Errores (Centralizado y final)
 app.use(globalErrorHandler);
-
 
 export default app;
