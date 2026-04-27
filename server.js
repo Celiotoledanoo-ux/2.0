@@ -1,7 +1,7 @@
 // ✅ REVISIÓN TÉCNICA EN server.js (Raíz)
 import app from './app.js'; 
-import { env } from './src/core/config/env.js'; 
-import logger from './src/core/logger/logger.js'; // <-- VERIFIQUE QUE SOLO DIGA 'src' UNA VEZ
+import { env } from './core/config/env.js';
+import logger from './core/logger/logger.js';
 
 let server;
 let isShuttingDown = false;

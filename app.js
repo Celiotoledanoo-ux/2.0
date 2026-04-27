@@ -4,10 +4,10 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 
 // 📡 IMPORTACIONES AJUSTADAS (Apuntando a /src desde la raíz)
-import logger from './src/core/logger/logger.js';
-import httpLogger from './src/core/logger/httpLogger.js';
-import apiRoutes from './src/routes/index.js';
-import { globalErrorHandler } from './src/core/middlewares/error.middleware.js';
+import logger from './core/logger/logger.js';
+import httpLogger from './core/logger/httpLogger.js';
+import apiRoutes from './routes/index.js';
+import { globalErrorHandler } from './core/middlewares/error.middleware.js';
 
 const isProd = process.env.NODE_ENV === 'production';
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
