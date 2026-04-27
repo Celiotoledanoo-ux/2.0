@@ -4,8 +4,8 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 
-import logger from './core/logger/logger.js'; 
-import apiRoutes from './routes/index.js';
+import logger from './src/core/logger/logger.js'; 
+import apiRoutes from './src/routes/index.js';
 import { globalErrorHandler } from './core/middlewares/error.middleware.js';
 
 const app = express();

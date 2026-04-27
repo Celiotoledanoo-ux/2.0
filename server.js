@@ -1,5 +1,5 @@
-import logger from './core/logger/logger.js';
-import app from './app.js';
+import logger from './src/core/logger/logger.js';
+import app from './src/app.js';
 import { env } from './core/config/env.js';
 
 let server;
