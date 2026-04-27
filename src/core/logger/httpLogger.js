@@ -1,69 +1,45 @@
 import pinoHttp from 'pino-http';
-import crypto from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import logger from './logger.js';
-
-const getClientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.socket?.remoteAddress ?? null;
-};
-
-const getUrl = (req) => req.originalUrl || req.url;
 
 const httpLogger = pinoHttp({
   logger,
+  // 🆔 ID único por petición para rastrear fallos (Tracing)
+  genReqId: (req) => req.headers['x-request-id'] || randomUUID(),
+  
+  // 🕵️‍♂️ Extractor de IP real (Considerando el proxy de Render)
+  reqCustomProps: (req) => ({
+    ip: req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress
+  }),
 
-  // Generamos un ID único para cada petición si no existe
-  genReqId: (req) => req.headers['x-request-id'] || crypto.randomUUID(),
-
-  // Protegemos datos sensibles para que no salgan en los logs
-  redact: {
-    paths: ['req.headers.authorization', 'req.headers.cookie', 'req.headers.set-cookie'],
-    remove: true
-  },
-
-  // Clasificamos el nivel de log según el éxito o fallo
+  // 🚦 Niveles inteligentes: 500 es Error, 400 es Warn, resto es Info
   customLogLevel: (req, res, err) => {
     if (err || res.statusCode >= 500) return 'error';
     if (res.statusCode >= 400) return 'warn';
     return 'info';
   },
 
+  // 📦 Serializadores ultra-ligeros (Solo lo que importa)
   serializers: {
     req: (req) => ({
       id: req.id,
       method: req.method,
-      url: getUrl(req),
-      ip: getClientIp(req),
-      userAgent: req.headers['user-agent'] ?? null
+      url: req.originalUrl || req.url,
+      ip: req.ip // Viene de reqCustomProps
     }),
-    res: (res) => ({
-      statusCode: res.statusCode
-    })
+    res: (res) => ({ statusCode: res.statusCode })
   },
 
+  // ✨ Mensajes de éxito y error claros
   customSuccessObject: (req, res) => ({
-    msg: '✔ Petición completada',
-    reqId: req.id,
-    method: req.method,
-    url: getUrl(req),
-    statusCode: res.statusCode,
-    responseTime: `${res.responseTime}ms`
+    msg: `✔ ${req.method} ${req.originalUrl || req.url} → ${res.statusCode}`,
+    duration: `${res.responseTime}ms`
   }),
-
   customErrorObject: (req, res, err) => ({
-    msg: '❌ Petición fallida',
-    reqId: req.id,
-    method: req.method,
-    url: getUrl(req),
-    statusCode: res.statusCode,
-    responseTime: `${res.responseTime}ms`,
-    err: {
-      name: err.name,
-      message: err.message,
-      stack: err.stack
-    }
+    msg: `❌ FALLO ${req.method} ${req.originalUrl || req.url}`,
+    duration: `${res.responseTime}ms`,
+    error: err.message
   })
 });
 
-export default httpLogger;
+export default httpLogger; // ✅ AHORA SÍ: Exportamos el radar correcto
