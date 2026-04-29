@@ -1,12 +1,6 @@
-import { Router } from 'express';
+import router from './payments.routes.js';
 
-const router = Router();
-
-router.get('/', (_req, res) => {
-  res.status(200).json({
-    module: 'payments',
-    status: 'ok'
-  });
-});
-
-export default router;
+export default {
+  path: '/payments',
+  routes: router
+};

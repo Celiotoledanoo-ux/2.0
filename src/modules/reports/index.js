@@ -1,12 +1,6 @@
-import { Router } from 'express';
+import router from './reports.routes.js';
 
-const router = Router();
-
-router.get('/', (_req, res) => {
-  res.status(200).json({
-    module: 'reports',
-    status: 'ok'
-  });
-});
-
-export default router;
+export default {
+  path: '/reports',
+  routes: router
+};
