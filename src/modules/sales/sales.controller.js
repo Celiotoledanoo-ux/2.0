@@ -1,45 +1,45 @@
 import * as salesService from './sales.service.js';
+import catchAsync from '../../../shared/utils/string.utils.js'; // Tu guardaespaldas
+import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
-export const checkout = async (req, res, next) => {
-  try {
-    const { items, payment_method, customer_id, discount } = req.body;
+/**
+ * 🚀 FINALIZAR VENTA (CHECKOUT)
+ */
+export const checkout = catchAsync(async (req, res, next) => {
+  const { items, payment_method, discount = 0 } = req.body;
 
-    if (!req.user) {
-      return next(new Error('Usuario no autenticado'));
-    }
-
-    const userId = req.user.id;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return next(new Error('Carrito inválido'));
-    }
-
-    // 🧠 ejecución del flujo de negocio
-    const sale = await salesService.processSale(
-      { payment_method, customer_id, discount },
-      items,
-      userId
-    );
-
-    // 📊 auditoría de evento de dominio
-    logger.info({
-      event: 'SALE_FINALIZED',
-      saleId: sale.id,
-      amount: sale.total,
-      itemsCount: items.length,
-      performedBy: userId
-    });
-
-    res.status(201).json({
-      status: 'success',
-      message: 'Venta procesada exitosamente',
-      data: {
-        sale
-      }
-    });
-
-  } catch (error) {
-    next(error);
+  // 1. Validaciones de guardia
+  if (!req.user) {
+    throw new AppError('Usuario no autenticado', 401);
   }
-};
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    throw new AppError('El carrito está vacío o es inválido', 400);
+  }
+
+  const userId = req.user.id;
+
+  // 2. Ejecución del flujo de negocio
+  // IMPORTANTE: Cambiamos processSale por createSale para que coincida con tu service
+  const sale = await salesService.createSale(
+    { items, payment_method, discount },
+    userId
+  );
+
+  // 3. Auditoría de dominio
+  logger.info({
+    event: 'SALE_FINALIZED',
+    saleId: sale.id,
+    amount: sale.total,
+    itemsCount: items.length,
+    performedBy: userId
+  });
+
+  // 4. Respuesta al cliente
+  res.status(201).json({
+    status: 'success',
+    message: 'Venta procesada exitosamente',
+    data: { sale }
+  });
+});

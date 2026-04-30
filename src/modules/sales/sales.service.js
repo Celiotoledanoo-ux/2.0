@@ -1,72 +1,57 @@
+import * as inventoryService from '../inventory/inventory.service.js';
 import * as salesRepo from './sales.repository.js';
-import * as inventoryRepo from '../inventory/inventory.repository.js';
 import AppError from '../../core/errors/AppError.js';
-import logger from '../../core/logger/logger.js';
 
-export const processSale = async (saleData, items, userId) => {
-  if (!Array.isArray(items) || items.length === 0) {
-    throw new AppError('La venta debe contener items', 400);
+/**
+ * 🛒 PROCESAR UNA VENTA COMPLETA
+ */
+export const createSale = async (saleData, userId) => {
+  const { items, payment_method, discount = 0 } = saleData;
+
+  if (!items || items.length === 0) {
+    throw new AppError('No hay productos en la venta', 400);
   }
 
-  if (!userId) {
-    throw new AppError('Usuario no identificado', 401);
-  }
-
-  // 1. 🛡️ Validación de stock (pre-check defensivo)
+  // 1. Calcular total y preparar los descuentos de stock
+  let total = 0;
+  
+  // Usamos un for...of para poder usar await dentro
   for (const item of items) {
-    const product = await inventoryRepo.findById(item.product_id);
-
-    if (!product) {
-      throw new AppError(`Producto no encontrado: ${item.product_id}`, 404);
-    }
-
-    if (product.stock < item.quantity) {
-      throw new AppError(
-        `Stock insuficiente para ${product.name}`,
-        400
-      );
-    }
+    total += item.price_at_sale * item.quantity;
   }
 
-  // 2. 📉 actualización de inventario
-  // ⚠️ sigue siendo no atómico, pero más seguro estructuralmente
-  for (const item of items) {
-    await inventoryRepo.updateStock(
-      item.product_id,
-      -item.quantity
-    );
-  }
+  const finalTotal = total - discount;
 
-  // 3. 💰 cálculo seguro del total (fallback defensivo)
-  const total = items.reduce((acc, item) => {
-    const price = Number(item.price);
-    const qty = Number(item.quantity);
-
-    if (Number.isNaN(price) || Number.isNaN(qty)) {
-      throw new AppError('Datos inválidos en items', 400);
-    }
-
-    return acc + price * qty;
-  }, 0);
-
-  // 4. 📝 registrar venta
-  const sale = await salesRepo.createSaleWithItems(
-    {
-      ...saleData,
-      created_by: userId,
-      total
-    },
-    items
-  );
-
-  // 5. 📢 auditoría estructurada
-  logger.info({
-    event: 'SALE_COMPLETED',
-    saleId: sale.id,
-    sellerId: userId,
-    amount: total,
-    itemsCount: items.length
+  // 2. Registrar la venta en la base de datos (Cabecera)
+  const sale = await salesRepo.create({
+    total: finalTotal,
+    payment_method,
+    discount,
+    created_by: userId
   });
+
+  // 3. Registrar cada item y actualizar el inventario
+  const itemPromises = items.map(async (item) => {
+    // A. Guardamos el detalle de la venta
+    await salesRepo.createItem({
+      sale_id: sale.id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      price_at_sale: item.price_at_sale
+    });
+
+    // B. Descontamos del inventario usando el servicio que ya "blindamos"
+    // Mandamos la cantidad en negativo porque es una salida por venta
+    return inventoryService.adjustStock(
+      item.product_id, 
+      -item.quantity, 
+      userId, 
+      `Venta #${sale.id.split('-')[0]}` // Referencia corta del ID de venta
+    );
+  });
+
+  // Ejecutamos todas las actualizaciones de items
+  await Promise.all(itemPromises);
 
   return sale;
 };

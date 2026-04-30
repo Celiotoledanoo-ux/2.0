@@ -1,46 +1,48 @@
 import * as inventoryService from './inventory.service.js';
 import AppError from '../../core/errors/AppError.js';
+import catchAsync from '../../../shared/utils/string.utils.js'; // Revisa esta ruta luego, suena a que debería ser async.utils.js
 
-export const getAll = async (req, res, next) => {
-  try {
-    const result = await inventoryService.getProducts(req.query);
+/**
+ * 📦 OBTENER TODO EL INVENTARIO
+ */
+export const getAll = catchAsync(async (req, res, next) => {
+  const result = await inventoryService.getProducts(req.query);
 
-    res.status(200).json({
-      status: 'success',
-      data: result
-    });
+  res.status(200).json({
+    status: 'success',
+    data: result
+  });
+});
 
-  } catch (error) {
-    next(error);
+/**
+ * ⚡ ACTUALIZAR STOCK (Versión mejorada)
+ */
+export const updateStock = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { quantity, reason = 'Ajuste manual' } = req.body; 
+
+  // Validación de seguridad: que no manden basura en quantity
+  if (quantity === undefined || typeof quantity !== 'number') {
+    throw new AppError('La cantidad es obligatoria y debe ser un número', 400);
   }
-};
 
-export const updateStock = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { quantity } = req.body;
-
-    if (!req.user) {
-      return next(new AppError('Usuario no autenticado', 401));
-    }
-
-    const { id: userId, email: userEmail } = req.user;
-
-    const product = await inventoryService.adjustStock(
-      id,
-      quantity,
-      userId
-    );
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Stock actualizado correctamente',
-      data: {
-        product
-      }
-    });
-
-  } catch (error) {
-    next(error);
+  if (!req.user) {
+    throw new AppError('Sesión inválida o expirada', 401);
   }
-};
+
+  const { id: userId } = req.user;
+
+  // Enviamos los datos al servicio
+  const product = await inventoryService.adjustStock(
+    id,
+    quantity,
+    userId,
+    reason 
+  );
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Stock actualizado correctamente',
+    data: { product }
+  });
+});

@@ -32,3 +32,5 @@ export const createUserClient = (token) => {
     auth: { persistSession: false },
   });
 };
+
+export const db = supabaseAdmin; 

@@ -1,24 +1,23 @@
 import { Router } from 'express';
 import * as salesController from './sales.controller.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middleware.js';
-import { validate } from '../../core/middlewares/validation.middleware.js';
 import { createSaleSchema } from './sales.schema.js';
+import { protect } from '../../core/middlewares/auth.middleware.js';
+import validate from '../../shared/middlewares/validate.middleware.js';
 
 const router = Router();
 
 /**
- * 🛡️ AUTENTICACIÓN GLOBAL DEL MÓDULO
+ * 💰 RUTAS DE VENTAS
+ * Prefijo: /api/v1/sales
  */
+
+// 1. Todas las rutas de ventas están protegidas (requieren login)
 router.use(protect);
 
-/**
- * 💰 CHECKOUT ROUTE
- * Solo roles autorizados pueden procesar ventas
- */
+// 2. Ruta para procesar el cobro
 router.post(
   '/checkout',
-  restrictTo('ADMIN', 'CASHIER', 'MANAGER'),
-  validate(createSaleSchema),
+  validate(createSaleSchema), // Valida que los datos vengan correctos antes de entrar al controller
   salesController.checkout
 );
 

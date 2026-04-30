@@ -1,31 +1,24 @@
 import { Router } from 'express';
 import * as inventoryController from './inventory.controller.js';
 import { protect, restrictTo } from '../../core/middlewares/auth.middleware.js';
-import { validate } from '../../core/middlewares/validation.middleware.js';
-import { stockAdjustmentSchema } from './inventory.schema.js';
+import validate from '../../shared/middlewares/validate.middleware.js';
+import { stockAdjustmentSchema } from './inventory.schema.js'; // El nombre exacto de tu schema
 
 const router = Router();
 
 /**
- * 🔐 PROTECCIÓN GLOBAL DEL MÓDULO
- */
-router.use(protect);
-
-/**
- * 📦 INVENTORY ROUTES
+ * 📦 RUTAS DE INVENTARIO
  */
 
-// 📥 obtener inventario (todos autenticados)
-router.get('/', inventoryController.getAll);
+// 1. Ver inventario (Cualquier usuario logueado)
+router.get('/', protect, inventoryController.getAll);
 
-/**
- * ⚡ AJUSTE DE STOCK
- * Operación sensible → requiere rol específico
- */
+// 2. Ajustar stock (Solo ADMIN o MANAGER, con validación de Schema)
 router.patch(
   '/:id/stock',
+  protect,
   restrictTo('ADMIN', 'MANAGER'),
-  validate(stockAdjustmentSchema),
+  validate(stockAdjustmentSchema), // Aquí usamos el que tiene params.id y body.quantity
   inventoryController.updateStock
 );
 
