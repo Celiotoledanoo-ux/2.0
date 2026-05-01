@@ -1,0 +1,124 @@
+-- ==========================================
+-- 1. LIMPIEZA Y EXTENSIONES
+-- ==========================================
+DROP FUNCTION IF EXISTS increment_stock(uuid, integer);
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('ADMIN', 'CASHIER', 'MANAGER');
+    END IF;
+END $$;
+
+-- ==========================================
+-- 2. TABLAS
+-- ==========================================
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    role user_role DEFAULT 'CASHIER',
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS inventory (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    sku TEXT UNIQUE NOT NULL,
+    price DECIMAL(12, 2) NOT NULL CHECK (price >= 0),
+    stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+    min_stock INTEGER DEFAULT 5,
+    category TEXT,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sales (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    total DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    payment_method TEXT NOT NULL,
+    status TEXT CHECK (status IN ('COMPLETED', 'REFUNDED')) DEFAULT 'COMPLETED',
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sales_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sale_id UUID REFERENCES sales(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES inventory(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    price_at_sale DECIMAL(12, 2) NOT NULL,
+    subtotal DECIMAL(12, 2) GENERATED ALWAYS AS (quantity * price_at_sale) STORED
+);
+
+CREATE TABLE IF NOT EXISTS returns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sale_id UUID REFERENCES sales(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES inventory(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    created_by UUID REFERENCES users(id)
+);
+
+-- ==========================================
+-- 3. TRIGGERS (AUTOMATIZACIÓN DE STOCK)
+-- ==========================================
+
+-- Función para RESTAR stock al vender
+CREATE OR REPLACE FUNCTION handle_sale_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE inventory
+    SET stock = stock - NEW.quantity
+    WHERE id = NEW.product_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función para SUMAR stock al devolver
+CREATE OR REPLACE FUNCTION handle_return_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE inventory
+    SET stock = stock + NEW.quantity
+    WHERE id = NEW.product_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$ BEGIN
+    -- Trigger para Ventas
+    DROP TRIGGER IF EXISTS tr_update_stock_on_sale ON sales_items;
+    CREATE TRIGGER tr_update_stock_on_sale
+    AFTER INSERT ON sales_items
+    FOR EACH ROW EXECUTE FUNCTION handle_sale_stock();
+
+    -- Trigger para Devoluciones
+    DROP TRIGGER IF EXISTS tr_update_stock_on_return ON returns;
+    CREATE TRIGGER tr_update_stock_on_return
+    AFTER INSERT ON returns
+    FOR EACH ROW EXECUTE FUNCTION handle_return_stock();
+END $$;
+
+-- ==========================================
+-- 4. SEGURIDAD (RLS)
+-- ==========================================
+ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE returns ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all" ON inventory FOR ALL TO authenticated USING (true);
+CREATE POLICY "Allow all" ON sales FOR ALL TO authenticated USING (true);
+CREATE POLICY "Allow all" ON returns FOR ALL TO authenticated USING (true);
+
+-- ==========================================
+-- 5. DATOS INICIALES Y VERIFICACIÓN
+-- ==========================================
+CREATE INDEX IF NOT EXISTS idx_inv_sku ON inventory(sku);
+
+INSERT INTO inventory (name, sku, price, stock, min_stock, category)
+VALUES ('Producto de Prueba', 'TEST-001', 100.00, 50, 5, 'General')
+ON CONFLICT (sku) DO NOTHING;
+
+SELECT * FROM inventory;

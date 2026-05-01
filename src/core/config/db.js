@@ -9,6 +9,7 @@ const TABLES = Object.freeze({
   INVENTORY: 'inventory',
   SALES: 'sales',
   SALES_ITEMS: 'sales_items', // Crucial para normalización
+  RETURNS: 'returns',
   PAYMENTS: 'payments',
   REPORTS: 'reports',
 });
