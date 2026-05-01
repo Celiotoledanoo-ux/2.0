@@ -2,6 +2,11 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // 📡 IMPORTACIONES
 import logger from './src/core/logger/logger.js';
@@ -45,9 +50,12 @@ app.use('/api/', rateLimit({
   message: { error: 'Demasiadas peticiones, intenta más tarde.' }
 }));
 
+app.use(express.static(path.join(__dirname, 'public')));
+
 // --- 5. Parsers ---
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false, limit: '10kb' }));
+
 
 // --- 6. Health Check ---
 app.get('/health', (_req, res) => {
