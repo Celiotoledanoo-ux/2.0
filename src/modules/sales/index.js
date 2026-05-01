@@ -1,7 +1,7 @@
 import { Router } from 'express';
 // ✅ Importamos los 'index' de cada módulo para mantener el orden
-import { inventoryRoutes } from '../modules/inventory/index.js';
-import { salesRoutes } from '../modules/sales/index.js';
+import { inventoryRoutes } from '../inventory/index.js';
+import { salesRoutes } from '../sales/index.js';
 
 const router = Router();
 
