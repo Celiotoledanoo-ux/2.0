@@ -1,23 +1,24 @@
 import { Router } from 'express';
 import * as salesController from './sales.controller.js';
 import { createSaleSchema } from './sales.schema.js';
-import { protect } from '../../core/middlewares/auth.middleware.js';
-import validate from '../../shared/middlewares/validate.middleware.js';
+// ✅ CORRECCIÓN 1: Importamos desde CORE y usamos el nombre físico exacto
+import { protect } from '../../core/middlewares/auth.middlewares.js';
+// ✅ CORRECCIÓN 2: Importamos desde CORE, no desde SHARED, y usamos llaves { }
+import { validate } from '../../core/middlewares/validation.middlewares.js'; 
 
 const router = Router();
 
 /**
  * 💰 RUTAS DE VENTAS
- * Prefijo: /api/v1/sales
  */
 
-// 1. Todas las rutas de ventas están protegidas (requieren login)
+// 1. Todas las rutas de ventas están protegidas
 router.use(protect);
 
-// 2. Ruta para procesar el cobro
+// 2. Ruta para procesar el cobro (Checkout)
 router.post(
   '/checkout',
-  validate(createSaleSchema), // Valida que los datos vengan correctos antes de entrar al controller
+  validate(createSaleSchema), 
   salesController.checkout
 );
 

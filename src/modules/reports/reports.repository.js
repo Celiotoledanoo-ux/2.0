@@ -1,52 +1,57 @@
-import { supabaseAdmin } from '../../core/database/supabaseClient.js';
-import { TABLES } from '../../core/config/db.config.js';
+import { db } from '../../core/database/supabaseClient.js';
+import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
  * 📊 REPORTS REPOSITORY
- * Extracción de métricas financieras y de rendimiento.
  */
 
+// 1. Ingresos diarios (El "botín" del día)
 export const getDailyRevenue = async (date) => {
-  if (!date) {
-    throw new AppError('Fecha requerida', 400);
-  }
+  const start = new Date(`${date}T00:00:00.000Z`).toISOString();
+  const end = new Date(`${date}T23:59:59.999Z`).toISOString();
 
-  const start = new Date(`${date}T00:00:00.000Z`);
-  const end = new Date(`${date}T23:59:59.999Z`);
-
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from(TABLES.SALES)
     .select('total')
-    .gte('created_at', start.toISOString())
-    .lte('created_at', end.toISOString());
+    .gte('created_at', start)
+    .lte('created_at', end)
+    .neq('status', 'REFUNDED'); // 🟢 Tip Pro: No contamos ventas devueltas
 
   if (error) {
-    throw new AppError('Error al calcular el botín diario', 500, {
-      details: error
-    });
+    console.error(`[REPORT_REVENUE_ERROR]: ${error.message}`);
+    throw new AppError('Error al calcular el ingreso diario', 500);
   }
 
-  const total = (data || []).reduce((acc, sale) => {
-    const value = Number(sale.total);
-    return acc + (Number.isNaN(value) ? 0 : value);
-  }, 0);
-
-  return total;
+  return data.reduce((acc, sale) => acc + Number(sale.total), 0);
 };
 
+// 2. Top Productos (Lo que más se mueve)
 export const getTopSellingProducts = async (limit = 5) => {
-  const { data, error } = await supabaseAdmin
-    .from(TABLES.SALES_ITEMS || 'sales_items')
-    .select('product_id, quantity, inventory(name)')
-    .order('quantity', { ascending: false })
+  const { data, error } = await db
+    .from(TABLES.SALES_ITEMS)
+    .select(`
+      product_id,
+      quantity,
+      ${TABLES.INVENTORY} (name)
+    `)
     .limit(limit);
 
   if (error) {
-    throw new AppError('Error al identificar los productos más vendidos', 500, {
-      details: error
-    });
+    console.error(`[REPORT_TOP_ERROR]: ${error.message}`);
+    throw new AppError('Error al obtener los más vendidos', 500);
   }
 
-  return data || [];
+  return data;
+};
+
+// 3. Alerta de Stock Bajo (Vital para el dueño)
+export const getLowStockAlerts = async () => {
+  const { data, error } = await db
+    .from(TABLES.INVENTORY)
+    .select('name, stock, min_stock')
+    .lt('stock', 'min_stock'); // Trae los que están por debajo del mínimo
+
+  if (error) throw new AppError('Error al consultar stock crítico', 500);
+  return data;
 };

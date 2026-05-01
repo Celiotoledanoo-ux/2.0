@@ -1,4 +1,4 @@
-import { db } from '../../core/database/supabaseClient.js'; // Usamos 'db' para consistencia
+import { db } from '../../core/database/supabaseClient.js';
 import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
@@ -12,7 +12,7 @@ export const create = async (saleData) => {
     .from(TABLES.SALES)
     .insert([saleData])
     .select()
-    .single();
+    .maybeSingle(); // 🟢 Cambio: más seguro que .single()
 
   if (error) {
     console.error(`[SALE_CREATE_ERROR]: ${error.message}`);
@@ -25,7 +25,7 @@ export const create = async (saleData) => {
 // 2. Crear los renglones (items) de la venta
 export const createItem = async (itemData) => {
   const { error } = await db
-    .from('sales_items')
+    .from(TABLES.SALES_ITEMS) // 🟢 Cambio: usamos la constante, no el string directo
     .insert([itemData]);
 
   if (error) {

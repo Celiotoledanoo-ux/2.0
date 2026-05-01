@@ -1,25 +1,23 @@
 import { Router } from 'express';
 import * as authController from './auth.controller.js';
-import { protect } from '../../core/middlewares/auth.middleware.js';
-// import { validate } from '../../core/middlewares/validation.middleware.js';
-// import { loginSchema } from './auth.schema.js';
+import { protect } from '../../core/middlewares/auth.middlewares.js';
+import { validate } from '../../core/middlewares/validation.middlewares.js';
+import { loginSchema } from './auth.schema.js';
 
 const router = Router();
 
 /**
- * 🔐 LOGIN
- * Public route (validación debería ir aquí)
+ * 🔐 RUTAS DE AUTENTICACIÓN
  */
+
+// 1. LOGIN: Ruta pública, pero con portero (validate)
 router.post(
   '/login',
-  // validate(loginSchema),
+  validate(loginSchema),
   authController.login
 );
 
-/**
- * 🔐 LOGOUT
- * Protected route
- */
+// 2. LOGOUT: Ruta protegida (necesitas estar logueado para salir)
 router.post(
   '/logout',
   protect,

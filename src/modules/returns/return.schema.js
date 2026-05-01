@@ -1,17 +1,17 @@
-const express = require('express');
-const router = express.Router();
-const salesController = require('./sales.controller');
+import { z } from 'zod';
 
-// Crear venta
-router.post('/', salesController.createSale);
-
-// Obtener todas las ventas
-router.get('/', salesController.getSales);
-
-// Obtener venta por ID
-router.get('/:id', salesController.getSaleById);
-
-// Eliminar venta
-router.delete('/:id', salesController.deleteSale);
-
-module.exports = router;
+/**
+ * 🔄 RETURNS VALIDATION SCHEMA
+ */
+export const createReturnSchema = z.object({
+  body: z.object({
+    // Validamos que el ID de la venta sea un UUID real
+    sale_id: z.string().uuid('ID de venta inválido'),
+    
+    // El motivo es obligatorio para evitar fraudes
+    reason: z.string()
+      .trim()
+      .min(5, 'El motivo debe ser más descriptivo (mínimo 5 caracteres)')
+      .max(255, 'El motivo es demasiado largo')
+  })
+});

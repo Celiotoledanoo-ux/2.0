@@ -1,5 +1,5 @@
 import { db } from '../../core/database/supabaseClient.js';
-import { TABLES } from '../../core/config/db.js';
+import { TABLES, DB_SETTINGS } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
@@ -7,7 +7,7 @@ import AppError from '../../core/errors/AppError.js';
  */
 
 const safePagination = (limit = 10, offset = 0) => {
-  const safeLimit = Math.max(1, Number(limit) || 10);
+  const safeLimit = Math.max(1, Number(limit) || DB_SETTINGS.PAGINATION.DEFAULT_LIMIT);
   const safeOffset = Math.max(0, Number(offset) || 0);
   return { safeLimit, safeOffset };
 };

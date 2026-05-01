@@ -1,19 +1,18 @@
 import { Router } from 'express';
-import inventoryRouter from './inventory/inventory.routes.js';
-import salesRouter from './sales/sales.routes.js';
+// ✅ Importamos los 'index' de cada módulo para mantener el orden
+import { inventoryRoutes } from '../modules/inventory/index.js';
+import { salesRoutes } from '../modules/sales/index.js';
 
 const router = Router();
 
 /**
- * 📂 Registro de Módulos
+ * 📂 Registro de Módulos (Prefijo: /api/v1)
  */
 
-// Módulo de Inventario (Productos, Stock, etc.)
-router.use('/inventory', inventoryRouter);
+// 📦 Módulo de Inventario
+router.use('/inventory', inventoryRoutes);
 
-// Módulo de Ventas (Checkout, Facturación, etc.)
-router.use('/sales', salesRouter);
-
-// ... aquí irían otros como router.use('/auth', authRouter);
+// 💰 Módulo de Ventas
+router.use('/sales', salesRoutes);
 
 export default router;

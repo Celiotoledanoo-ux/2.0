@@ -1,31 +1,45 @@
-import { supabaseAdmin } from '../../core/database/supabaseClient.js';
+import * as authRepo from './auth.repository.js';
+import { db } from '../../core/database/supabaseClient.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * AUTH SERVICE
- * Lógica pura de autenticación
+ * 🔐 AUTH SERVICE
  */
 
 export const login = async (email, password) => {
+  if (!email || !password) {
+    throw new AppError('Por favor, proporciona email y contraseña', 400);
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
 
-  const { data, error } =
-    await supabaseAdmin.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
+  // 1. 🛡️ Usamos el motor de Supabase para validar la contraseña
+  // Esto es más seguro que gestionar contraseñas manualmente
+  const { data, error } = await db.auth.signInWithPassword({
+    email: normalizedEmail,
+    password,
+  });
 
   if (error || !data?.user) {
-    // seguridad: no revelamos si usuario existe o no
+    // 💡 Perfeccionista: Error genérico para no dar pistas a hackers
     throw new AppError('Credenciales de acceso incorrectas', 401);
   }
 
+  // 2. 🔍 Buscamos los datos extra en tu tabla de 'users' (rol, nombre, etc.)
+  // Usamos el repository que acabamos de blindar
+  const userDetails = await authRepo.findById(data.user.id);
+
+  if (!userDetails || !userDetails.active) {
+    throw new AppError('Tu cuenta está desactivada o no existe. Contacta al administrador.', 403);
+  }
+
+  // 3. 📦 Retornamos el combo perfecto: Datos de DB + Token de Sesión
   return {
     user: {
-      id: data.user.id,
-      email: data.user.email,
-      role: data.user.user_metadata?.role,
-      name: data.user.user_metadata?.name
+      id: userDetails.id,
+      email: userDetails.email,
+      role: userDetails.role,
+      name: userDetails.name || data.user.user_metadata?.name
     },
     session: {
       accessToken: data.session.access_token,
@@ -35,8 +49,8 @@ export const login = async (email, password) => {
   };
 };
 
-export const logout = async (accessToken) => {
-  const { error } = await supabaseAdmin.auth.admin.signOut(accessToken);
+export const logout = async () => {
+  const { error } = await db.auth.signOut();
 
   if (error) {
     throw new AppError('Error al cerrar la sesión', 500);

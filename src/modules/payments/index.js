@@ -1,6 +1,3 @@
-import router from './payments.routes.js';
+import paymentsRoutes from './payments.routes.js';
 
-export default {
-  path: '/payments',
-  routes: router
-};
+export { paymentsRoutes };

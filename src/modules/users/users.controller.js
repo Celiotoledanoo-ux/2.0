@@ -1,39 +1,54 @@
-import * as userService from './users.service.js';
+import * as userService from './users.service.js'; // ✅ Corregido: un solo punto (están en la misma carpeta)
 import logger from '../../core/logger/logger.js';
-import catchAsync from '../../../shared/utils/string.utils.js'; // Importamos al guardaespaldas
+import catchAsync from '../../shared/utils/async.utils.js';
 
 /**
- * 👤 CREAR USUARIO
- * Usa catchAsync para eliminar el try/catch repetitivo.
+ * 👤 CREAR USUARIO (Cajeros/Admin)
  */
 export const create = catchAsync(async (req, res, next) => {
-  // 1. Ejecutamos la lógica a través del servicio
+  // El Service ahora se encarga de Supabase Auth y de la DB pública
   const newUser = await userService.registerUser(req.body);
 
-  // 2. Registro de auditoría (Auditoria es clave para un hacker)
   logger.info({
     event: 'USER_CREATED',
     userId: newUser.id,
-    ip: req.ip // Tip de seguridad: saber desde dónde se creó
+    adminId: req.user?.id, // Auditoría: ¿quién creó a este usuario?
+    ip: req.ip
   });
 
-  // 3. Respuesta limpia
   return res.status(201).json({
     status: 'success',
-    data: {
-      user: newUser
-    }
+    message: 'Usuario creado exitosamente',
+    data: { user: newUser }
   });
 });
 
 /**
- * 🔍 OBTENER USUARIO POR EMAIL
+ * 🔍 OBTENER USUARIO POR ID
+ * Nota: Cambiamos email por ID para que sea más estándar en la API
  */
-export const getByEmail = catchAsync(async (req, res, next) => {
-  const user = await userService.getUserByEmail(req.params.email);
+export const getById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const user = await userService.getUserById(id);
 
   return res.status(200).json({
     status: 'success',
     data: { user }
+  });
+});
+
+/**
+ * ⚡ ACTIVAR/DESACTIVAR USUARIO
+ */
+export const toggleStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { active } = req.body;
+
+  const updatedUser = await userService.toggleUserStatus(id, active);
+
+  return res.status(200).json({
+    status: 'success',
+    message: `Usuario ${active ? 'activado' : 'desactivado'} correctamente`,
+    data: { user: updatedUser }
   });
 });

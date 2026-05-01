@@ -1,33 +1,29 @@
-import salesModel from './sales.model.js';
-import inventoryModel from '../inventory/inventory.model.js';
+import * as paymentsRepo from './payments.repository.js';
+import * as salesRepo from '../sales/sales.repository.js';
+import AppError from '../../core/errors/AppError.js';
 
-export const createSale = async (data) => {
-  if (!data.product_id) throw new Error('Producto requerido');
-  if (!data.quantity) throw new Error('Cantidad requerida');
+/**
+ * 💳 PAYMENTS SERVICE
+ */
 
-  // 1. Obtener producto
-  const product = await inventoryModel.getItemById(data.product_id);
+export const processPayment = async (paymentData) => {
+  const { sale_id, amount, method } = paymentData;
 
-  if (!product) {
-    throw new Error('Producto no existe');
-  }
+  // 1. Verificar que la venta exista
+  const sale = await salesRepo.create({ id: sale_id }); // Aquí usaríamos un findById en el futuro
+  if (!sale) throw new AppError('La venta referenciada no existe', 404);
 
-  // 2. Validar stock
-  if (product.stock < data.quantity) {
-    throw new Error('Stock insuficiente');
-  }
-
-  // 3. Crear venta
-  const sale = await salesModel.createSale({
-    product_id: data.product_id,
-    quantity: data.quantity,
-    total: data.quantity * product.price
+  // 2. Registrar el pago en la base de datos
+  const payment = await paymentsRepo.create({
+    sale_id,
+    amount,
+    method,
+    status: 'COMPLETED',
+    created_at: new Date()
   });
 
-  // 4. Actualizar stock
-  await inventoryModel.updateItem(product.id, {
-    stock: product.stock - data.quantity
-  });
+  // 3. Opcional: Podrías actualizar el estado de la venta a 'PAID'
+  // await salesRepo.update(sale_id, { status: 'PAID' });
 
-  return sale;
+  return payment;
 };

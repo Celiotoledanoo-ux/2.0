@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
+/**
+ * 🛒 SALES VALIDATION SCHEMA
+ */
 export const createSaleSchema = z.object({
   body: z.object({
+    // Carrito de productos
     items: z.array(
       z.object({
         product_id: z.string().uuid('ID de producto no válido'),
@@ -9,7 +13,7 @@ export const createSaleSchema = z.object({
           .number()
           .int('La cantidad debe ser entera')
           .positive('La cantidad debe ser mayor a 0'),
-        // 🔄 Cambiado de 'price' a 'price_at_sale' para que coincida con el service
+        // Coincide exacto con la base de datos y el service
         price_at_sale: z.coerce
           .number()
           .positive('El precio unitario debe ser positivo')
@@ -17,15 +21,14 @@ export const createSaleSchema = z.object({
     )
     .min(1, 'La venta debe tener al menos un producto'),
 
+    // Método de pago (Sincronizado con tus ENUMS si los tienes)
     payment_method: z.enum(['CASH', 'CARD', 'TRANSFER'], {
-      errorMap: () => ({ message: 'Método de pago no soportado' })
+      errorMap: () => ({ message: 'Método de pago no soportado (CASH, CARD, TRANSFER)' })
     }),
 
-    customer_id: z.string().uuid().optional(),
+    customer_id: z.string().uuid('ID de cliente inválido').optional(),
 
-    // 💸 El descuento lo manejamos como monto fijo en el service, 
-    // pero si lo quieres como porcentaje (max 100), hay que avisar al service.
-    // Por ahora lo dejamos como monto para no romper la lógica actual.
+    // Descuento como monto fijo (dinero)
     discount: z.coerce
       .number()
       .min(0, 'El descuento no puede ser negativo')

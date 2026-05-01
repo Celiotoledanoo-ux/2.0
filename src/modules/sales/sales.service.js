@@ -8,31 +8,40 @@ import AppError from '../../core/errors/AppError.js';
 export const createSale = async (saleData, userId) => {
   const { items, payment_method, discount = 0 } = saleData;
 
-  if (!items || items.length === 0) {
+  // 1. Validaciones iniciales
+  if (!items || !Array.isArray(items) || items.length === 0) {
     throw new AppError('No hay productos en la venta', 400);
   }
 
-  // 1. Calcular total y preparar los descuentos de stock
-  let total = 0;
-  
-  // Usamos un for...of para poder usar await dentro
-  for (const item of items) {
-    total += item.price_at_sale * item.quantity;
+  if (!userId) {
+    throw new AppError('El ID de usuario es obligatorio para registrar la venta', 401);
   }
+
+  // 2. Calcular total de forma segura
+  const total = items.reduce((acc, item) => {
+    return acc + (Number(item.price_at_sale) * Number(item.quantity));
+  }, 0);
 
   const finalTotal = total - discount;
 
-  // 2. Registrar la venta en la base de datos (Cabecera)
+  if (finalTotal < 0) {
+    throw new AppError('El descuento no puede ser mayor al total de la venta', 400);
+  }
+
+  // 3. Registrar la venta en la base de datos (Cabecera)
   const sale = await salesRepo.create({
     total: finalTotal,
     payment_method,
     discount,
-    created_by: userId
+    created_by: userId,
+    status: 'COMPLETED' // Valor por defecto según tu script SQL
   });
 
-  // 3. Registrar cada item y actualizar el inventario
-  const itemPromises = items.map(async (item) => {
-    // A. Guardamos el detalle de la venta
+  // 4. Registrar items y actualizar stock secuencialmente para mayor seguridad
+  // Usamos for...of para asegurar que si un producto falla (ej. stock insuficiente),
+  // el proceso se detenga antes de afectar al siguiente.
+  for (const item of items) {
+    // A. Detalle de venta
     await salesRepo.createItem({
       sale_id: sale.id,
       product_id: item.product_id,
@@ -40,18 +49,14 @@ export const createSale = async (saleData, userId) => {
       price_at_sale: item.price_at_sale
     });
 
-    // B. Descontamos del inventario usando el servicio que ya "blindamos"
-    // Mandamos la cantidad en negativo porque es una salida por venta
-    return inventoryService.adjustStock(
+    // B. Descuento de stock con referencia a la venta
+    await inventoryService.adjustStock(
       item.product_id, 
-      -item.quantity, 
+      -Math.abs(item.quantity), // Aseguramos que siempre sea negativo
       userId, 
-      `Venta #${sale.id.split('-')[0]}` // Referencia corta del ID de venta
+      `Venta #${sale.id.split('-')[0]}` 
     );
-  });
-
-  // Ejecutamos todas las actualizaciones de items
-  await Promise.all(itemPromises);
+  }
 
   return sale;
 };

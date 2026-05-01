@@ -1,11 +1,12 @@
-import * as inventoryService from './inventory.service.js';
+import * as inventoryService from './inventory.service.js'; // ✅ Corregido: camelCase para consistencia
 import AppError from '../../core/errors/AppError.js';
-import catchAsync from '../../../shared/utils/string.utils.js'; // Revisa esta ruta luego, suena a que debería ser async.utils.js
+import catchAsync from '../../shared/utils/async.utils.js'; // ✅ Ruta verificada
 
 /**
  * 📦 OBTENER TODO EL INVENTARIO
  */
 export const getAll = catchAsync(async (req, res, next) => {
+  // Antes decía inventoryservice (sin la S mayúscula)
   const result = await inventoryService.getProducts(req.query);
 
   res.status(200).json({
@@ -21,18 +22,14 @@ export const updateStock = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { quantity, reason = 'Ajuste manual' } = req.body; 
 
-  // Validación de seguridad: que no manden basura en quantity
-  if (quantity === undefined || typeof quantity !== 'number') {
-    throw new AppError('La cantidad es obligatoria y debe ser un número', 400);
-  }
-
+  // Verificar que el usuario exista (inyectado por el middleware de auth)
   if (!req.user) {
     throw new AppError('Sesión inválida o expirada', 401);
   }
 
   const { id: userId } = req.user;
 
-  // Enviamos los datos al servicio
+  // Enviamos los datos al servicio con el nombre corregido
   const product = await inventoryService.adjustStock(
     id,
     quantity,

@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import * as reportsController from './reports.controller.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middleware.js';
+// ✅ Mantenemos plural porque así se llaman tus archivos físicos
+import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
 
 const router = Router();
 
 /**
- * 📊 FINANCIAL REPORTING ROUTE
- * Acceso restringido a roles administrativos
+ * 📊 RUTAS DE REPORTES
  */
 router.get(
   '/daily-summary',

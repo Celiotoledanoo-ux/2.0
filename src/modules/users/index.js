@@ -1,7 +1,3 @@
-import routes from './users.routes.js';
+import userRoutes from './users.routes.js';
 
-export default {
-  path: '/users',
-  routes: routes
-};
-
+export { userRoutes };
