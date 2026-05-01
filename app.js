@@ -58,6 +58,11 @@ app.get('/health', (_req, res) => {
 // Usamos el router que ya tiene todos los módulos conectados
 app.use(API_PREFIX, globalRouter);
 
+// 👇 AGREGA ESTO AQUÍ PARA LA PÁGINA DE INICIO
+app.get('/', (req, res) => {
+  res.send('<h1>¡Servidor POS en línea!</h1><p>Usa /api/v1 para acceder a la API.</p>');
+});
+
 // --- 8. 404 & Errores ---
 app.all('*', (req, res, next) => {
   res.status(404).json({ status: 'fail', message: `Route ${req.originalUrl} not found` });
