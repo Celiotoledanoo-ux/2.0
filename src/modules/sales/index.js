@@ -1,18 +1,5 @@
-import { Router } from 'express';
-// ✅ Importamos los 'index' de cada módulo para mantener el orden
-import { inventoryRoutes } from '../inventory/index.js';
-import { salesRoutes } from '../sales/index.js';
+// 1. Importas el archivo de rutas que está en la misma carpeta
+import salesRoutes from './sales.routes.js';
 
-const router = Router();
-
-/**
- * 📂 Registro de Módulos (Prefijo: /api/v1)
- */
-
-// 📦 Módulo de Inventario
-router.use('/inventory', inventoryRoutes);
-
-// 💰 Módulo de Ventas
-router.use('/sales', salesRoutes);
-
-export default router;
+// 2. Lo exportas con el nombre que espera tu index global de rutas
+export { salesRoutes };
