@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopper beautymx POS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 🔐 PANTALLA DE LOGIN -->
+<div id="login-screen" class="container">
+    <div class="login-box">
+        <h1>💄 Shopper BeautyMX</h1>
+        <p>Inicia sesión para continuar</p>
+        <input type="email" id="login-email" placeholder="Correo electrónico">
+        <input type="password" id="login-pass" placeholder="Contraseña">
+        <button class="btn cobrar" onclick="ejecutarLogin()">Entrar al Sistema</button>
+    </div>
+</div>
+
+<!-- 📦 SISTEMA (Oculto hasta el Login) -->
+<div id="app-shell" style="display:none;">
+    <!-- 🔄 LOADER -->
+    <div id="loader" style="display:none;"><div class="spinner"></div></div>
+
+    <!-- 🔝 BARRA -->
+    <div id="barra">
+        <button id="btnVenta" onclick="mostrarSeccion('venta')">💄 Ventas</button>
+        <button id="btnInventario" onclick="mostrarSeccion('inventario')">📦 Inventario</button>
+        <button id="btnTickets" onclick="mostrarSeccion('tickets')">🧾 Historial</button>
+        <button onclick="cerrarSesion()" style="background:#ff4757">🚪 Salir</button>
+    </div>
+
+    <div id="contenido">
+        <!-- SECCIÓN VENTA -->
+        <div id="venta" class="seccion activa container">
+            <h1>Punto de Venta</h1>
+            <input type="text" id="codigo-busqueda" placeholder="Buscar por SKU o Nombre..." oninput="buscarEnVenta()">
+            <div id="resultados-busqueda"></div>
+            
+            <table>
+                <thead>
+                    <tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="tabla-carrito"></tbody>
+            </table>
+            <div class="total">Total: $<span id="total-venta">0.00</span></div>
+            <div class="acciones">
+                <button class="btn cobrar" onclick="procesarVenta()">💰 Finalizar Venta</button>
+                <button class="btn vaciar" onclick="vaciarCarrito()">🗑 Vaciar</button>
+            </div>
+        </div>
+
+        <!-- SECCIÓN INVENTARIO -->
+        <div id="inventario" class="seccion container">
+            <h2>Gestión de Inventario</h2>
+            <div class="inventario-form">
+                <input type="text" id="inv-sku" placeholder="SKU (Código)">
+                <input type="text" id="inv-nombre" placeholder="Nombre">
+                <input type="number" id="inv-stock" placeholder="Stock Inicial">
+                <input type="number" id="inv-precio" placeholder="Precio">
+                <button class="btn agregar" onclick="crearProducto()">➕ Registrar</button>
+            </div>
+            <table id="tabla-inventario-real">
+                <thead>
+                    <tr><th>SKU</th><th>Producto</th><th>Stock</th><th>Precio</th><th>Acciones</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

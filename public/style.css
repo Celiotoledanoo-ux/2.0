@@ -1,0 +1,188 @@
+/* 💄 POS SHOPPER BEAUTYMX - ESTILO PROFESIONAL */
+:root {
+  --primary: #c71585; /* Rosa Beauty */
+  --primary-hover: #a0106a;
+  --success: #00b894;
+  --danger: #e74c3c;
+  --dark: #1e1e2e;
+  --light-bg: #f8f9fc;
+  --white: #ffffff;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+* {
+  margin: 0; padding: 0; box-sizing: border-box;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background-color: var(--light-bg);
+  color: #333;
+}
+
+/* 🔐 PANTALLA DE LOGIN */
+#login-screen {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--dark) 0%, #2d3436 100%);
+}
+
+.login-box {
+  background: var(--white);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.login-box h1 { color: var(--primary); margin-bottom: 10px; font-size: 1.8rem; }
+.login-box p { color: #666; margin-bottom: 25px; }
+
+/* 🔝 BARRA DE NAVEGACIÓN */
+#barra {
+  background: var(--dark);
+  display: flex;
+  padding: 10px 20px;
+  gap: 15px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+#barra button {
+  flex: 1;
+  background: #34344b;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+#barra button:hover { background: #454562; }
+#barra button.activo { background: var(--primary); }
+
+/* 📦 CONTENEDORES */
+.container {
+  max-width: 1100px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.seccion { display: none; }
+.seccion.activa { display: block; animation: slideUp 0.4s ease; }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 🔍 BUSCADOR DE VENTAS */
+#codigo-busqueda {
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 1.1rem;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+#resultados-busqueda {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  max-height: 250px;
+  overflow-y: auto;
+  position: absolute;
+  width: calc(100% - 40px);
+  max-width: 1060px;
+  z-index: 99;
+}
+
+.search-item {
+  padding: 12px 20px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: 0.2s;
+}
+
+.search-item:hover { background: #fff0f6; color: var(--primary); }
+
+/* 📋 TABLAS */
+table {
+  width: 100%;
+  background: var(--white);
+  border-radius: 15px;
+  overflow: hidden;
+  border-collapse: collapse;
+  box-shadow: var(--shadow);
+  margin: 20px 0;
+}
+
+thead { background: var(--dark); color: white; }
+th, td { padding: 15px; text-align: left; }
+tbody tr { border-bottom: 1px solid #eee; }
+tbody tr:last-child { border: none; }
+
+/* 💰 TOTAL */
+.total {
+  background: var(--white);
+  padding: 20px;
+  border-radius: 15px;
+  text-align: right;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--success);
+  box-shadow: var(--shadow);
+}
+
+/* 🔘 BOTONES */
+.btn {
+  border: none;
+  padding: 15px 25px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn.cobrar { background: var(--success); color: white; width: 100%; margin-top: 15px; }
+.btn.cobrar:hover { background: #009e7f; transform: scale(1.02); }
+
+.btn.agregar { background: var(--primary); color: white; }
+
+/* 🛠 FORMULARIOS INVENTARIO */
+.inventario-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: var(--shadow);
+  margin-bottom: 30px;
+}
+
+input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+}
+
+input:focus { border-color: var(--primary); }
+
+/* 📱 RESPONSIVO */
+@media (max-width: 768px) {
+  #barra { flex-wrap: wrap; }
+  .total { font-size: 1.5rem; }
+}
