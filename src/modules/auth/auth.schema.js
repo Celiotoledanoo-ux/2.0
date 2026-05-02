@@ -3,7 +3,6 @@ import { z } from 'zod';
 /**
  * 🔐 AUTH VALIDATION SCHEMAS - ACCESO POR CAJAS
  */
-import { z } from 'zod';
 
 export const loginSchema = z.object({
   body: z.object({
