@@ -1,22 +1,24 @@
 import { z } from 'zod';
 
 /**
- * 🔐 AUTH VALIDATION SCHEMAS
+ * 🔐 AUTH VALIDATION SCHEMAS - ACCESO POR CAJAS
  */
+import { z } from 'zod';
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z
-      .string({ required_error: 'El email es obligatorio' })
+    // Cambiamos email por username para aceptar "Caja 1", "Caja 2", etc.
+    username: z
+      .string({ required_error: 'El nombre de la caja es obligatorio' })
       .trim()
-      .email('Formato de correo electrónico inválido')
-      .toLowerCase(),
+      .min(1, 'El nombre de la caja no puede estar vacío'),
     
     password: z
       .string({ required_error: 'La contraseña es obligatoria' })
       .min(1, 'La contraseña no puede estar vacía')
   })
 });
+
 
 // Por si en el futuro habilitas registro de cajeros/admin
 export const registerSchema = z.object({

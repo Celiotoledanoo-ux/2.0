@@ -3,7 +3,7 @@ import { db } from '../database/supabaseClient.js'; // ✅ Usamos el alias está
 import logger from '../logger/logger.js';
 
 /**
- * 🔐 AUTH MIDDLEWARE
+ * 🛡️ AUTH MIDDLEWARE - ADAPTADO PARA CAJAS
  */
 export const protect = async (req, res, next) => {
   try {
@@ -18,8 +18,7 @@ export const protect = async (req, res, next) => {
       return next(new AppError('Sesión inválida o expirada.', 401));
     }
 
-    // 2. Verificación de identidad con el servidor de Supabase
-    // Usamos 'db.auth' que es el cliente que ya tenemos
+    // 2. Verificación de identidad con Supabase
     const { data: { user }, error } = await db.auth.getUser(token);
 
     if (error || !user) {
@@ -27,13 +26,18 @@ export const protect = async (req, res, next) => {
       return next(new AppError('Tu sesión ha expirado. Por favor, ingresa de nuevo.', 401));
     }
 
-    // 3. Inyección de Contexto de Seguridad
-    // Congelamos el objeto para que nadie lo pueda modificar en el camino
+    // 3. ✨ Lógica de Identificación de Caja
+    // Extraemos el nombre limpio (ej. de "caja1@sistema.local" sacamos "CAJA 1")
+    const emailPrefix = user.email.split('@')[0]; 
+    const displayCaja = emailPrefix.replace('caja', 'CAJA ').toUpperCase();
+
+    // 4. Inyección de Contexto de Seguridad
+    // Mantenemos el freeze para blindar el objeto req.user
     req.user = Object.freeze({
       id: user.id,
       email: user.email,
       role: user.user_metadata?.role || 'CASHIER',
-      name: user.user_metadata?.name
+      caja: displayCaja // <--- Ahora cualquier módulo sabe que es "CAJA 1"
     });
 
     next();

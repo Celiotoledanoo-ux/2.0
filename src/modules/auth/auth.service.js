@@ -3,43 +3,43 @@ import { db } from '../../core/database/supabaseClient.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 🔐 AUTH SERVICE
+ * 🔐 AUTH SERVICE - ACTUALIZADO PARA CAJAS
  */
 
-export const login = async (email, password) => {
-  if (!email || !password) {
-    throw new AppError('Por favor, proporciona email y contraseña', 400);
+// Cambiamos el parámetro 'email' por 'username' para que sea más claro
+export const login = async (username, password) => {
+  if (!username || !password) {
+    throw new AppError('Por favor, proporciona el nombre de caja y contraseña', 400);
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  // 1. 🔄 Transformamos "Caja 1" en "caja1@sistema.local"
+  const normalizedUsername = username.trim().toLowerCase().replace(/\s+/g, '');
+  const virtualEmail = `${normalizedUsername}@sistema.local`;
 
-  // 1. 🛡️ Usamos el motor de Supabase para validar la contraseña
-  // Esto es más seguro que gestionar contraseñas manualmente
+  // 2. 🛡️ Usamos el motor de Supabase con el email virtual
   const { data, error } = await db.auth.signInWithPassword({
-    email: normalizedEmail,
+    email: virtualEmail,
     password,
   });
 
   if (error || !data?.user) {
-    // 💡 Perfeccionista: Error genérico para no dar pistas a hackers
-    throw new AppError('Credenciales de acceso incorrectas', 401);
+    throw new AppError('Credenciales de acceso incorrectas para esta caja', 401);
   }
 
-  // 2. 🔍 Buscamos los datos extra en tu tabla de 'users' (rol, nombre, etc.)
-  // Usamos el repository que acabamos de blindar
+  // 3. 🔍 Buscamos los datos extra en tu tabla de 'users'
   const userDetails = await authRepo.findById(data.user.id);
 
   if (!userDetails || !userDetails.active) {
-    throw new AppError('Tu cuenta está desactivada o no existe. Contacta al administrador.', 403);
+    throw new AppError('Esta caja no está activa. Contacta al administrador.', 403);
   }
 
-  // 3. 📦 Retornamos el combo perfecto: Datos de DB + Token de Sesión
+  // 4. 📦 Retornamos los datos (manteniendo la estructura para no romper el front)
   return {
     user: {
       id: userDetails.id,
       email: userDetails.email,
       role: userDetails.role,
-      name: userDetails.name || data.user.user_metadata?.name
+      name: username // Aquí devolvemos "Caja 1" original para el UI
     },
     session: {
       accessToken: data.session.access_token,
@@ -49,12 +49,3 @@ export const login = async (email, password) => {
   };
 };
 
-export const logout = async () => {
-  const { error } = await db.auth.signOut();
-
-  if (error) {
-    throw new AppError('Error al cerrar la sesión', 500);
-  }
-
-  return true;
-};
