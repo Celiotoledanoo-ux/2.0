@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopper beautymx POS</title>
+    <title>Shopper BeautyMX POS 2.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,65 +13,118 @@
     <div class="login-box">
         <h1>💄 Shopper BeautyMX</h1>
         <p>Inicia sesión para continuar</p>
-        <input type="email" id="login-email" placeholder="Correo electrónico">
+        <!-- 🔄 Cambiado a type="text" para que acepte "Caja 1" sin quejas del navegador -->
+        <input type="text" id="login-email" placeholder="Usuario o Email">
         <input type="password" id="login-pass" placeholder="Contraseña">
         <button class="btn cobrar" onclick="ejecutarLogin()">Entrar al Sistema</button>
     </div>
 </div>
 
-<!-- 📦 SISTEMA (Oculto hasta el Login) -->
+<!-- 📦 SISTEMA PRINCIPAL -->
 <div id="app-shell" style="display:none;">
-    <!-- 🔄 LOADER -->
-    <div id="loader" style="display:none;"><div class="spinner"></div></div>
-
-    <!-- 🔝 BARRA -->
+    
+    <!-- 🔝 BARRA SUPERIOR (NAV) -->
     <div id="barra">
-        <button id="btnVenta" onclick="mostrarSeccion('venta')">💄 Ventas</button>
-        <button id="btnInventario" onclick="mostrarSeccion('inventario')">📦 Inventario</button>
-        <button id="btnTickets" onclick="mostrarSeccion('tickets')">🧾 Historial</button>
-        <button onclick="cerrarSesion()" style="background:#ff4757">🚪 Salir</button>
+        <div class="user-info">
+            <span id="user-display-name">👤 Cargando...</span>
+        </div>
+        <div class="nav-buttons">
+            <button id="btnVenta" onclick="mostrarSeccion('venta')">💄 [F1] Ventas</button>
+            <button id="btnInventario" onclick="mostrarSeccion('inventario')">📦 Inventario</button>
+            <button id="btnReportes" onclick="mostrarSeccion('reportes')">📊 Reportes</button>
+            <button onclick="cerrarSesion()" style="background:#ff4757">🚪 Salir</button>
+        </div>
     </div>
 
     <div id="contenido">
-        <!-- SECCIÓN VENTA -->
+        <!-- 🛒 SECCIÓN VENTA -->
         <div id="venta" class="seccion activa container">
             <h1>Punto de Venta</h1>
-            <input type="text" id="codigo-busqueda" placeholder="Buscar por SKU o Nombre..." oninput="buscarEnVenta()">
-            <div id="resultados-busqueda"></div>
+            <div class="search-box">
+                <input type="text" id="codigo-busqueda" placeholder="🔍 [F1] Buscar por SKU o Nombre..." oninput="buscarEnVenta()">
+                <div id="resultados-busqueda"></div>
+            </div>
             
-            <table>
+            <table class="pos-table">
                 <thead>
-                    <tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th><th>Acciones</th></tr>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Cant.</th>
+                        <th>Subtotal</th>
+                        <th>Acciones</th>
+                    </tr>
                 </thead>
                 <tbody id="tabla-carrito"></tbody>
             </table>
-            <div class="total">Total: $<span id="total-venta">0.00</span></div>
-            <div class="acciones">
-                <button class="btn cobrar" onclick="procesarVenta()">💰 Finalizar Venta</button>
-                <button class="btn vaciar" onclick="vaciarCarrito()">🗑 Vaciar</button>
+            
+            <div class="total-container">
+                <div class="total-label">Total a Pagar:</div>
+                <div class="total-amount">$<span id="total-venta">0.00</span></div>
             </div>
+
+            <div class="acciones-pago">
+                <select id="metodo-pago">
+                    <option value="CASH">💵 Efectivo</option>
+                    <option value="CARD">💳 Tarjeta</option>
+                    <option value="TRANSFER">🏦 Transferencia</option>
+                </select>
+                <button class="btn cobrar" onclick="procesarVenta()">💰 Finalizar Venta [F2]</button>
+                <button class="btn vaciar" onclick="vaciarCarrito()">🗑 Vaciar [F4]</button>
+            </div>
+            <p class="helper-text">💡 Tip: Usa <b>ESC</b> para limpiar la búsqueda rápidamente.</p>
         </div>
 
-        <!-- SECCIÓN INVENTARIO -->
+        <!-- 📦 SECCIÓN INVENTARIO -->
         <div id="inventario" class="seccion container">
             <h2>Gestión de Inventario</h2>
             <div class="inventario-form">
                 <input type="text" id="inv-sku" placeholder="SKU (Código)">
-                <input type="text" id="inv-nombre" placeholder="Nombre">
+                <input type="text" id="inv-nombre" placeholder="Nombre del Producto">
                 <input type="number" id="inv-stock" placeholder="Stock Inicial">
-                <input type="number" id="inv-precio" placeholder="Precio">
-                <button class="btn agregar" onclick="crearProducto()">➕ Registrar</button>
+                <input type="number" id="inv-precio" placeholder="Precio de Venta">
+                <button class="btn agregar" onclick="crearProducto()">➕ Registrar Producto</button>
             </div>
-            <table id="tabla-inventario-real">
+            <table id="tabla-inventario-real" class="pos-table">
                 <thead>
-                    <tr><th>SKU</th><th>Producto</th><th>Stock</th><th>Precio</th><th>Acciones</th></tr>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Producto</th>
+                        <th>Stock</th>
+                        <th>Precio</th>
+                        <th>Acción</th>
+                    </tr>
                 </thead>
                 <tbody></tbody>
             </table>
         </div>
+
+        <!-- 📊 SECCIÓN REPORTES (Dashboard del Dueño) -->
+        <div id="reportes" class="seccion container">
+            <h2>📊 Resumen de Negocio</h2>
+            <div class="grid-reportes">
+                <div class="card">
+                    <h3>Ventas de Hoy</h3>
+                    <p id="rep-cantidad" class="stat">0</p>
+                </div>
+                <div class="card">
+                    <h3>Ingresos del Día</h3>
+                    <p id="rep-ingresos" class="stat">$0.00</p>
+                </div>
+            </div>
+
+            <div class="alert-section">
+                <h3>⚠️ Stock Crítico (Reabastecer ya)</h3>
+                <ul id="lista-stock-bajo" class="stock-list">
+                    <!-- Se llena solo con JS -->
+                </ul>
+            </div>
+            <button class="btn agregar" onclick="obtenerResumen()">🔄 Actualizar Datos</button>
+        </div>
     </div>
 </div>
 
+<!-- ⚠️ IMPORTANTE: Asegúrate que el archivo se llame script.js en tu carpeta -->
 <script src="script.js"></script>
 </body>
 </html>

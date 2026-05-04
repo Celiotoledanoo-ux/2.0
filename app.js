@@ -64,7 +64,7 @@ app.get('/health', (_req, res) => {
 
 // --- 8. CARGA DINÁMICA DE MÓDULOS (LOADER) ---
 // El loader toma la app y le inyecta el globalRouter bajo el prefijo API_PREFIX
-app.use(API_PREFIX, initLoader(app)); 
+app.use(API_PREFIX, initLoader());
 
 // --- 9. MANEJO DE RUTAS NO ENCONTRADAS (404) ---
 app.all('*', (req, res, next) => {

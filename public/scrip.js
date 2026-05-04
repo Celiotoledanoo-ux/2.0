@@ -17,12 +17,11 @@ async function api(endpoint, method = 'GET', body = null) {
 
         if (!res.ok) {
             if (res.status === 401) {
-                alert("Sesión expirada o no autorizada");
+                alert("🚫 Sesión expirada. Por favor, reingresa.");
                 cerrarSesion();
             }
             throw new Error(response.message || 'Error en la petición');
         }
-        // Retornamos data porque nuestro backend usa el formato JSend { status, data }
         return response.data; 
     } catch (err) {
         alert(`⚠️ ${err.message}`);
@@ -31,17 +30,17 @@ async function api(endpoint, method = 'GET', body = null) {
 }
 
 //////////////////////
-// 🔐 AUTENTICACIÓN (LOGIN)
+// 🔐 AUTENTICACIÓN
 //////////////////////
 async function ejecutarLogin() {
-    const email = document.getElementById('login-email').value;
+    const username = document.getElementById('login-email').value;
     const password = document.getElementById('login-pass').value;
 
-    if (!email || !password) return alert("Ingresa credenciales");
+    if (!username || !password) return alert("Ingresa credenciales");
 
     try {
-        const data = await api('/auth/login', 'POST', { email, password });
-        localStorage.setItem('token', data.token);
+        const data = await api('/auth/login', 'POST', { username, password });
+        localStorage.setItem('token', data.session.accessToken);
         localStorage.setItem('user', JSON.stringify(data.user));
         location.reload(); 
     } catch (err) { console.error("Login fallido", err); }
@@ -57,7 +56,8 @@ function cerrarSesion() {
 //////////////////////
 async function cargarInventario() {
     try {
-        const productos = await api('/inventory');
+        const response = await api('/inventory');
+        const productos = response.products || [];
         const tbody = document.querySelector('#tabla-inventario-real tbody');
         if (!tbody) return;
 
@@ -68,11 +68,10 @@ async function cargarInventario() {
                 <td><strong>${p.stock}</strong></td>
                 <td>$${Number(p.price).toFixed(2)}</td>
                 <td>
-                    <button class="btn vaciar" style="padding: 5px 10px" onclick="eliminarDelInventario('${p.id}')">🗑</button>
+                    <button class="btn vaciar" onclick="eliminarDelInventario('${p.id}')">🗑</button>
                 </td>
             </tr>
         `).join('');
-        return productos;
     } catch (err) { console.error(err); }
 }
 
@@ -95,7 +94,7 @@ async function crearProducto() {
 }
 
 //////////////////////
-// 🔍 BUSCADOR DE VENTAS (TIEMPO REAL)
+// 🔍 BUSCADOR (TECLADO > MOUSE)
 //////////////////////
 let timeoutBusqueda;
 
@@ -111,14 +110,15 @@ async function buscarEnVenta() {
     clearTimeout(timeoutBusqueda);
     timeoutBusqueda = setTimeout(async () => {
         try {
-            const productos = await api('/inventory');
+            const response = await api('/inventory');
+            const productos = response.products || [];
             const filtrados = productos.filter(p => 
                 p.name.toLowerCase().includes(query.toLowerCase()) || 
                 p.sku.toLowerCase().includes(query.toLowerCase())
             );
             pintarResultados(filtrados);
         } catch (err) { console.error(err); }
-    }, 300);
+    }, 200);
 }
 
 function pintarResultados(productos) {
@@ -141,9 +141,6 @@ function pintarResultados(productos) {
 let carrito = [];
 
 function seleccionarProducto(id, nombre, precio, sku) {
-    document.getElementById('codigo-busqueda').value = '';
-    document.getElementById('resultados-busqueda').innerHTML = '';
-
     const existente = carrito.find(item => item.id === id);
     if (existente) {
         existente.cantidad++;
@@ -151,6 +148,8 @@ function seleccionarProducto(id, nombre, precio, sku) {
     } else {
         carrito.push({ id, nombre, sku, precio: Number(precio), cantidad: 1, subtotal: Number(precio) });
     }
+    document.getElementById('codigo-busqueda').value = '';
+    document.getElementById('resultados-busqueda').innerHTML = '';
     actualizarVistaCarrito();
 }
 
@@ -176,46 +175,75 @@ function actualizarVistaCarrito() {
     totalSpan.innerText = total.toFixed(2);
 }
 
-function cambiarCantidad(id, cambio) {
-    const item = carrito.find(i => i.id === id);
-    if (!item) return;
-    item.cantidad += cambio;
-    if (item.cantidad <= 0) {
-        carrito = carrito.filter(i => i.id !== id);
-    } else {
-        item.subtotal = item.cantidad * item.precio;
-    }
-    actualizarVistaCarrito();
-}
-
 async function procesarVenta() {
     if (carrito.length === 0) return alert("Carrito vacío");
     
     const payload = {
-        payment_method: 'CASH',
-        items: carrito.map(i => ({ product_id: i.id, quantity: i.cantidad }))
+        payment_method: document.getElementById('metodo-pago')?.value || 'CASH',
+        items: carrito.map(i => ({ 
+            product_id: i.id, 
+            quantity: i.cantidad,
+            price_at_sale: i.precio 
+        }))
     };
 
     try {
-        await api('/sales', 'POST', payload);
-        alert("💰 Venta exitosa y stock actualizado");
-        carrito = [];
-        actualizarVistaCarrito();
+        await api('/sales/checkout', 'POST', payload);
+        alert("💰 Venta exitosa");
+        vaciarCarrito();
         cargarInventario();
+        mostrarSeccion('venta'); // Regresar foco
     } catch (err) { console.error(err); }
 }
 
 //////////////////////
-// 🛠 UTILIDADES Y NAVEGACIÓN
+// ⚡️ ATAJOS DE TECLADO (VELOCIDAD POS)
+//////////////////////
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F1') { // F1: Foco al buscador
+        e.preventDefault();
+        mostrarSeccion('venta');
+        document.getElementById('codigo-busqueda').focus();
+    }
+    if (e.key === 'F2') { // F2: Cobrar
+        e.preventDefault();
+        if (carrito.length > 0) procesarVenta();
+    }
+    if (e.key === 'Escape') { // ESC: Cerrar búsqueda
+        document.getElementById('resultados-busqueda').innerHTML = '';
+        document.getElementById('codigo-busqueda').value = '';
+    }
+    if (e.key === 'Enter' && document.activeElement.id === 'codigo-busqueda') {
+        const primero = document.querySelector('.search-item');
+        if (primero) primero.click();
+    }
+});
+
+//////////////////////
+// 📊 REPORTES (PARA EL DUEÑO)
+//////////////////////
+async function obtenerResumen() {
+    try {
+        const res = await api('/reports/summary');
+        document.getElementById('rep-ingresos').innerText = `$${res.metrics.total_revenue.toFixed(2)}`;
+        document.getElementById('rep-cantidad').innerText = res.metrics.sales_count;
+        
+        const lista = document.getElementById('lista-stock-bajo');
+        lista.innerHTML = res.metrics.critical_inventory.items.map(i => `
+            <li>⚠️ ${i.name} - Stock: ${i.stock} (Mín: ${i.min_stock})</li>
+        `).join('');
+    } catch (err) { console.error(err); }
+}
+
+//////////////////////
+// 🛠 UTILIDADES
 //////////////////////
 function mostrarSeccion(id) {
     document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
     document.getElementById(id).classList.add('activa');
     if (id === 'inventario') cargarInventario();
-}
-
-function limpiarFormularios() {
-    document.querySelectorAll('input').forEach(i => i.value = '');
+    if (id === 'reportes') obtenerResumen();
+    if (id === 'venta') document.getElementById('codigo-busqueda').focus();
 }
 
 function vaciarCarrito() {
@@ -223,12 +251,18 @@ function vaciarCarrito() {
     actualizarVistaCarrito();
 }
 
-// 🏁 INICIO DEL SISTEMA
+function limpiarFormularios() {
+    document.querySelectorAll('input').forEach(i => i.value = '');
+}
+
 window.onload = () => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (token && user) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-shell').style.display = 'block';
+        document.getElementById('user-display-name').innerText = `👤 ${user.name}`;
         cargarInventario();
+        mostrarSeccion('venta');
     }
 };
