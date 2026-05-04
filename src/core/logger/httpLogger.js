@@ -4,42 +4,43 @@ import logger from './logger.js';
 
 const httpLogger = pinoHttp({
   logger,
-  // 🆔 ID único por petición para rastrear fallos (Tracing)
   genReqId: (req) => req.headers['x-request-id'] || randomUUID(),
   
-  // 🕵️‍♂️ Extractor de IP real (Considerando el proxy de Render)
-  reqCustomProps: (req) => ({
-    ip: req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress
-  }),
+  // 🕵️‍♂️ CUSTOM PROPS: Aquí es donde conectamos el POS con los Logs
+  customProps: (req, res) => {
+    return {
+      ip: req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress,
+      // 📦 Si el usuario ya pasó por 'protect', guardamos su ID y Caja
+      userId: req.user?.id || 'anonymous',
+      caja: req.user?.caja || 'N/A'
+    };
+  },
 
-  // 🚦 Niveles inteligentes: 500 es Error, 400 es Warn, resto es Info
   customLogLevel: (req, res, err) => {
     if (err || res.statusCode >= 500) return 'error';
     if (res.statusCode >= 400) return 'warn';
     return 'info';
   },
 
-  // 📦 Serializadores ultra-ligeros (Solo lo que importa)
   serializers: {
     req: (req) => ({
       id: req.id,
       method: req.method,
       url: req.originalUrl || req.url,
-      ip: req.ip // Viene de reqCustomProps
+      // No necesitamos repetir la IP aquí porque ya va en customProps
     }),
     res: (res) => ({ statusCode: res.statusCode })
   },
 
-  // ✨ Mensajes de éxito y error claros
-  customSuccessObject: (req, res) => ({
-    msg: `✔ ${req.method} ${req.originalUrl || req.url} → ${res.statusCode}`,
-    duration: `${res.responseTime}ms`
-  }),
-  customErrorObject: (req, res, err) => ({
-    msg: `❌ FALLO ${req.method} ${req.originalUrl || req.url}`,
-    duration: `${res.responseTime}ms`,
-    error: err.message
-  })
+  // ✨ Mensajes con contexto de Caja
+  customSuccessMessage: (req, res) => {
+    const userContext = req.user ? `[${req.user.caja}]` : '[GUEST]';
+    return `${userContext} ✔ ${req.method} ${req.url} → ${res.statusCode} (${res.responseTime}ms)`;
+  },
+
+  customErrorMessage: (req, res, err) => {
+    return `❌ ERROR ${req.method} ${req.url} → ${err.message}`;
+  }
 });
 
-export default httpLogger; // ✅ AHORA SÍ: Exportamos el radar correcto
+export default httpLogger;
