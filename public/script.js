@@ -33,16 +33,22 @@ async function api(endpoint, method = 'GET', body = null) {
 // 🔐 AUTENTICACIÓN
 //////////////////////
 async function ejecutarLogin() {
-    const username = document.getElementById('login-email').value;
-    const password = document.getElementById('login-pass').value;
+    const username = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-pass').value.trim();
 
-    if (!username || !password) return alert("Ingresa credenciales");
+    if (!username || !password) return alert("⚠️ Ingresa usuario y contraseña");
 
     try {
         const data = await api('/auth/login', 'POST', { username, password });
-        localStorage.setItem('token', data.session.accessToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        location.reload(); 
+        
+        // Soporta ambos formatos de token (camelCase y snake_case)
+        const token = data.session.access_token || data.session.accessToken;
+
+        if (token) {
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            location.reload(); 
+        }
     } catch (err) { console.error("Login fallido", err); }
 }
 
@@ -57,7 +63,8 @@ function cerrarSesion() {
 async function cargarInventario() {
     try {
         const response = await api('/inventory');
-        const productos = response.products || [];
+        // Ajustamos por si el backend devuelve un objeto con la propiedad 'products'
+        const productos = response.products || response || [];
         const tbody = document.querySelector('#tabla-inventario-real tbody');
         if (!tbody) return;
 
@@ -68,7 +75,7 @@ async function cargarInventario() {
                 <td><strong>${p.stock}</strong></td>
                 <td>$${Number(p.price).toFixed(2)}</td>
                 <td>
-                    <button class="btn vaciar" onclick="eliminarDelInventario('${p.id}')">🗑</button>
+                    <button class="btn vaciar" style="padding:5px" onclick="eliminarProducto('${p.id}')">🗑</button>
                 </td>
             </tr>
         `).join('');
@@ -94,7 +101,7 @@ async function crearProducto() {
 }
 
 //////////////////////
-// 🔍 BUSCADOR (TECLADO > MOUSE)
+// 🔍 BUSCADOR (TIEMPO REAL)
 //////////////////////
 let timeoutBusqueda;
 
@@ -111,7 +118,7 @@ async function buscarEnVenta() {
     timeoutBusqueda = setTimeout(async () => {
         try {
             const response = await api('/inventory');
-            const productos = response.products || [];
+            const productos = response.products || response || [];
             const filtrados = productos.filter(p => 
                 p.name.toLowerCase().includes(query.toLowerCase()) || 
                 p.sku.toLowerCase().includes(query.toLowerCase())
@@ -175,6 +182,18 @@ function actualizarVistaCarrito() {
     totalSpan.innerText = total.toFixed(2);
 }
 
+function cambiarCantidad(id, cambio) {
+    const item = carrito.find(i => i.id === id);
+    if (!item) return;
+    item.cantidad += cambio;
+    if (item.cantidad <= 0) {
+        carrito = carrito.filter(i => i.id !== id);
+    } else {
+        item.subtotal = item.cantidad * item.precio;
+    }
+    actualizarVistaCarrito();
+}
+
 async function procesarVenta() {
     if (carrito.length === 0) return alert("Carrito vacío");
     
@@ -192,32 +211,9 @@ async function procesarVenta() {
         alert("💰 Venta exitosa");
         vaciarCarrito();
         cargarInventario();
-        mostrarSeccion('venta'); // Regresar foco
+        mostrarSeccion('venta');
     } catch (err) { console.error(err); }
 }
-
-//////////////////////
-// ⚡️ ATAJOS DE TECLADO (VELOCIDAD POS)
-//////////////////////
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'F1') { // F1: Foco al buscador
-        e.preventDefault();
-        mostrarSeccion('venta');
-        document.getElementById('codigo-busqueda').focus();
-    }
-    if (e.key === 'F2') { // F2: Cobrar
-        e.preventDefault();
-        if (carrito.length > 0) procesarVenta();
-    }
-    if (e.key === 'Escape') { // ESC: Cerrar búsqueda
-        document.getElementById('resultados-busqueda').innerHTML = '';
-        document.getElementById('codigo-busqueda').value = '';
-    }
-    if (e.key === 'Enter' && document.activeElement.id === 'codigo-busqueda') {
-        const primero = document.querySelector('.search-item');
-        if (primero) primero.click();
-    }
-});
 
 //////////////////////
 // 📊 REPORTES (PARA EL DUEÑO)
@@ -236,14 +232,13 @@ async function obtenerResumen() {
 }
 
 //////////////////////
-// 🛠 UTILIDADES
+// ⚡️ ATAJOS Y UTILIDADES
 //////////////////////
 function mostrarSeccion(id) {
     document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
     document.getElementById(id).classList.add('activa');
     if (id === 'inventario') cargarInventario();
     if (id === 'reportes') obtenerResumen();
-    if (id === 'venta') document.getElementById('codigo-busqueda').focus();
 }
 
 function vaciarCarrito() {
@@ -255,14 +250,26 @@ function limpiarFormularios() {
     document.querySelectorAll('input').forEach(i => i.value = '');
 }
 
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F1') { e.preventDefault(); mostrarSeccion('venta'); document.getElementById('codigo-busqueda').focus(); }
+    if (e.key === 'F2') { e.preventDefault(); if (carrito.length > 0) procesarVenta(); }
+    if (e.key === 'Escape') { document.getElementById('resultados-busqueda').innerHTML = ''; document.getElementById('codigo-busqueda').value = ''; }
+});
+
+// 🏁 ARRANQUE
 window.onload = () => {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user'));
+    
     if (token && user) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-shell').style.display = 'block';
-        document.getElementById('user-display-name').innerText = `👤 ${user.name}`;
+        document.getElementById('user-display-name').innerText = `👤 ${user.name} (${user.role})`;
+        
+        if (user.role !== 'ADMIN' && user.role !== 'OWNER') {
+            const btnRep = document.getElementById('btnReportes');
+            if (btnRep) btnRep.style.display = 'none';
+        }
         cargarInventario();
-        mostrarSeccion('venta');
     }
 };
