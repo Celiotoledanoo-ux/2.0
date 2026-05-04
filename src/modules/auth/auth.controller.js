@@ -1,40 +1,47 @@
 import * as authService from './auth.service.js';
 import logger from '../../core/logger/logger.js';
-import AppError from '../../core/errors/AppError.js';
 import catchAsync from '../../shared/utils/async.utils.js';
 
 /**
- * 🔐 LOGIN DE USUARIOS POR CAJA
+ * 🔐 LOGIN DE USUARIOS/CAJAS
  */
 export const login = catchAsync(async (req, res, next) => {
-  // 🔄 Cambiamos 'email' por 'username' para que coincida con el Schema de Zod
   const { username, password } = req.body;
 
-  // Ejecución de la lógica en el Service pasando el username
+  // El service ya maneja la lógica de "Caja 1" -> "caja1@sistema.local"
   const result = await authService.login(username, password);
 
-  // 📢 Auditoría de seguridad (Mantenemos el log para saber qué caja entró)
   logger.info({
     event: 'AUTH_LOGIN_SUCCESS',
-    caja: username,
-    userId: result.user.id,
+    user: username,
+    role: result.user.role,
     ip: req.ip
   });
 
+  // Enviamos todo: User y Session (Token)
   res.status(200).json({
     status: 'success',
+    message: `Bienvenido de nuevo, ${result.user.name}`,
     data: result
   });
 });
 
 /**
- * 🚪 CIERRE DE SESIÓN
+ * 🚪 LOGOUT
  */
 export const logout = catchAsync(async (req, res, next) => {
-  await authService.logout();
+  // 💡 Tip: Supabase Auth a veces requiere el token para desloguear en el server
+  // Si solo vas a borrar el token en el front, este endpoint puede ser simple
+  // pero vamos a dejarlo preparado por si implementas lista negra de tokens.
+  
+  logger.info({
+    event: 'AUTH_LOGOUT',
+    userId: req.user?.id, // Gracias al middleware 'protect' ya tenemos al user aquí
+    ip: req.ip
+  });
 
-  res.status(204).json({
+  res.status(200).json({ // Cambié a 200 para poder mandar un mensaje de confirmación
     status: 'success',
-    data: null
+    message: 'Sesión cerrada correctamente'
   });
 });

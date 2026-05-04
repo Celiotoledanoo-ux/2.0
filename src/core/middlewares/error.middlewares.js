@@ -1,25 +1,18 @@
 import { env } from '../config/env.js';
-import logger from '../logger/logger.js'; // ✅ Importamos el logger central
+import logger from '../logger/logger.js';
 
-/**
- * 🚨 Middleware global de errores
- */
 export const globalErrorHandler = (err, req, res, next) => {
   const statusCode = err?.statusCode || 500;
   const status = err?.status || 'error';
 
-  // 1. 🛡️ SANITIZACIÓN (Seguridad)
+  // 1. 🛡️ SANITIZACIÓN DE AUDITORÍA
   const sanitizedBody = { ...req.body };
-  const keysToDelete = ['password', 'token', 'confirmPassword', 'oldPassword'];
-  keysToDelete.forEach(key => delete sanitizedBody[key]);
+  ['password', 'token', 'oldPassword'].forEach(key => delete sanitizedBody[key]);
 
-  // 2. 🔥 LOGGING (Usamos nuestro logger central)
-  // En lugar de req.log, usamos el logger que ya blindamos antes
+  // 2. 🔥 LOGGING PROFESIONAL
   logger.error({
     event: 'REQUEST_ERROR',
     message: err.message,
-    stack: env.isDevelopment ? err.stack : undefined,
-    code: err.code,
     context: {
       method: req.method,
       url: req.originalUrl,
@@ -28,46 +21,34 @@ export const globalErrorHandler = (err, req, res, next) => {
     }
   });
 
-  // 3. 🧪 RESPUESTA DESARROLLO
+  // 3. 🧪 MODO DESARROLLO (Full info)
   if (process.env.NODE_ENV === 'development') {
     return res.status(statusCode).json({
       status,
       message: err.message,
-      error: err,
       stack: err.stack,
+      error: err
     });
   }
 
-  // 4. 🛡️ RESPUESTA PRODUCCIÓN (Render)
+  // 4. 🛡️ MODO PRODUCCIÓN (Mensajes amigables)
   
-  // Errores de Zod (Validation Error)
-  if (err.name === 'ZodError' || err.message === 'Error de validación') {
-    return res.status(400).json({
-      status: 'fail',
-      message: err.message,
-      errors: err.errors || undefined
-    });
-  }
+  // Manejo de errores de Base de Datos (Postgres)
+  if (err.code === '23505') err.message = 'Este registro ya existe (Duplicado).';
+  if (err.code === '23503') err.message = 'Error de referencia: El elemento relacionado no existe.';
+  if (err.code === '23514') err.message = 'Operación rechazada: Stock insuficiente o datos inválidos.';
 
-  // Errores de DB (Postgres/Supabase)
-  if (err.code?.startsWith('23')) {
-    return res.status(400).json({
-      status: 'fail',
-      message: 'Conflicto de integridad en los datos.'
-    });
-  }
-
-  // Errores Operacionales (AppError)
-  if (err.isOperational) {
+  // Si es un error que nosotros lanzamos (AppError) o uno conocido
+  if (err.isOperational || statusCode < 500) {
     return res.status(statusCode).json({
       status,
-      message: err.message,
+      message: err.message
     });
   }
 
-  // Error crítico genérico (Lo que no conocemos)
+  // Error crítico (Bug no controlado)
   return res.status(500).json({
     status: 'error',
-    message: 'Algo salió muy mal en el servidor.'
+    message: 'Ocurrió un error inesperado. Por favor, contacta a soporte.'
   });
 };

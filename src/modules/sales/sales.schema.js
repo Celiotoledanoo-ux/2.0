@@ -1,37 +1,23 @@
 import { z } from 'zod';
 
-/**
- * 🛒 SALES VALIDATION SCHEMA
- */
 export const createSaleSchema = z.object({
   body: z.object({
-    // Carrito de productos
     items: z.array(
       z.object({
         product_id: z.string().uuid('ID de producto no válido'),
-        quantity: z.coerce
-          .number()
-          .int('La cantidad debe ser entera')
-          .positive('La cantidad debe ser mayor a 0'),
-        // Coincide exacto con la base de datos y el service
-        price_at_sale: z.coerce
-          .number()
-          .positive('El precio unitario debe ser positivo')
+        quantity: z.coerce.number().int().positive('La cantidad debe ser mayor a 0'),
+        price_at_sale: z.coerce.number().positive('El precio debe ser positivo')
       })
-    )
-    .min(1, 'La venta debe tener al menos un producto'),
+    ).min(1, 'La venta debe tener al menos un producto'),
 
-    // Método de pago (Sincronizado con tus ENUMS si los tienes)
     payment_method: z.enum(['CASH', 'CARD', 'TRANSFER'], {
-      errorMap: () => ({ message: 'Método de pago no soportado (CASH, CARD, TRANSFER)' })
+      errorMap: () => ({ message: 'Método de pago no soportado' })
     }),
 
+    // 🔥 Agregamos validación de monto recibido para el flujo de caja
+    received_amount: z.coerce.number().min(0).optional(),
+    
     customer_id: z.string().uuid('ID de cliente inválido').optional(),
-
-    // Descuento como monto fijo (dinero)
-    discount: z.coerce
-      .number()
-      .min(0, 'El descuento no puede ser negativo')
-      .default(0)
+    discount: z.coerce.number().min(0).default(0)
   })
 });

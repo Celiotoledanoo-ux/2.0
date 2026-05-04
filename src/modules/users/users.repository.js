@@ -3,58 +3,69 @@ import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 👥 USERS REPOSITORY
+ * 👥 USERS REPOSITORY - REFACTORIZADO PARA MODO MAESTRO
  */
 
 // 1. Crear usuario
 export const create = async (userData) => {
+  // Desestructuramos para asegurar que no mandamos basura a SQL
   const { data, error } = await db
     .from(TABLES.USERS)
-    .insert([userData])
-    .select('id, email, name, role, active, created_at') // 🟢 No devolvemos el password al crear
+    .insert([userData]) // userData ya trae el ID de Auth desde el Service
+    .select('id, email, name, role, active, avatar_url, created_at') 
     .single();
 
   if (error) {
-    if (error.code === '23505') throw new AppError('El correo ya está registrado', 409);
+    // Error 23505 es violación de unicidad (ya existe)
+    if (error.code === '23505') throw new AppError('El correo o ID ya está registrado', 409);
     console.error(`[USER_CREATE_ERROR]: ${error.message}`);
-    throw new AppError('Error al crear usuario', 500);
+    throw new AppError('Error interno al guardar en la base de datos pública', 500);
   }
   return data;
 };
 
-// 2. Buscar por Email (Específico para Auth)
+// 2. Buscar por Email
 export const findByEmail = async (email) => {
   const { data, error } = await db
     .from(TABLES.USERS)
-    .select('*') // Aquí sí traemos todo para que el Service compare contraseñas
+    .select('*')
     .eq('email', email.toLowerCase().trim())
     .maybeSingle();
 
-  if (error) throw new AppError('Error al buscar el usuario', 500);
+  if (error) {
+    console.error(`[USER_FIND_EMAIL_ERROR]: ${error.message}`);
+    throw new AppError('Error al buscar el usuario por email', 500);
+  }
   return data;
 };
 
-// 3. Buscar por ID (Uso general)
+// 3. Buscar por ID
 export const findById = async (id) => {
   const { data, error } = await db
     .from(TABLES.USERS)
-    .select('id, email, name, role, active') // 🛡️ Password fuera por seguridad
+    .select('id, email, name, role, active, avatar_url') 
     .eq('id', id)
     .maybeSingle();
 
-  if (error) throw new AppError('Error al obtener datos del usuario', 500);
+  if (error) {
+    console.error(`[USER_FIND_ID_ERROR]: ${error.message}`);
+    throw new AppError('Error al obtener datos del usuario', 500);
+  }
   return data;
 };
 
-// 4. Actualizar usuario (Activar/Desactivar/Cambiar Rol)
+// 4. Actualizar usuario
 export const update = async (id, updateData) => {
   const { data, error } = await db
     .from(TABLES.USERS)
     .update(updateData)
     .eq('id', id)
-    .select('id, email, name, role, active')
+    .select('id, email, name, role, active, avatar_url')
     .single();
 
-  if (error) throw new AppError('No se pudo actualizar el usuario', 500);
+  if (error) {
+    console.error(`[USER_UPDATE_ERROR]: ${error.message}`);
+    throw new AppError('No se pudo actualizar el perfil en la base de datos', 500);
+  }
   return data;
 };

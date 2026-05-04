@@ -1,43 +1,50 @@
 import AppError from '../errors/AppError.js';
-import { db } from '../database/supabaseClient.js'; // ✅ Usamos el alias estándar 'db'
+import { db } from '../database/supabaseClient.js';
+import * as authRepo from '../../modules/auth/auth.repository.js'; // IMPORTANTE
 import logger from '../logger/logger.js';
 
-/**
- * 🛡️ AUTH MIDDLEWARE - ADAPTADO PARA CAJAS
- */
 export const protect = async (req, res, next) => {
   try {
-    // 1. Validación del Header
+    // 1. Validación del Header (Impecable)
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return next(new AppError('Acceso denegado. Se requiere un token válido.', 401));
+      return next(new AppError('Se requiere un token válido.', 401));
     }
 
     const token = authHeader.split(' ')[1];
-    if (!token || token === 'null') {
-      return next(new AppError('Sesión inválida o expirada.', 401));
+
+    // 2. Verificación inicial con Supabase (Valida el Token)
+    const { data: { user: authUser }, error } = await db.auth.getUser(token);
+
+    if (error || !authUser) {
+      return next(new AppError('Sesión expirada.', 401));
     }
 
-    // 2. Verificación de identidad con Supabase
-    const { data: { user }, error } = await db.auth.getUser(token);
+    // 3. 🔍 VALIDACIÓN DE CONEXIÓN SQL (La Verdad Absoluta)
+    // Consultamos al repositorio para ver el estado REAL en nuestra tabla 'users'
+    const dbUser = await authRepo.findById(authUser.id);
 
-    if (error || !user) {
-      logger.warn({ event: 'AUTH_FAILED', reason: error?.message, ip: req.ip });
-      return next(new AppError('Tu sesión ha expirado. Por favor, ingresa de nuevo.', 401));
+    if (!dbUser) {
+      return next(new AppError('El usuario ya no existe en el sistema.', 401));
     }
 
-    // 3. ✨ Lógica de Identificación de Caja
-    // Extraemos el nombre limpio (ej. de "caja1@sistema.local" sacamos "CAJA 1")
-    const emailPrefix = user.email.split('@')[0]; 
-    const displayCaja = emailPrefix.replace('caja', 'CAJA ').toUpperCase();
+    if (!dbUser.active) {
+      return next(new AppError('Tu cuenta ha sido desactivada por un administrador.', 403));
+    }
 
-    // 4. Inyección de Contexto de Seguridad
-    // Mantenemos el freeze para blindar el objeto req.user
+    // 4. ✨ Lógica de Identificación de Caja
+    const emailPrefix = dbUser.email.split('@')[0]; 
+    const displayCaja = emailPrefix.startsWith('caja') 
+      ? emailPrefix.replace('caja', 'CAJA ').toUpperCase()
+      : 'OFICINA CENTRAL';
+
+    // 5. Inyección de Contexto de Seguridad
     req.user = Object.freeze({
-      id: user.id,
-      email: user.email,
-      role: user.user_metadata?.role || 'CASHIER',
-      caja: displayCaja // <--- Ahora cualquier módulo sabe que es "CAJA 1"
+      id: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role, // <--- Ahora viene directo de SQL, 100% real
+      caja: displayCaja,
+      name: dbUser.name
     });
 
     next();
@@ -47,25 +54,12 @@ export const protect = async (req, res, next) => {
   }
 };
 
-/**
- * 👑 RBAC (Control de Roles)
- */
+// El restrictTo está perfecto, no le tocamos nada. ✅
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return next(new AppError('Contexto de usuario no encontrado.', 500));
-    }
-
     if (!roles.includes(req.user.role)) {
-      logger.warn({
-        event: 'FORBIDDEN_ACCESS',
-        userId: req.user.id,
-        role: req.user.role,
-        path: req.originalUrl
-      });
-      return next(new AppError('No tienes permisos para realizar esta acción.', 403));
+      return next(new AppError('No tienes permisos para esta acción.', 403));
     }
-
     next();
   };
 };

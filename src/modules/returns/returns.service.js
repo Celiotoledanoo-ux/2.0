@@ -1,51 +1,54 @@
 import * as returnsRepo from './returns.repository.js';
-import * as salesRepo from '../sales/sales.repository.js';
+import * as salesRepo from '../sales/sales.repository.js'; // Usaremos findWithItems
 import * as inventoryService from '../inventory/inventory.service.js';
 import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
- * 🔄 RETURNS SERVICE (Versión Final Blindada)
+ * 🔄 RETURNS SERVICE - MODO CIRUJANO
  */
 export const processFullReturn = async (saleId, reason, userId) => {
   if (!saleId) throw new AppError('El ID de venta es requerido', 400);
 
-  // 1. 🔍 Obtener venta y verificar estado (Tu lógica rescatada)
-  // Nota: Asegúrate que salesRepo tenga findById que incluya items
-  const sale = await salesRepo.create({ id: saleId }); // Simulando búsqueda por ahora
+  // 1. 🔍 BUSCAR VENTA CON SUS ITEMS (Fundamental)
+  // Usamos el método findWithItems que añadimos al salesRepo
+  const sale = await salesRepo.findWithItems(saleId);
   
-  if (!sale) throw new AppError('Venta no encontrada', 404);
-  if (sale.status === 'REFUNDED') throw new AppError('Esta venta ya fue devuelta anteriormente', 400);
+  if (!sale) throw new AppError('La venta no existe en el sistema', 404);
+  if (sale.status === 'REFUNDED') throw new AppError('Esta venta ya fue devuelta en su totalidad', 400);
 
-  // 2. 🔁 RESTOCK (Usando nuestro inventoryService ya probado)
-  // Aquí asumimos que 'sale.items' viene de la relación en la DB
-  const items = sale.items || []; 
-  
-  for (const item of items) {
-    await inventoryService.adjustStock(
-      item.product_id,
-      Math.abs(item.quantity), // Siempre positivo para sumar al stock
-      userId,
-      `Devolución Venta #${saleId.split('-')[0]}`
-    );
+  // 2. 🔁 RESTOCK AUTOMÁTICO
+  // Si la venta tiene items, los regresamos al inventario uno por uno
+  if (sale.items && sale.items.length > 0) {
+    for (const item of sale.items) {
+      await inventoryService.adjustStock(
+        item.product_id,
+        Math.abs(item.quantity), // Sumamos al stock
+        userId,
+        `DEVOLUCIÓN: Venta #${saleId.slice(0, 8)}`
+      );
+    }
   }
 
-  // 3. 📝 REGISTRAR DEVOLUCIÓN Y ACTUALIZAR VENTA
+  // 3. 📝 REGISTRAR EN SQL (Cabecera y Estado)
+  // Primero registramos que hubo una devolución
   const returnEntry = await returnsRepo.create({
     sale_id: saleId,
-    reason: reason || 'Devolución completa',
+    reason: reason || 'Devolución completa de productos',
     amount_refunded: sale.total,
     user_id: userId
   });
 
+  // Marcamos la venta original como devuelta para que no se cobre dos veces
   await returnsRepo.updateSaleStatus(saleId, 'REFUNDED');
 
-  // 4. 📢 AUDITORÍA FINAL
+  // 4. 📢 AUDITORÍA DE SEGURIDAD
   logger.warn({
-    event: 'SALE_REFUNDED',
-    saleId,
+    event: 'INVENTORY_RESTOCK_BY_RETURN',
+    saleId: saleId,
     refundedBy: userId,
-    amount: sale.total
+    totalRefunded: sale.total,
+    caja: req.user?.caja || 'SISTEMA' // Si logramos pasar el req.user completo
   });
 
   return returnEntry;

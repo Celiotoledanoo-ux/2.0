@@ -6,41 +6,59 @@ import logger from '../../core/logger/logger.js';
  */
 export const getFinancialSummary = async () => {
   const now = new Date();
-  
-  // 📅 Ajuste de fecha para que coincida con el formato YYYY-MM-DD
   const today = now.toISOString().split('T')[0];
 
-  // ⚡ Ejecución en paralelo de todas las métricas
+  // ⚡ Ejecución en paralelo (Eficiencia pura)
   const results = await Promise.allSettled([
     reportsRepo.getDailyRevenue(today),
-    reportsRepo.getTopSellingProducts(5),
-    reportsRepo.getLowStockAlerts() // 🟢 Agregado: para que el dueño sepa qué comprar
+    reportsRepo.getTopSellingProducts(100), // Traemos muestra para agrupar
+    reportsRepo.getLowStockAlerts()
   ]);
 
-  // Manejo seguro de resultados (Tu lógica impecable)
-  const dailyTotal = results[0].status === 'fulfilled' ? results[0].value : 0;
-  const topProducts = results[1].status === 'fulfilled' ? results[1].value : [];
+  // 1. Extraer Ingresos
+  const dailyData = results[0].status === 'fulfilled' ? results[0].value : { total: 0, transactionCount: 0 };
+
+  // 2. 🧠 Lógica de Agrupación de Top Productos
+  // Transformamos la lista plana en un ranking real
+  const rawProducts = results[1].status === 'fulfilled' ? results[1].value : [];
+  const productMap = {};
+
+  rawProducts.forEach(item => {
+    const name = item.product?.name || 'Producto Desconocido';
+    productMap[name] = (productMap[name] || 0) + item.quantity;
+  });
+
+  const topProducts = Object.entries(productMap)
+    .map(([name, quantity]) => ({ name, quantity }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5); // Nos quedamos con el Top 5 real
+
+  // 3. Stock Crítico
   const lowStock = results[2].status === 'fulfilled' ? results[2].value : [];
 
-  // 📢 Auditoría de Reportes
+  // 📢 Auditoría
   logger.info({
     event: 'REPORT_GENERATED',
     date: today,
-    revenue: dailyTotal,
-    criticalStockCount: lowStock.length
+    revenue: dailyData.total,
+    criticalItems: lowStock.length
   });
 
   return {
     report_date: today,
     metrics: {
-      total_revenue: dailyTotal,
+      total_revenue: dailyData.total,
+      sales_count: dailyData.transactionCount,
       top_products: topProducts,
-      critical_inventory: lowStock
+      critical_inventory: {
+        count: lowStock.length,
+        items: lowStock
+      }
     },
-    // Estado rápido del negocio
     business_status: {
-      has_sales: dailyTotal > 0,
-      needs_restock: lowStock.length > 0
+      has_sales: dailyData.total > 0,
+      needs_restock: lowStock.length > 0,
+      health_score: lowStock.length === 0 ? 'EXCELLENT' : 'ATTENTION_REQUIRED'
     }
   };
 };

@@ -1,45 +1,47 @@
-import * as authRepo from './auth.repository.js';
-import { db } from '../../core/database/supabaseClient.js';
-import AppError from '../../core/errors/AppError.js';
-
-/**
- * 🔐 AUTH SERVICE - ACTUALIZADO PARA CAJAS
- */
-
-// Cambiamos el parámetro 'email' por 'username' para que sea más claro
-export const login = async (username, password) => {
-  if (!username || !password) {
-    throw new AppError('Por favor, proporciona el nombre de caja y contraseña', 400);
+export const login = async (identifier, password) => {
+  if (!identifier || !password) {
+    throw new AppError('Por favor, proporciona credenciales de acceso', 400);
   }
 
-  // 1. 🔄 Transformamos "Caja 1" en "caja1@sistema.local"
-  const normalizedUsername = username.trim().toLowerCase().replace(/\s+/g, '');
-  const virtualEmail = `${normalizedUsername}@sistema.local`;
+  // 1. 🧠 DETECTAR IDENTIDAD
+  let finalEmail = identifier.trim().toLowerCase();
+  
+  // Si NO tiene un "@", asumimos que es un nombre de caja (ej: "Caja 1")
+  if (!finalEmail.includes('@')) {
+    const normalizedBox = finalEmail.replace(/\s+/g, '');
+    finalEmail = `${normalizedBox}@sistema.local`;
+  }
 
-  // 2. 🛡️ Usamos el motor de Supabase con el email virtual
+  // 2. 🛡️ Intento de Login en Supabase
   const { data, error } = await db.auth.signInWithPassword({
-    email: virtualEmail,
+    email: finalEmail,
     password,
   });
 
   if (error || !data?.user) {
-    throw new AppError('Credenciales de acceso incorrectas para esta caja', 401);
+    // Log interno para ti, pero mensaje genérico para el usuario (Seguridad)
+    console.error('[AUTH_ERROR]:', error?.message);
+    throw new AppError('Credenciales incorrectas o caja no registrada', 401);
   }
 
-  // 3. 🔍 Buscamos los datos extra en tu tabla de 'users'
+  // 3. 🔍 Sincronización con la Tabla Pública
   const userDetails = await authRepo.findById(data.user.id);
 
-  if (!userDetails || !userDetails.active) {
-    throw new AppError('Esta caja no está activa. Contacta al administrador.', 403);
+  if (!userDetails) {
+    throw new AppError('Error de sincronización: Perfil no encontrado en SQL', 404);
   }
 
-  // 4. 📦 Retornamos los datos (manteniendo la estructura para no romper el front)
+  if (!userDetails.active) {
+    throw new AppError('Esta cuenta/caja está desactivada.', 403);
+  }
+
+  // 4. 📦 Respuesta Maestra
   return {
     user: {
       id: userDetails.id,
       email: userDetails.email,
       role: userDetails.role,
-      name: username // Aquí devolvemos "Caja 1" original para el UI
+      name: userDetails.name // Usamos el nombre real guardado en SQL
     },
     session: {
       accessToken: data.session.access_token,
@@ -48,4 +50,3 @@ export const login = async (username, password) => {
     }
   };
 };
-
