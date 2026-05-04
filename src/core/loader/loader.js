@@ -1,31 +1,25 @@
 import logger from '../logger/logger.js';
-// Importamos el router global que une a todos los módulos
 import globalRouter from '../../routes/index.js';
 
 /**
- * 🏗️ SYSTEM LOADER
- * El encargado de inicializar la arquitectura y conectar los cables
+ * 🏗️ SYSTEM LOADER - VERSIÓN SINCRONIZADA
  */
-export default (app) => {
+export default () => { 
   try {
     logger.info('🚀 Iniciando carga de módulos del sistema...');
 
-    // 1. Cargamos el Router Global (que ya tiene users, sales, auth, etc.)
-    // El prefijo /api/v1 se gestiona en app.js, aquí solo inyectamos la lógica
-    app.use(globalRouter);
+    // ✅ La clave: Quitamos el "app.use" de aquí adentro.
+    // Solo avisamos que los módulos están listos.
+    logger.info('✅ Módulos listos para inyección: [Auth, Users, Inventory, Sales, Returns, Reports]');
 
-    logger.info('✅ Módulos cargados exitosamente: [Auth, Users, Inventory, Sales, Returns, Reports]');
-
-    // 2. Aquí podrías inicializar otros servicios globales en el futuro
-    // Ej: Conexiones a colas de mensajería, cron jobs de limpieza, etc.
-
-    return app;
+    // ✅ Retornamos el router para que app.js lo reciba en el Paso 8
+    return globalRouter; 
+    
   } catch (error) {
     logger.error({
       event: 'LOADER_CRITICAL_ERROR',
       message: error.message
     });
-    // Si el loader falla, el sistema no es seguro, así que detenemos todo
     process.exit(1);
   }
 };
