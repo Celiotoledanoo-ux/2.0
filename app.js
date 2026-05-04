@@ -28,7 +28,8 @@ app.use(httpLogger);
 
 // --- 2. SEGURIDAD HTTP ---
 app.use(helmet({
-  contentSecurityPolicy: isProd ? undefined : false 
+  contentSecurityPolicy: false, // 🔓 Desactivamos CSP temporalmente para que tus botones funcionen
+  crossOriginEmbedderPolicy: false
 }));
 
 // --- 3. CORS ---
