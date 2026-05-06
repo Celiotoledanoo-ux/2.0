@@ -4,60 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopper BeautyMX | POS System</title>
-    <!-- Google Fonts para un look moderno -->
+    <!-- Google Fonts: Inter para legibilidad máxima -->
     <link href="https://googleapis.com" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="retail-bg">
 
-<!-- 🔐 PANTALLA DE LOGIN (MODERNA) -->
+<!-- 🔐 PANTALLA DE LOGIN (MODERNA Y FUNCIONAL) -->
 <div id="login-screen" class="auth-wrapper">
     <div class="login-card">
-        <div class="brand-header">
-            <span class="logo-icon">💄</span>
+        <header class="brand-header">
+            <div class="logo-circle">💄</div>
             <h1>Shopper <span>BeautyMX</span></h1>
             <p>SISTEMA DE CONTROL RETAIL</p>
-        </div>
-        <div class="form-group">
-            <label>Identificador de Acceso</label>
-            <input type="text" id="login-email" placeholder="Ej: Caja 1 o admin@beauty.com">
+        </header>
+
+        <!-- FORM añadido para que funcione el ENTER automáticamente -->
+        <form id="login-form" class="form-group" onsubmit="event.preventDefault(); ejecutarLogin();">
+            <div class="input-block">
+                <label for="login-email">Identificador de Acceso</label>
+                <input type="email" id="login-email" placeholder="admin@beauty.com" required>
+            </div>
             
-            <label>Contraseña</label>
-            <input type="password" id="login-pass" placeholder="••••••••">
+            <div class="input-block">
+                <label for="login-pass">Contraseña</label>
+                <input type="password" id="login-pass" placeholder="••••••••" required>
+            </div>
             
-            <button class="btn-primary full-width" onclick="ejecutarLogin()">INICIAR TURNO</button>
-        </div>
-        <div class="auth-footer">v2.0.4 | Seguridad Encriptada</div>
+            <button type="submit" class="btn-primary full-width">
+                <span>INICIAR TURNO</span>
+                <span class="icon">→</span>
+            </button>
+        </form>
+
+        <footer class="auth-footer">
+            <span class="status-dot"></span> v2.0.5 | Servidor Seguro
+        </footer>
     </div>
 </div>
 
-<!-- 📦 SISTEMA PRINCIPAL (LAYOUT RETAIL) -->
+<!-- 📦 SISTEMA PRINCIPAL (LAYOUT RETAIL OPTIMIZADO) -->
 <div id="app-shell" style="display:none;">
     
-    <!-- 🔝 HEADER PROFESIONAL -->
     <header class="main-header">
         <div class="header-brand">
             <strong>Shopper</strong> BeautyMX
         </div>
         <nav class="main-nav">
-            <button class="nav-item active" onclick="mostrarSeccion('venta')">🛒 VENTAS [F1]</button>
-            <button class="nav-item" onclick="mostrarSeccion('inventario')">📦 STOCK [F2]</button>
-            <button class="nav-item" onclick="mostrarSeccion('reportes')">📈 REPORTES [F3]</button>
+            <!-- Usamos [data-section] para manejar mejor el JS -->
+            <button class="nav-item active" onclick="mostrarSeccion('venta')">
+                <span class="icon">🛒</span> VENTAS <kbd>F1</kbd>
+            </button>
+            <button class="nav-item" onclick="mostrarSeccion('inventario')">
+                <span class="icon">📦</span> STOCK <kbd>F2</kbd>
+            </button>
+            <button class="nav-item" onclick="mostrarSeccion('reportes')">
+                <span class="icon">📈</span> REPORTES <kbd>F3</kbd>
+            </button>
         </nav>
         <div class="header-user">
-            <span id="user-display-name">👤 Usuario</span>
-            <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+            <div class="user-info">
+                <span class="role-badge">OWNER</span>
+                <span id="user-display-name">Celio Toledano</span>
+            </div>
+            <button class="btn-logout" title="Cerrar Sesión" onclick="cerrarSesion()">✕</button>
         </div>
     </header>
 
     <main class="content-area">
-        <!-- 🛒 SECCIÓN VENTA (ENFOCADA A VELOCIDAD) -->
-        <div id="venta" class="seccion activa">
+        <!-- 🛒 SECCIÓN VENTA -->
+        <section id="venta" class="seccion activa">
             <div class="pos-grid">
-                <!-- Columna Izquierda: Buscador y Carrito -->
                 <div class="pos-main">
-                    <div class="search-container">
-                        <input type="text" id="codigo-busqueda" placeholder="Escribe el nombre del maquillaje o escanea SKU..." oninput="buscarEnVenta()">
+                    <div class="search-bar">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="codigo-busqueda" 
+                               placeholder="Busca por nombre o escanea SKU..." 
+                               oninput="buscarEnVenta()" autofocus>
                         <div id="resultados-busqueda" class="dropdown-results"></div>
                     </div>
                     
@@ -67,66 +90,80 @@
                                 <tr>
                                     <th>PRODUCTO</th>
                                     <th>PRECIO</th>
-                                    <th>CANT.</th>
+                                    <th style="width: 80px;">CANT.</th>
                                     <th>SUBTOTAL</th>
                                     <th></th>
                                 </tr>
                             </thead>
-                            <tbody id="tabla-carrito"></tbody>
+                            <tbody id="tabla-carrito">
+                                <!-- Filas dinámicas -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Columna Derecha: Totales y Cobro -->
                 <div class="pos-sidebar">
                     <div class="summary-card">
                         <h3>RESUMEN DE VENTA</h3>
-                        <div class="summary-row">
-                            <span>Subtotal:</span>
-                            <span id="subtotal-display">$0.00</span>
-                        </div>
-                        <div class="summary-row total">
-                            <span>TOTAL:</span>
-                            <span id="total-venta">$0.00</span>
+                        <div class="summary-details">
+                            <div class="summary-row">
+                                <span>Subtotal</span>
+                                <span id="subtotal-display">$0.00</span>
+                            </div>
+                            <div class="summary-row divider">
+                                <span>Descuento</span>
+                                <span>-$0.00</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>TOTAL</span>
+                                <span id="total-venta">$0.00</span>
+                            </div>
                         </div>
                         
-                        <div class="payment-method">
+                        <div class="field-group">
                             <label>Método de Pago</label>
-                            <select id="metodo-pago">
+                            <select id="metodo-pago" class="modern-select">
                                 <option value="CASH">💵 Efectivo</option>
                                 <option value="CARD">💳 Tarjeta / Terminal</option>
                                 <option value="TRANSFER">🏦 Transferencia</option>
                             </select>
                         </div>
                         
-                        <button class="btn-pay" onclick="procesarVenta()">FINALIZAR COBRO [F10]</button>
-                        <button class="btn-clear" onclick="vaciarCarrito()">Vaciar Carrito</button>
+                        <div class="action-buttons">
+                            <button class="btn-pay" onclick="procesarVenta()">FINALIZAR COBRO <kbd>F10</kbd></button>
+                            <button class="btn-clear-link" onclick="vaciarCarrito()">Limpiar Carrito</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- 📦 SECCIÓN INVENTARIO -->
-        <div id="inventario" class="seccion">
+        <section id="inventario" class="seccion">
             <div class="inventory-layout">
-                <div class="card-form">
-                    <h3>Registrar Nuevo Producto</h3>
-                    <div class="form-grid">
-                        <input type="text" id="inv-sku" placeholder="SKU / Código Barras">
-                        <input type="text" id="inv-nombre" placeholder="Nombre (ej: Labial Mate Rojo)">
-                        <input type="number" id="inv-stock" placeholder="Stock Inicial">
-                        <input type="number" id="inv-precio" placeholder="Precio de Venta">
-                        <button class="btn-add" onclick="crearProducto()">Guardar en Catálogo</button>
-                    </div>
-                </div>
+                <aside class="card-form">
+                    <h3>Registrar Producto</h3>
+                    <form class="form-grid" onsubmit="event.preventDefault(); crearProducto();">
+                        <input type="text" id="inv-sku" placeholder="SKU / Código" required>
+                        <input type="text" id="inv-nombre" placeholder="Nombre del producto" required>
+                        <div class="input-row">
+                            <input type="number" id="inv-stock" placeholder="Stock" required>
+                            <input type="number" id="inv-precio" placeholder="Precio" step="0.01" required>
+                        </div>
+                        <button type="submit" class="btn-add">Añadir al Inventario</button>
+                    </form>
+                </aside>
                 
                 <div class="table-card">
+                    <div class="table-header">
+                        <h3>Listado de Existencias</h3>
+                    </div>
                     <table id="tabla-inventario-real" class="retail-table">
                         <thead>
                             <tr>
                                 <th>SKU</th>
                                 <th>DESCRIPCIÓN</th>
-                                <th>EXISTENCIA</th>
+                                <th>STOCK</th>
                                 <th>PRECIO</th>
                                 <th>ESTADO</th>
                             </tr>
@@ -135,22 +172,31 @@
                     </table>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- 📊 SECCIÓN REPORTES -->
-        <div id="reportes" class="seccion">
+        <section id="reportes" class="seccion">
             <div class="dashboard-grid">
-                <div class="kpi-card highlight">
-                    <label>Ventas de Hoy</label>
-                    <div id="rep-cantidad" class="value">0</div>
+                <div class="kpi-card">
+                    <div class="kpi-icon">🛒</div>
+                    <div class="kpi-data">
+                        <label>Ventas de Hoy</label>
+                        <div id="rep-cantidad" class="value">0</div>
+                    </div>
                 </div>
                 <div class="kpi-card success">
-                    <label>Ingresos Totales</label>
-                    <div id="rep-ingresos" class="value">$0.00</div>
+                    <div class="kpi-icon">💰</div>
+                    <div class="kpi-data">
+                        <label>Ingresos Totales</label>
+                        <div id="rep-ingresos" class="value">$0.00</div>
+                    </div>
                 </div>
                 <div class="kpi-card warning">
-                    <label>Productos con Stock Bajo</label>
-                    <div id="rep-alertas" class="value">0</div>
+                    <div class="kpi-icon">⚠️</div>
+                    <div class="kpi-data">
+                        <label>Stock Bajo</label>
+                        <div id="rep-alertas" class="value">0</div>
+                    </div>
                 </div>
             </div>
 
@@ -158,7 +204,7 @@
                 <h3>🔔 Alertas de Reabastecimiento</h3>
                 <ul id="lista-stock-bajo" class="clean-list"></ul>
             </div>
-        </div>
+        </section>
     </main>
 </div>
 
