@@ -1,54 +1,48 @@
-import { env } from '../config/env.js';
 import logger from '../logger/logger.js';
 
 export const globalErrorHandler = (err, req, res, next) => {
-  const statusCode = err?.statusCode || 500;
-  const status = err?.status || 'error';
+  let statusCode = err?.statusCode || 500;
+  let status = err?.status || 'error';
+  let message = err.message;
 
-  // 1. 🛡️ SANITIZACIÓN DE AUDITORÍA
+  // 1. 🛡️ SANITIZACIÓN (No logueamos datos sensibles)
   const sanitizedBody = { ...req.body };
-  ['password', 'token', 'oldPassword'].forEach(key => delete sanitizedBody[key]);
+  ['password', 'token', 'oldPassword', 'newPassword'].forEach(key => delete sanitizedBody[key]);
 
-  // 2. 🔥 LOGGING PROFESIONAL
+  // 2. 🔥 LOGGING DE PRECISIÓN
   logger.error({
-    event: 'REQUEST_ERROR',
+    event: 'REQUEST_FAILED',
     message: err.message,
-    context: {
-      method: req.method,
-      url: req.originalUrl,
-      userId: req.user?.id || 'anonymous',
-      payload: req.method !== 'GET' ? sanitizedBody : undefined,
-    }
+    path: req.originalUrl,
+    userId: req.user?.id || 'GUEST',
+    method: req.method
   });
 
-  // 3. 🧪 MODO DESARROLLO (Full info)
+  // 3. 🧪 MODO DESARROLLO
   if (process.env.NODE_ENV === 'development') {
-    return res.status(statusCode).json({
-      status,
-      message: err.message,
-      stack: err.stack,
-      error: err
-    });
+    return res.status(statusCode).json({ status, message, stack: err.stack, error: err });
   }
 
-  // 4. 🛡️ MODO PRODUCCIÓN (Mensajes amigables)
+  // 4. 🛡️ MODO PRODUCCIÓN (Traducción de códigos de Supabase/Postgres)
+  // Errores de integridad (Postgres codes)
+  if (err.code === '23505') message = 'El registro ya existe (Dato duplicado).';
+  if (err.code === '23503') message = 'No se puede completar: El elemento relacionado no existe.';
+  if (err.code === '23514') message = 'Restricción violada: Verifica el stock o los valores mínimos.';
   
-  // Manejo de errores de Base de Datos (Postgres)
-  if (err.code === '23505') err.message = 'Este registro ya existe (Duplicado).';
-  if (err.code === '23503') err.message = 'Error de referencia: El elemento relacionado no existe.';
-  if (err.code === '23514') err.message = 'Operación rechazada: Stock insuficiente o datos inválidos.';
+  // Errores de conexión (Network/Render)
+  if (err.code === 'ECONNREFUSED') message = 'Error de conexión con la base de datos.';
 
-  // Si es un error que nosotros lanzamos (AppError) o uno conocido
+  // Errores operacionales (Lanzados por nosotros con AppError)
   if (err.isOperational || statusCode < 500) {
     return res.status(statusCode).json({
       status,
-      message: err.message
+      message
     });
   }
 
-  // Error crítico (Bug no controlado)
+  // 5. ERROR CRÍTICO (Fallo de sistema no previsto)
   return res.status(500).json({
     status: 'error',
-    message: 'Ocurrió un error inesperado. Por favor, contacta a soporte.'
+    message: 'Servicio temporalmente no disponible. Inténtalo más tarde.'
   });
 };

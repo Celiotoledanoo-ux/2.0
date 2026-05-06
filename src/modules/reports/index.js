@@ -1,2 +1,1 @@
-import reportsRoutes from './reports.routes.js';
-export { reportsRoutes };
+export { default as reportsRoutes } from './reports.routes.js';

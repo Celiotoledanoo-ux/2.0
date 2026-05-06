@@ -1,64 +1,69 @@
 import AppError from '../errors/AppError.js';
 import { db } from '../database/supabaseClient.js';
-import * as authRepo from '../../modules/auth/auth.repository.js'; // IMPORTANTE
+import * as authRepo from '../../modules/auth/auth.repository.js';
 import logger from '../logger/logger.js';
 
 export const protect = async (req, res, next) => {
   try {
-    // 1. Validación del Header (Impecable)
+    // 1. Validación del Header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return next(new AppError('Se requiere un token válido.', 401));
+      return next(new AppError('No se encontró una sesión activa. Por favor, inicia sesión.', 401));
     }
 
     const token = authHeader.split(' ')[1];
 
-    // 2. Verificación inicial con Supabase (Valida el Token)
+    // 2. Verificación con Supabase Auth (Valida que el token sea auténtico)
     const { data: { user: authUser }, error } = await db.auth.getUser(token);
 
     if (error || !authUser) {
-      return next(new AppError('Sesión expirada.', 401));
+      return next(new AppError('Tu sesión ha expirado o es inválida.', 401));
     }
 
-    // 3. 🔍 VALIDACIÓN DE CONEXIÓN SQL (La Verdad Absoluta)
-    // Consultamos al repositorio para ver el estado REAL en nuestra tabla 'users'
+    // 3. Validación de integridad en SQL (Estado y Rol real)
     const dbUser = await authRepo.findById(authUser.id);
 
     if (!dbUser) {
-      return next(new AppError('El usuario ya no existe en el sistema.', 401));
+      return next(new AppError('Usuario no encontrado en la base de datos local.', 401));
     }
 
     if (!dbUser.active) {
-      return next(new AppError('Tu cuenta ha sido desactivada por un administrador.', 403));
+      return next(new AppError('Acceso restringido: Esta cuenta se encuentra desactivada.', 403));
     }
 
-    // 4. ✨ Lógica de Identificación de Caja
-    const emailPrefix = dbUser.email.split('@')[0]; 
-    const displayCaja = emailPrefix.startsWith('caja') 
-      ? emailPrefix.replace('caja', 'CAJA ').toUpperCase()
-      : 'OFICINA CENTRAL';
+    // 4. Lógica de Identificación de Punto de Venta
+    // Adaptamos para que reconozca "ventas", "caja" o el nombre del local
+    const emailPrefix = dbUser.email.split('@')[0].toUpperCase();
+    const displayCaja = dbUser.email.includes('@sistema.local') 
+      ? emailPrefix.replace('CAJA', 'CAJA ').replace('VENTAS', 'PUNTO ')
+      : 'ADMINISTRACIÓN';
 
-    // 5. Inyección de Contexto de Seguridad
+    // 5. Inyección de Contexto (Inmutable para evitar alteraciones en el camino)
     req.user = Object.freeze({
       id: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role, // <--- Ahora viene directo de SQL, 100% real
+      role: dbUser.role,
       caja: displayCaja,
       name: dbUser.name
     });
 
     next();
   } catch (error) {
-    logger.error({ event: 'AUTH_CRITICAL_ERROR', message: error.message });
-    next(new AppError('Error en el servicio de autenticación.', 500));
+    logger.error({ 
+      event: 'AUTH_PROTECT_ERROR', 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+    });
+    next(new AppError('Fallo interno en la verificación de identidad.', 500));
   }
 };
 
-// El restrictTo está perfecto, no le tocamos nada. ✅
+// Mantenemos tu restrictTo pero nos aseguramos de que maneje el OWNER correctamente
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return next(new AppError('No tienes permisos para esta acción.', 403));
+    // Si req.user no existe o el rol no está permitido, bloqueamos
+    if (!req.user || !roles.includes(req.user.role)) {
+      return next(new AppError('No tienes los permisos necesarios para realizar esta acción.', 403));
     }
     next();
   };

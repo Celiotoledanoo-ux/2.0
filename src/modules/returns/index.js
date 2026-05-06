@@ -1,3 +1,1 @@
-import returnsRoutes from './returns.routes.js';
-
-export { returnsRoutes };
+export { default as returnsRoutes } from './returns.routes.js';

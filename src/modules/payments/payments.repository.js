@@ -2,36 +2,27 @@ import { db } from '../../core/database/supabaseClient.js';
 import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
-/**
- * 💳 PAYMENTS REPOSITORY
- */
-
-// 1. Registrar un pago
 export const create = async (paymentData) => {
   const { data, error } = await db
-    .from(TABLES.PAYMENTS)
+    .from(TABLES.PAYMENTS || 'payments')
     .insert([paymentData])
     .select()
-    .maybeSingle();
+    .single(); // Cambiado a single para asegurar que devuelva el objeto creado
 
   if (error) {
     console.error(`[PAYMENT_CREATE_ERROR]: ${error.message}`);
-    throw new AppError('Error al registrar el pago en la base de datos', 500);
+    throw new AppError('Error crítico al registrar el pago', 500);
   }
-
   return data;
 };
 
-// 2. Obtener pagos de una venta específica
 export const findBySaleId = async (saleId) => {
   const { data, error } = await db
-    .from(TABLES.PAYMENTS)
+    .from(TABLES.PAYMENTS || 'payments')
     .select('*')
     .eq('sale_id', saleId);
 
-  if (error) {
-    throw new AppError('Error al consultar los pagos de la venta', 500);
-  }
-
+  if (error) throw new AppError('Error al consultar pagos', 500);
   return data;
 };
+

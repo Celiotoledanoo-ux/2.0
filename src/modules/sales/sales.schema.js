@@ -5,8 +5,7 @@ export const createSaleSchema = z.object({
     items: z.array(
       z.object({
         product_id: z.string().uuid('ID de producto no válido'),
-        quantity: z.coerce.number().int().positive('La cantidad debe ser mayor a 0'),
-        price_at_sale: z.coerce.number().positive('El precio debe ser positivo')
+        quantity: z.coerce.number().int().positive('La cantidad debe ser mayor a 0')
       })
     ).min(1, 'La venta debe tener al menos un producto'),
 
@@ -14,10 +13,8 @@ export const createSaleSchema = z.object({
       errorMap: () => ({ message: 'Método de pago no soportado' })
     }),
 
-    // 🔥 Agregamos validación de monto recibido para el flujo de caja
-    received_amount: z.coerce.number().min(0).optional(),
-    
+    received_amount: z.coerce.number().nonnegative('El monto no puede ser negativo').optional(),
     customer_id: z.string().uuid('ID de cliente inválido').optional(),
-    discount: z.coerce.number().min(0).default(0)
+    discount: z.coerce.number().nonnegative('El descuento no puede ser negativo').default(0)
   })
 });

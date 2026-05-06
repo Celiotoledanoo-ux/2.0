@@ -3,23 +3,19 @@ import { db } from '../../core/database/supabaseClient.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 👥 USERS SERVICE - MASTER VERSION
+ * 👥 USERS SERVICE - VERSIÓN PERFECCIONADA
  */
 
 export const registerUser = async (userData) => {
   const { email, password, name, role } = userData;
 
-  // 1. 🧠 NORMALIZACIÓN MAESTRA
-  // Si el admin escribe "Caja 1", lo convertimos en "caja1@sistema.local"
+  // 1. Normalización Calculada (Misma lógica que Auth para evitar discrepancias)
   let finalEmail = email.trim().toLowerCase();
-  
   if (!finalEmail.includes('@')) {
-    const normalizedBox = finalEmail.replace(/\s+/g, '');
-    finalEmail = `${normalizedBox}@sistema.local`;
+    finalEmail = `${finalEmail.replace(/\s+/g, '')}@sistema.local`;
   }
 
-  // 2. 🛡️ Registro en Supabase Auth
-  // Usamos 'finalEmail' para que Supabase no rechace el formato
+  // 2. Registro en Supabase Auth (Capa de Seguridad)
   const { data: authData, error: authError } = await db.auth.admin.createUser({
     email: finalEmail,
     password: password,
@@ -28,53 +24,40 @@ export const registerUser = async (userData) => {
   });
 
   if (authError) {
-    // Si el error es porque ya existe, mandamos un mensaje más amigable
     if (authError.message.includes('already registered')) {
-      throw new AppError('Este nombre de caja o correo ya está registrado', 409);
+      throw new AppError('Este nombre de usuario o correo ya existe en el sistema', 409);
     }
-    throw new AppError(authError.message, 400);
+    throw new AppError(`Error en Autenticación: ${authError.message}`, 400);
   }
 
   try {
-    // 3. 📝 Sincronización con la Tabla Pública 'users' (SQL)
+    // 3. Sincronización con SQL
     const newUser = await userRepository.create({
       id: authData.user.id,
       email: finalEmail,
-      name: name,
-      role: role,
+      name: name.trim(),
+      role: role || 'CASHIER',
       active: true
     });
 
     return newUser;
 
   } catch (error) {
-    // 💣 ROLLBACK: Si falla la inserción en SQL, borramos el usuario de Auth
-    // Así evitamos la "desconexión" (usuarios que existen en Auth pero no en tu POS)
+    // 💣 ROLLBACK TOTAL: Si falla SQL, borramos de Auth para mantener la integridad
     await db.auth.admin.deleteUser(authData.user.id);
-    
-    console.error(`[SYNC_ERROR]: ${error.message}`);
-    throw new AppError('Error de sincronización de datos. El usuario no fue creado.', 500);
+    console.error(`[CRITICAL_SYNC_ERROR]: ${error.message}`);
+    throw new AppError('Error al sincronizar el perfil. Operación cancelada por seguridad.', 500);
   }
 };
 
-/**
- * 🔍 OBTENER USUARIO POR ID
- */
 export const getUserById = async (id) => {
   const user = await userRepository.findById(id);
-  if (!user) {
-    throw new AppError('Usuario no encontrado', 404);
-  }
+  if (!user) throw new AppError('Usuario no identificado', 404);
   return user;
 };
 
-/**
- * ⚡ ACTIVAR/DESACTIVAR USUARIO
- */
 export const toggleUserStatus = async (id, activeStatus) => {
   const updatedUser = await userRepository.update(id, { active: activeStatus });
-  if (!updatedUser) {
-    throw new AppError('No se pudo actualizar el estado del usuario', 500);
-  }
+  if (!updatedUser) throw new AppError('Error al actualizar el estado del empleado', 500);
   return updatedUser;
 };

@@ -2,64 +2,49 @@ import { db } from '../../core/database/supabaseClient.js';
 import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
-/**
- * 🔄 RETURNS REPOSITORY - MODO RELOJITO
- */
-
-// 1. Registrar la cabecera de la devolución
+// 1. Crear cabecera
 export const create = async (returnData) => {
   const { data, error } = await db
-    .from(TABLES.RETURNS || 'returns') // Usamos la constante del core
+    .from(TABLES.RETURNS || 'returns')
     .insert([returnData])
-    .select()
-    .maybeSingle();
+    .select().single();
 
-  if (error) {
-    console.error(`[RETURN_CREATE_ERROR]: ${error.message}`);
-    throw new AppError('No se pudo registrar la devolución en la base de datos', 500);
-  }
-
+  if (error) throw new AppError('Error al crear la devolución', 500);
   return data;
 };
 
-// 2. ✨ NUEVO: Registrar el detalle de la devolución
-// Vital para saber qué producto regresó al inventario
+// 2. Crear detalle de items devueltos
 export const createReturnItem = async (itemData) => {
-  const { error } = await db
-    .from('return_items') // Asegúrate de tener esta tabla o agrégala a TABLES
-    .insert([itemData]);
-
-  if (error) {
-    console.error(`[RETURN_ITEM_ERROR]: ${error.message}`);
-    throw new AppError('Error al registrar el detalle del producto devuelto', 500);
-  }
+  const { error } = await db.from('return_items').insert([itemData]);
+  if (error) throw new AppError('Error al registrar item devuelto', 500);
 };
 
-// 3. Actualizar el estado de la venta original (Impecable tu lógica)
+// 3. Actualizar estado de la venta
 export const updateSaleStatus = async (saleId, status) => {
   const { error } = await db
-    .from(TABLES.SALES)
-    .update({ status }) // Ejemplo: 'PARTIAL_RETURN' o 'RETURNED'
+    .from(TABLES.SALES || 'sales')
+    .update({ status })
     .eq('id', saleId);
 
-  if (error) {
-    console.error(`[SALE_STATUS_ERROR]: ${error.message}`);
-    throw new AppError('Fallo al actualizar la venta original', 500);
-  }
-
+  if (error) throw new AppError('Error al actualizar estado de la venta', 500);
   return true;
 };
 
-// 4. Buscar historial con detalles
-export const findBySaleId = async (saleId) => {
+// 4. ✨ MÉTODO DE LECTURA (Añádelo aquí)
+// Este es el que permite que el historial de devoluciones funcione
+export const findAll = async () => {
   const { data, error } = await db
     .from(TABLES.RETURNS || 'returns')
     .select(`
       *,
-      items: return_items (*) 
+      user: users (name),
+      sale: sales (total, created_at)
     `)
-    .eq('sale_id', saleId);
+    .order('created_at', { ascending: false });
 
-  if (error) throw new AppError('Error al consultar el historial de devoluciones', 500);
+  if (error) {
+    console.error(`[RETURN_FIND_ALL_ERROR]: ${error.message}`);
+    throw new AppError('Error al recuperar historial de devoluciones', 500);
+  }
   return data;
 };

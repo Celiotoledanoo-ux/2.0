@@ -1,18 +1,22 @@
 {
-  "name": "punto_de_venta",
+  "name": "punto-de-venta-maquillaje",
   "version": "1.0.0",
-  "description": "Sistema de punto de venta con Node.js y Supabase",
+  "description": "Sistema POS Retail optimizado para Render y Supabase",
   "main": "server.js",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "lint": "eslint . --ext .js",
+    "lint": "eslint .",
     "test": "node --test"
   },
   "keywords": [
     "pos",
-    "punto-de-venta",
+    "retail",
+    "makeup",
     "express",
     "supabase"
   ],

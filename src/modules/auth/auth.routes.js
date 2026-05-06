@@ -7,21 +7,13 @@ import { loginSchema } from './auth.schema.js';
 const router = Router();
 
 /**
- * 🔐 RUTAS DE AUTENTICACIÓN
+ * 🔐 RUTAS DE AUTENTICACIÓN - POS MAQUILLAJE
  */
 
-// 1. LOGIN: Ruta pública, pero con portero (validate)
-router.post(
-  '/login',
-  validate(loginSchema),
-  authController.login
-);
+// LOGIN: Valida que el 'identifier' sea correcto antes de procesar
+router.post('/login', validate(loginSchema), authController.login);
 
-// 2. LOGOUT: Ruta protegida (necesitas estar logueado para salir)
-router.post(
-  '/logout',
-  protect,
-  authController.logout
-);
+// LOGOUT: Requiere token válido (protect) para registrar quién cierra sesión
+router.post('/logout', protect, authController.logout);
 
 export default router;

@@ -1,37 +1,49 @@
 import { z } from 'zod';
 
 /**
- * 🔐 AUTH VALIDATION SCHEMAS - ACCESO POR CAJAS
+ * 🔐 AUTH VALIDATION SCHEMAS - PERFECCIONADO
  */
 
 export const loginSchema = z.object({
   body: z.object({
-    // Cambiamos email por username para aceptar "Caja 1", "Caja 2", etc.
-    username: z.string().min(3, "El nombre de caja es muy corto"),
-    password: z.string().min(4, "La contraseña debe tener al menos 4 caracteres")
+    // Aplicamos .trim() para limpiar espacios accidentales
+    identifier: z
+      .string({ required_error: "Identificador requerido" })
+      .trim()
+      .min(3, "El nombre o correo es muy corto"),
+    
+    password: z
+      .string({ required_error: "Contraseña requerida" })
+      .min(4, "La contraseña debe tener al menos 4 caracteres")
   })
 });
 
-// Por si en el futuro habilitas registro de cajeros/admin
 export const registerSchema = z.object({
   body: z.object({
     name: z
       .string({ required_error: 'El nombre es obligatorio' })
       .trim()
-      .min(3, 'El nombre debe tener al menos 3 caracteres'),
+      .min(3, 'El nombre debe tener al menos 3 caracteres')
+      // Forzamos que el nombre no contenga caracteres extraños
+      .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'El nombre solo debe contener letras'),
       
     email: z
       .string({ required_error: 'El email es obligatorio' })
       .trim()
-      .email('Email inválido')
+      .email('Formato de correo electrónico inválido')
       .toLowerCase(),
       
     password: z
       .string({ required_error: 'La contraseña es obligatoria' })
-      .min(8, 'La contraseña debe tener al menos 8 caracteres')
-      .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
-      .regex(/[0-9]/, 'Debe contener al menos un número'),
+      .min(8, 'La contraseña debe ser de al menos 8 caracteres')
+      .regex(/[A-Z]/, 'Debe incluir al menos una letra mayúscula')
+      .regex(/[0-9]/, 'Debe incluir al menos un número'),
       
-    role: z.enum(['ADMIN', 'CASHIER', 'MANAGER', 'OWNER']).default('CASHIER')
+    role: z
+      .enum(['ADMIN', 'CASHIER', 'MANAGER', 'OWNER'], {
+        error_map: () => ({ message: "Rol no permitido en el sistema" })
+      })
+      .default('CASHIER')
   })
 });
+

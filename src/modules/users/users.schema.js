@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * 👥 USER VALIDATION SCHEMA
+ * 👥 USER VALIDATION SCHEMA - POS MAQUILLAJE
  */
 export const createUserSchema = z.object({
   body: z.object({
@@ -11,18 +11,20 @@ export const createUserSchema = z.object({
       .min(2, 'El nombre debe tener al menos 2 caracteres')
       .max(50, 'El nombre es demasiado largo'),
 
+    // CAMBIO CLAVE: Quitamos .email() estricto para permitir "Caja1"
+    // El service se encargará de volverlo @sistema.local
     email: z
-      .string({ required_error: 'El email es obligatorio' })
+      .string({ required_error: 'El email o identificador es obligatorio' })
       .trim()
-      .email('Formato de correo electrónico inválido')
+      .min(3, 'Identificador muy corto')
       .toLowerCase(),
 
     password: z
       .string({ required_error: 'La contraseña es obligatoria' })
-      .min(8, 'La contraseña debe tener al menos 8 caracteres para ser segura'),
+      .min(8, 'La contraseña debe tener al menos 8 caracteres'),
 
-    role: z.enum(['ADMIN', 'MANAGER', 'CASHIER'], {
-      errorMap: () => ({ message: 'Rol inválido (ADMIN, MANAGER, CASHIER)' })
+    role: z.enum(['ADMIN', 'MANAGER', 'CASHIER', 'OWNER'], {
+      errorMap: () => ({ message: 'Rol inválido (ADMIN, MANAGER, CASHIER, OWNER)' })
     }).default('CASHIER')
   })
 });

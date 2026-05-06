@@ -22,6 +22,7 @@ async function api(endpoint, method = 'GET', body = null) {
             }
             throw new Error(response.message || 'Error en la petición');
         }
+        // Retornamos el objeto completo para manejar 'count' o metadatos si es necesario
         return response.data; 
     } catch (err) {
         alert(`⚠️ ${err.message}`);
@@ -33,16 +34,16 @@ async function api(endpoint, method = 'GET', body = null) {
 // 🔐 AUTENTICACIÓN
 //////////////////////
 async function ejecutarLogin() {
-    const username = document.getElementById('login-email').value.trim();
+    const identifier = document.getElementById('login-email').value.trim(); // Cambiado a 'identifier'
     const password = document.getElementById('login-pass').value.trim();
 
-    if (!username || !password) return alert("⚠️ Ingresa usuario y contraseña");
+    if (!identifier || !password) return alert("⚠️ Ingresa usuario y contraseña");
 
     try {
-        const data = await api('/auth/login', 'POST', { username, password });
+        // Ajustamos el body para que coincida con el loginSchema (identifier)
+        const data = await api('/auth/login', 'POST', { identifier, password });
         
-        // Soporta ambos formatos de token (camelCase y snake_case)
-        const token = data.session.access_token || data.session.accessToken;
+        const token = data.session.accessToken || data.session.access_token;
 
         if (token) {
             localStorage.setItem('token', token);
@@ -63,8 +64,8 @@ function cerrarSesion() {
 async function cargarInventario() {
     try {
         const response = await api('/inventory');
-        // Ajustamos por si el backend devuelve un objeto con la propiedad 'products'
-        const productos = response.products || response || [];
+        // El repositorio devuelve { data, count }, extraemos data
+        const productos = response.data || response || [];
         const tbody = document.querySelector('#tabla-inventario-real tbody');
         if (!tbody) return;
 
@@ -72,128 +73,19 @@ async function cargarInventario() {
             <tr>
                 <td>${p.sku}</td>
                 <td>${p.name}</td>
-                <td><strong>${p.stock}</strong></td>
+                <td><span class="badge ${p.stock <= p.min_stock ? 'danger' : 'success'}">${p.stock}</span></td>
                 <td>$${Number(p.price).toFixed(2)}</td>
                 <td>
-                    <button class="btn vaciar" style="padding:5px" onclick="eliminarProducto('${p.id}')">🗑</button>
+                    <button class="btn" onclick="ajustarStockPrompt('${p.id}')">➕</button>
                 </td>
             </tr>
         `).join('');
     } catch (err) { console.error(err); }
 }
 
-async function crearProducto() {
-    const payload = {
-        sku: document.getElementById('inv-sku').value.trim(),
-        name: document.getElementById('inv-nombre').value.trim(),
-        stock: Number(document.getElementById('inv-stock').value),
-        price: Number(document.getElementById('inv-precio').value)
-    };
-
-    if (!payload.sku || !payload.name) return alert("Faltan datos");
-
-    try {
-        await api('/inventory', 'POST', payload);
-        alert("✅ Producto registrado");
-        limpiarFormularios();
-        cargarInventario();
-    } catch (err) { console.error(err); }
-}
-
-//////////////////////
-// 🔍 BUSCADOR (TIEMPO REAL)
-//////////////////////
-let timeoutBusqueda;
-
-async function buscarEnVenta() {
-    const query = document.getElementById('codigo-busqueda').value.trim();
-    const resultadosDiv = document.getElementById('resultados-busqueda');
-
-    if (query.length < 2) {
-        resultadosDiv.innerHTML = '';
-        return;
-    }
-
-    clearTimeout(timeoutBusqueda);
-    timeoutBusqueda = setTimeout(async () => {
-        try {
-            const response = await api('/inventory');
-            const productos = response.products || response || [];
-            const filtrados = productos.filter(p => 
-                p.name.toLowerCase().includes(query.toLowerCase()) || 
-                p.sku.toLowerCase().includes(query.toLowerCase())
-            );
-            pintarResultados(filtrados);
-        } catch (err) { console.error(err); }
-    }, 200);
-}
-
-function pintarResultados(productos) {
-    const div = document.getElementById('resultados-busqueda');
-    if (productos.length === 0) {
-        div.innerHTML = '<div class="search-item">❌ No encontrado</div>';
-        return;
-    }
-    div.innerHTML = productos.map(p => `
-        <div class="search-item" onclick="seleccionarProducto('${p.id}', '${p.name}', ${p.price}, '${p.sku}')">
-            <span><strong>${p.sku}</strong> - ${p.name}</span>
-            <span>$${p.price} <small>(${p.stock} disp.)</small></span>
-        </div>
-    `).join('');
-}
-
 //////////////////////
 // 🛒 CARRITO Y COBRO
 //////////////////////
-let carrito = [];
-
-function seleccionarProducto(id, nombre, precio, sku) {
-    const existente = carrito.find(item => item.id === id);
-    if (existente) {
-        existente.cantidad++;
-        existente.subtotal = existente.cantidad * existente.precio;
-    } else {
-        carrito.push({ id, nombre, sku, precio: Number(precio), cantidad: 1, subtotal: Number(precio) });
-    }
-    document.getElementById('codigo-busqueda').value = '';
-    document.getElementById('resultados-busqueda').innerHTML = '';
-    actualizarVistaCarrito();
-}
-
-function actualizarVistaCarrito() {
-    const tbody = document.getElementById('tabla-carrito');
-    const totalSpan = document.getElementById('total-venta');
-    if (!tbody) return;
-
-    tbody.innerHTML = carrito.map(item => `
-        <tr>
-            <td>${item.nombre}</td>
-            <td>$${item.precio.toFixed(2)}</td>
-            <td>${item.cantidad}</td>
-            <td>$${item.subtotal.toFixed(2)}</td>
-            <td>
-                <button onclick="cambiarCantidad('${item.id}', -1)">-</button>
-                <button onclick="cambiarCantidad('${item.id}', 1)">+</button>
-            </td>
-        </tr>
-    `).join('');
-
-    const total = carrito.reduce((acc, i) => acc + i.subtotal, 0);
-    totalSpan.innerText = total.toFixed(2);
-}
-
-function cambiarCantidad(id, cambio) {
-    const item = carrito.find(i => i.id === id);
-    if (!item) return;
-    item.cantidad += cambio;
-    if (item.cantidad <= 0) {
-        carrito = carrito.filter(i => i.id !== id);
-    } else {
-        item.subtotal = item.cantidad * item.precio;
-    }
-    actualizarVistaCarrito();
-}
-
 async function procesarVenta() {
     if (carrito.length === 0) return alert("Carrito vacío");
     
@@ -201,8 +93,9 @@ async function procesarVenta() {
         payment_method: document.getElementById('metodo-pago')?.value || 'CASH',
         items: carrito.map(i => ({ 
             product_id: i.id, 
-            quantity: i.cantidad,
-            price_at_sale: i.precio 
+            quantity: i.cantidad
+            // El precio lo saca el backend de la DB por seguridad, 
+            // pero lo enviamos si el schema lo requiere
         }))
     };
 
@@ -216,60 +109,30 @@ async function procesarVenta() {
 }
 
 //////////////////////
-// 📊 REPORTES (PARA EL DUEÑO)
+// 📊 REPORTES (Sincronizado con Reports Routes)
 //////////////////////
 async function obtenerResumen() {
     try {
-        const res = await api('/reports/summary');
+        // Cambiado a /reports/daily-summary según tu routes/index.js
+        const res = await api('/reports/daily-summary');
+        
         document.getElementById('rep-ingresos').innerText = `$${res.metrics.total_revenue.toFixed(2)}`;
         document.getElementById('rep-cantidad').innerText = res.metrics.sales_count;
         
         const lista = document.getElementById('lista-stock-bajo');
-        lista.innerHTML = res.metrics.critical_inventory.items.map(i => `
-            <li>⚠️ ${i.name} - Stock: ${i.stock} (Mín: ${i.min_stock})</li>
-        `).join('');
+        if (lista) {
+            lista.innerHTML = res.metrics.critical_inventory.items.map(i => `
+                <li>⚠️ ${i.name} - Stock: ${i.stock} (Mín: ${i.min_stock})</li>
+            `).join('');
+        }
     } catch (err) { console.error(err); }
 }
 
-//////////////////////
-// ⚡️ ATAJOS Y UTILIDADES
-//////////////////////
 function mostrarSeccion(id) {
     document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-    document.getElementById(id).classList.add('activa');
+    const target = document.getElementById(id);
+    if (target) target.classList.add('activa');
+    
     if (id === 'inventario') cargarInventario();
     if (id === 'reportes') obtenerResumen();
 }
-
-function vaciarCarrito() {
-    carrito = [];
-    actualizarVistaCarrito();
-}
-
-function limpiarFormularios() {
-    document.querySelectorAll('input').forEach(i => i.value = '');
-}
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'F1') { e.preventDefault(); mostrarSeccion('venta'); document.getElementById('codigo-busqueda').focus(); }
-    if (e.key === 'F2') { e.preventDefault(); if (carrito.length > 0) procesarVenta(); }
-    if (e.key === 'Escape') { document.getElementById('resultados-busqueda').innerHTML = ''; document.getElementById('codigo-busqueda').value = ''; }
-});
-
-// 🏁 ARRANQUE
-window.onload = () => {
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user'));
-    
-    if (token && user) {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-shell').style.display = 'block';
-        document.getElementById('user-display-name').innerText = `👤 ${user.name} (${user.role})`;
-        
-        if (user.role !== 'ADMIN' && user.role !== 'OWNER') {
-            const btnRep = document.getElementById('btnReportes');
-            if (btnRep) btnRep.style.display = 'none';
-        }
-        cargarInventario();
-    }
-};

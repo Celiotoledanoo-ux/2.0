@@ -1,17 +1,15 @@
 import { Router } from 'express';
 import * as reportsController from './reports.controller.js';
-// ✅ Mantenemos plural porque así se llaman tus archivos físicos
 import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
 
 const router = Router();
 
-/**
- * 📊 RUTAS DE REPORTES
- */
+router.use(protect);
+
+// Solo niveles de mando pueden ver finanzas
 router.get(
   '/daily-summary',
-  protect,
-  restrictTo('ADMIN', 'MANAGER'),
+  restrictTo('ADMIN', 'MANAGER', 'OWNER'),
   reportsController.getDailyReport
 );
 

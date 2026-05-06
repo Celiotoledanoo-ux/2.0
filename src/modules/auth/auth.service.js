@@ -3,48 +3,51 @@ import * as authRepo from './auth.repository.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 🔐 SERVICIO DE AUTENTICACIÓN CENTRALIZADO
+ * 🔐 SERVICIO DE AUTENTICACIÓN - VERSIÓN MAQUILLAJE POS (BLINDADO)
  */
 export const login = async (identifier, password) => {
-  // Validación de entrada
-  if (!identifier || !password) {
+  // 1. Validación de entrada (Calculada)
+  if (!identifier?.trim() || !password) {
     throw new AppError('Por favor, proporciona credenciales de acceso', 400);
   }
 
-  // 1. 🧠 DETECTAR IDENTIDAD (Cajas vs Emails)
+  // 2. Normalización de Identidad
   let finalEmail = identifier.trim().toLowerCase();
   
-  // Si NO tiene un "@", lo convertimos a formato de sistema (ej: "Caja 1" -> "caja1@sistema.local")
+  // Lógica para nombres de usuario cortos (ej: "Ventas1" -> "ventas1@sistema.local")
   if (!finalEmail.includes('@')) {
-    const normalizedBox = finalEmail.replace(/\s+/g, '');
-    finalEmail = `${normalizedBox}@sistema.local`;
+    const normalizedName = finalEmail.replace(/\s+/g, '');
+    finalEmail = `${normalizedName}@sistema.local`;
   }
 
-  // 2. 🛡️ INTENTO DE LOGIN EN SUPABASE AUTH
-  // Usamos 'db' que es nuestra instancia de serviceRole
+  // 3. Intento de Login en Supabase Auth
   const { data, error } = await db.auth.signInWithPassword({
     email: finalEmail,
     password,
   });
 
+  // Error de Auth (Credenciales mal o usuario inexistente en Auth)
   if (error || !data?.user) {
     console.error('[AUTH_ERROR]:', error?.message);
-    throw new AppError('Credenciales incorrectas o caja no registrada', 401);
+    throw new AppError('Credenciales incorrectas o usuario no registrado', 401);
   }
 
-  // 3. 🔍 SINCRONIZACIÓN CON TABLA SQL
-  // Buscamos el rol y estado en nuestra tabla 'public.users'
+  // 4. Sincronización con Tabla SQL (public.users)
+  // IMPORTANTE: Aquí verificamos que el ID de Auth exista en nuestra tabla de maquillaje
   const userDetails = await authRepo.findById(data.user.id);
 
   if (!userDetails) {
-    throw new AppError('Perfil no encontrado en la base de datos SQL', 404);
+    throw new AppError('El usuario existe pero no tiene un perfil configurado en el sistema', 404);
   }
 
   if (!userDetails.active) {
-    throw new AppError('Esta cuenta o caja se encuentra desactivada', 403);
+    throw new AppError('Esta cuenta se encuentra desactivada por el administrador', 403);
   }
 
-  // 4. 📦 RESPUESTA MAESTRA (Estructura JSend)
+  // 5. Respuesta Maestra (Asegurando nombres de propiedades de Supabase)
+  // Usamos desestructuración segura para evitar errores de "undefined"
+  const { session } = data;
+
   return {
     user: {
       id: userDetails.id,
@@ -53,9 +56,9 @@ export const login = async (identifier, password) => {
       name: userDetails.name
     },
     session: {
-      accessToken: data.session.access_token,
-      refreshToken: data.session.refresh_token,
-      expiresIn: data.session.expires_in
+      accessToken: session?.access_token,
+      refreshToken: session?.refresh_token,
+      expiresIn: session?.expires_in
     }
   };
 };

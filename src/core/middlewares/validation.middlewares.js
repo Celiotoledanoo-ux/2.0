@@ -2,26 +2,30 @@ import AppError from '../errors/AppError.js';
 
 export const validate = (schema) => (req, res, next) => {
   try {
-    // Usamos parse en lugar de safeParse para que Zod maneje la excepción si falla
     const validated = schema.parse({
       body: req.body,
       query: req.query,
       params: req.params,
     });
 
-    // ✅ REFACTOR: Solo reemplazamos lo que Zod validó. 
-    // Si el esquema no trae 'query' o 'params', mantenemos los originales.
-    req.body = validated.body || req.body;
-    req.query = validated.query || req.query;
-    req.params = validated.params || req.params;
+    // Inyectamos los datos ya validados y limpios (sin campos extraños)
+    req.body = validated.body;
+    req.query = validated.query;
+    req.params = validated.params;
 
     next();
   } catch (error) {
-    // 🔍 Capturamos el primer error de Zod de forma más limpia
-    const message = error.errors 
-      ? error.errors[0].message 
-      : 'Error de validación en los datos';
+    // Si es error de Zod, extraemos el mensaje del primer campo que falló
+    let errorMessage = 'Datos inválidos';
+    
+    if (error.errors && error.errors.length > 0) {
+      const firstError = error.errors[0];
+      // Ejemplo: "name: El nombre es muy corto"
+      errorMessage = firstError.path.length > 1 
+        ? `${firstError.path[1]}: ${firstError.message}` 
+        : firstError.message;
+    }
       
-    next(new AppError(message, 400));
+    next(new AppError(errorMessage, 400));
   }
 };

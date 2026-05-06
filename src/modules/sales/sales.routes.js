@@ -1,18 +1,17 @@
 import { Router } from 'express';
 import * as salesController from './sales.controller.js';
 import { createSaleSchema } from './sales.schema.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js'; // ✅ Agregamos restrictTo
+import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
 import { validate } from '../../core/middlewares/validation.middlewares.js'; 
 
 const router = Router();
 
-// 1. Protección global
 router.use(protect);
 
-// 2. Solo Admin y Cajeros pueden entrar a cobrar
+// Todos los roles operativos pueden realizar ventas
 router.post(
   '/checkout',
-  restrictTo('ADMIN', 'CASHIER'), // 🛡️ Blindaje de roles
+  restrictTo('ADMIN', 'CASHIER', 'MANAGER', 'OWNER'),
   validate(createSaleSchema), 
   salesController.checkout
 );

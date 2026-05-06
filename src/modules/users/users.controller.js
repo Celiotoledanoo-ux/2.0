@@ -1,28 +1,29 @@
 import * as userService from './users.service.js';
 import logger from '../../core/logger/logger.js';
 import catchAsync from '../../shared/utils/async.utils.js';
+import AppError from '../../core/errors/AppError.js';
 
 /**
- * 👤 CREAR USUARIO (Cajeros/Admin)
+ * 👤 CREAR USUARIO (Administradores/Vendedores de Maquillaje)
  */
 export const create = catchAsync(async (req, res, next) => {
-  // 🔥 BLINDAJE: Solo extraemos lo que necesitamos.
-  // Así evitamos que nos inyecten campos basura o roles no autorizados.
+  // Extraemos datos con precisión
   const { email, password, name, role } = req.body;
 
-  // Pasamos los datos limpios al Service
+  // El Service se encarga de la lógica pesada
   const newUser = await userService.registerUser({ email, password, name, role });
 
   logger.info({
     event: 'USER_CREATED',
     userId: newUser.id,
-    adminId: req.user?.id || 'SYSTEM', // Por si lo crea el sistema al inicio
+    adminId: req.user?.id || 'SYSTEM',
+    role: newUser.role,
     ip: req.ip
   });
 
   return res.status(201).json({
     status: 'success',
-    message: 'Usuario creado exitosamente',
+    message: 'Personal registrado correctamente en el sistema',
     data: { user: newUser }
   });
 });
@@ -33,7 +34,6 @@ export const create = catchAsync(async (req, res, next) => {
 export const getById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   
-  // Agregamos una validación rápida de ID antes de llamar al service
   if (!id) return next(new AppError('El ID del usuario es obligatorio', 400));
 
   const user = await userService.getUserById(id);
@@ -45,20 +45,19 @@ export const getById = catchAsync(async (req, res, next) => {
 });
 
 /**
- * ⚡ ACTIVAR/DESACTIVAR USUARIO
+ * ⚡ ACTIVAR/DESACTIVAR USUARIO (Baja de empleados)
  */
 export const toggleStatus = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { active } = req.body;
 
-  // Aseguramos que 'active' sea realmente un booleano
-  const activeStatus = Boolean(active);
+  if (active === undefined) return next(new AppError('El estado "active" es requerido', 400));
 
-  const updatedUser = await userService.toggleUserStatus(id, activeStatus);
+  const updatedUser = await userService.toggleUserStatus(id, Boolean(active));
 
   return res.status(200).json({
     status: 'success',
-    message: `Usuario ${activeStatus ? 'activado' : 'desactivado'} correctamente`,
+    message: `Acceso ${updatedUser.active ? 'habilitado' : 'restringido'} para el usuario`,
     data: { user: updatedUser }
   });
 });

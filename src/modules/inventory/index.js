@@ -1,3 +1,1 @@
-import inventoryRoutes from './inventory.routes.js';
-
-export { inventoryRoutes };
+export { default as inventoryRoutes } from './inventory.routes.js';

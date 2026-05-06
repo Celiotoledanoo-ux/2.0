@@ -9,30 +9,31 @@ import logger from '../../core/logger/logger.js';
 export const processPayment = catchAsync(async (req, res, next) => {
   const { sale_id, amount, method } = req.body;
 
-  // 1. Validación rápida (Fail-fast)
-  if (!sale_id || !amount || !method) {
-    throw new AppError('Datos de pago incompletos (sale_id, amount, method)', 400);
+  // 1. Validación rápida (Calculada)
+  if (!sale_id || amount === undefined || !method) {
+    throw new AppError('Faltan datos obligatorios para registrar el pago', 400);
   }
 
   // 2. Ejecutar lógica en el Service
+  // Pasamos los datos que el service espera recibir
   const payment = await paymentsService.processPayment({
     sale_id,
     amount,
-    method,
-    processed_by: req.user.id // Auditoría: ¿quién recibió el dinero?
+    method
   });
 
-  // 3. Log de finanzas (Vital para auditoría de caja)
+  // 3. Auditoría de Seguridad (Log de flujo de caja)
   logger.info({
     event: 'PAYMENT_RECEIVED',
     paymentId: payment.id,
     saleId: sale_id,
     amount,
     method,
-    receivedBy: req.user.id
+    receivedBy: req.user.id, // ID del cajero/admin logueado
+    ip: req.ip
   });
 
-  // 4. Respuesta exitosa
+  // 4. Respuesta Estructurada
   res.status(201).json({
     status: 'success',
     message: 'Pago registrado correctamente',

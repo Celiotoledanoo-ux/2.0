@@ -2,24 +2,33 @@ import logger from '../logger/logger.js';
 import globalRouter from '../../routes/index.js';
 
 /**
- * 🏗️ SYSTEM LOADER - VERSIÓN SINCRONIZADA
+ * 🏗️ SYSTEM LOADER - VERSIÓN MAQUILLAJE POS
+ * Este archivo asegura que la estructura de rutas esté lista antes de que el servidor abra sus puertas.
  */
 export default () => { 
   try {
-    logger.info('🚀 Iniciando carga de módulos del sistema...');
+    logger.info('🚀 Iniciando secuencia de carga del núcleo...');
 
-    // ✅ La clave: Quitamos el "app.use" de aquí adentro.
-    // Solo avisamos que los módulos están listos.
-    logger.info('✅ Módulos listos para inyección: [Auth, Users, Inventory, Sales, Returns, Reports]');
+    // Verificación de integridad de rutas
+    if (!globalRouter) {
+      throw new Error('El enrutador global no se encuentra o está mal exportado.');
+    }
 
-    // ✅ Retornamos el router para que app.js lo reciba en el Paso 8
+    // Listado de módulos auditados para maquillaje
+    const modules = ['Auth', 'Users', 'Inventory', 'Sales', 'Returns', 'Payments', 'Reports'];
+    
+    logger.info(`✅ Inyección de módulos completada: [${modules.join(', ')}]`);
+
+    // Retornamos el router al app.js principal
     return globalRouter; 
     
   } catch (error) {
     logger.error({
       event: 'LOADER_CRITICAL_ERROR',
-      message: error.message
+      message: error.message,
+      stack: error.stack
     });
+    // En producción, si el loader falla, el proceso debe morir para evitar estados inconsistentes
     process.exit(1);
   }
 };
