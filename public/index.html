@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopper BeautyMX | POS System</title>
-    <!-- Google Fonts: Inter para legibilidad máxima -->
+    <!-- Google Fonts -->
     <link href="https://googleapis.com" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="retail-bg">
 
-<!-- 🔐 PANTALLA DE LOGIN (MODERNA Y FUNCIONAL) -->
+<!-- 🔐 PANTALLA DE LOGIN -->
 <div id="login-screen" class="auth-wrapper">
     <div class="login-card">
         <header class="brand-header">
@@ -19,7 +19,6 @@
             <p>SISTEMA DE CONTROL RETAIL</p>
         </header>
 
-        <!-- FORM añadido para que funcione el ENTER automáticamente -->
         <form id="login-form" class="form-group" onsubmit="event.preventDefault(); ejecutarLogin();">
             <div class="input-block">
                 <label for="login-email">Identificador de Acceso</label>
@@ -38,12 +37,12 @@
         </form>
 
         <footer class="auth-footer">
-            <span class="status-dot"></span> v2.0.5 | Servidor Seguro
+            <span class="status-dot"></span> v2.1.0 | Conexión Segura
         </footer>
     </div>
 </div>
 
-<!-- 📦 SISTEMA PRINCIPAL (LAYOUT RETAIL OPTIMIZADO) -->
+<!-- 📦 SISTEMA PRINCIPAL -->
 <div id="app-shell" style="display:none;">
     
     <header class="main-header">
@@ -51,7 +50,6 @@
             <strong>Shopper</strong> BeautyMX
         </div>
         <nav class="main-nav">
-            <!-- Usamos [data-section] para manejar mejor el JS -->
             <button class="nav-item active" onclick="mostrarSeccion('venta')">
                 <span class="icon">🛒</span> VENTAS <kbd>F1</kbd>
             </button>
@@ -64,8 +62,8 @@
         </nav>
         <div class="header-user">
             <div class="user-info">
-                <span class="role-badge">OWNER</span>
-                <span id="user-display-name">Celio Toledano</span>
+                <span id="user-role-badge" class="role-badge">...</span>
+                <span id="user-display-name">Cargando...</span>
             </div>
             <button class="btn-logout" title="Cerrar Sesión" onclick="cerrarSesion()">✕</button>
         </div>
@@ -92,7 +90,7 @@
                                     <th>PRECIO</th>
                                     <th style="width: 80px;">CANT.</th>
                                     <th>SUBTOTAL</th>
-                                    <th></th>
+                                    <th>ACCION</th>
                                 </tr>
                             </thead>
                             <tbody id="tabla-carrito">
@@ -110,10 +108,6 @@
                                 <span>Subtotal</span>
                                 <span id="subtotal-display">$0.00</span>
                             </div>
-                            <div class="summary-row divider">
-                                <span>Descuento</span>
-                                <span>-$0.00</span>
-                            </div>
                             <div class="summary-row total">
                                 <span>TOTAL</span>
                                 <span id="total-venta">$0.00</span>
@@ -124,7 +118,7 @@
                             <label>Método de Pago</label>
                             <select id="metodo-pago" class="modern-select">
                                 <option value="CASH">💵 Efectivo</option>
-                                <option value="CARD">💳 Tarjeta / Terminal</option>
+                                <option value="CARD">💳 Tarjeta</option>
                                 <option value="TRANSFER">🏦 Transferencia</option>
                             </select>
                         </div>
@@ -145,7 +139,7 @@
                     <h3>Registrar Producto</h3>
                     <form class="form-grid" onsubmit="event.preventDefault(); crearProducto();">
                         <input type="text" id="inv-sku" placeholder="SKU / Código" required>
-                        <input type="text" id="inv-nombre" placeholder="Nombre del producto" required>
+                        <input type="text" id="inv-nombre" placeholder="Nombre" required>
                         <div class="input-row">
                             <input type="number" id="inv-stock" placeholder="Stock" required>
                             <input type="number" id="inv-precio" placeholder="Precio" step="0.01" required>
@@ -155,9 +149,6 @@
                 </aside>
                 
                 <div class="table-card">
-                    <div class="table-header">
-                        <h3>Listado de Existencias</h3>
-                    </div>
                     <table id="tabla-inventario-real" class="retail-table">
                         <thead>
                             <tr>
@@ -165,10 +156,11 @@
                                 <th>DESCRIPCIÓN</th>
                                 <th>STOCK</th>
                                 <th>PRECIO</th>
-                                <th>ESTADO</th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody id="lista-inventario">
+                            <!-- Datos de Supabase -->
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -178,36 +170,19 @@
         <section id="reportes" class="seccion">
             <div class="dashboard-grid">
                 <div class="kpi-card">
-                    <div class="kpi-icon">🛒</div>
-                    <div class="kpi-data">
-                        <label>Ventas de Hoy</label>
-                        <div id="rep-cantidad" class="value">0</div>
-                    </div>
-                </div>
-                <div class="kpi-card success">
                     <div class="kpi-icon">💰</div>
                     <div class="kpi-data">
-                        <label>Ingresos Totales</label>
-                        <div id="rep-ingresos" class="value">$0.00</div>
+                        <label>Ventas de Hoy</label>
+                        <div id="rep-ventas-hoy" class="value">$0.00</div>
                     </div>
                 </div>
-                <div class="kpi-card warning">
-                    <div class="kpi-icon">⚠️</div>
-                    <div class="kpi-data">
-                        <label>Stock Bajo</label>
-                        <div id="rep-alertas" class="value">0</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="alert-box">
-                <h3>🔔 Alertas de Reabastecimiento</h3>
-                <ul id="lista-stock-bajo" class="clean-list"></ul>
             </div>
         </section>
     </main>
 </div>
 
+<!-- Scripts al final para carga rápida -->
+<script src="https://jsdelivr.net"></script>
 <script src="script.js"></script>
 </body>
 </html>

@@ -1,139 +1,230 @@
 //////////////////////
-// 📡 CAPA DE COMUNICACIÓN (API LAYER)
+// 📡 CONFIGURACIÓN SUPABASE
 //////////////////////
-const API_URL = '/api/v1';
+const supabaseUrl = 'TU_URL_DE_SUPABASE';
+const supabaseKey = 'TU_ANON_KEY';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-async function api(endpoint, method = 'GET', body = null) {
-    const token = localStorage.getItem('token');
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const config = { method, headers };
-    if (body) config.body = JSON.stringify(body);
-
-    try {
-        const res = await fetch(`${API_URL}${endpoint}`, config);
-        const response = await res.json();
-
-        if (!res.ok) {
-            if (res.status === 401) {
-                cerrarSesion();
-            }
-            // Aquí es donde atrapamos el error de "perfil no configurado"
-            throw new Error(response.message || 'Error en la petición');
-        }
-        return response.data; 
-    } catch (err) {
-        alert(`⚠️ ${err.message}`);
-        throw err;
-    }
-}
+let carrito = [];
+let productosLocal = []; // Para búsqueda ultra rápida
 
 //////////////////////
 // 🔐 AUTENTICACIÓN
 //////////////////////
 async function ejecutarLogin() {
-    const identifier = document.getElementById('login-email').value.trim();
+    const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-pass').value.trim();
 
-    if (!identifier || !password) return alert("⚠️ Ingresa usuario y contraseña");
+    if (!email || !password) return alert("⚠️ Ingresa correo y contraseña");
 
     try {
-        // Enviamos 'identifier' (que es el email) al backend
-        const data = await api('/auth/login', 'POST', { identifier, password });
-        
-        // Render/Supabase a veces devuelven access_token o accessToken
-        const token = data.session?.access_token || data.session?.accessToken;
-
-        if (token) {
-            localStorage.setItem('token', token);
-            // Guardamos el objeto user completo (que ya trae el ROLE del trigger)
-            localStorage.setItem('user', JSON.stringify(data.user));
-            
-            // En lugar de reload, mostramos la app directamente
-            inicializarApp();
-        }
-    } catch (err) { 
-        console.error("Login fallido", err); 
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        await inicializarApp();
+    } catch (err) {
+        alert(`❌ Error: ${err.message}`);
     }
 }
 
-// Nueva función para arrancar la interfaz con datos reales
-function inicializarApp() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user) {
+async function inicializarApp() {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-shell').style.display = 'block';
-        document.getElementById('user-display-name').innerText = user.name || user.email;
+
+        const { data: profile } = await supabase
+            .from('users')
+            .select('name, role')
+            .eq('id', session.user.id)
+            .single();
+
+        if (profile) {
+            document.getElementById('user-display-name').innerText = profile.name;
+            document.getElementById('user-role-badge').innerText = profile.role;
+        }
+
+        // Cargar datos iniciales
+        await sincronizarProductos();
         mostrarSeccion('venta');
     }
 }
 
-function cerrarSesion() {
-    localStorage.clear();
+async function cerrarSesion() {
+    await supabase.auth.signOut();
     location.reload();
 }
 
 //////////////////////
 // 📦 GESTIÓN DE INVENTARIO
 //////////////////////
+async function sincronizarProductos() {
+    const { data, error } = await supabase.from('inventory').select('*').order('name');
+    if (!error) productosLocal = data;
+}
+
 async function cargarInventario() {
-    try {
-        const response = await api('/inventory');
-        // Manejamos si viene como array directo o dentro de .data
-        const productos = Array.isArray(response) ? response : (response.data || []);
-        
-        const tbody = document.querySelector('#tabla-inventario-real tbody');
-        if (!tbody) return;
+    await sincronizarProductos();
+    const tbody = document.getElementById('lista-inventario');
+    tbody.innerHTML = productosLocal.map(p => `
+        <tr>
+            <td><strong>${p.sku}</strong></td>
+            <td>${p.name}</td>
+            <td><span class="badge ${p.stock <= p.min_stock ? 'danger' : 'success'}">${p.stock}</span></td>
+            <td>$${Number(p.price).toFixed(2)}</td>
+        </tr>
+    `).join('');
+}
 
-        tbody.innerHTML = productos.map(p => `
+async function crearProducto() {
+    const nuevoProd = {
+        sku: document.getElementById('inv-sku').value,
+        name: document.getElementById('inv-nombre').value,
+        stock: parseInt(document.getElementById('inv-stock').value),
+        price: parseFloat(document.getElementById('inv-precio').value)
+    };
+
+    const { error } = await supabase.from('inventory').insert([nuevoProd]);
+    if (error) alert("Error: " + error.message);
+    else {
+        alert("✅ Producto añadido");
+        document.querySelector('.card-form form').reset();
+        cargarInventario();
+    }
+}
+
+//////////////////////
+// 🛒 LÓGICA DE VENTA (EL MOTOR)
+//////////////////////
+function buscarEnVenta() {
+    const input = document.getElementById('codigo-busqueda');
+    const query = input.value.toLowerCase();
+    const resultados = document.getElementById('resultados-busqueda');
+
+    if (query.length < 2) {
+        resultados.innerHTML = '';
+        return;
+    }
+
+    const filtrados = productosLocal.filter(p => 
+        p.sku.toLowerCase().includes(query) || p.name.toLowerCase().includes(query)
+    );
+
+    resultados.innerHTML = filtrados.map(p => `
+        <div class="result-item" onclick="agregarAlCarrito('${p.sku}')">
+            <span>${p.name}</span>
+            <strong>$${p.price}</strong>
+        </div>
+    `).join('');
+}
+
+function agregarAlCarrito(sku) {
+    const producto = productosLocal.find(p => p.sku === sku);
+    if (!producto) return;
+
+    const enCarrito = carrito.find(item => item.sku === sku);
+    
+    if (enCarrito) {
+        enCarrito.cantidad++;
+    } else {
+        carrito.push({ ...producto, cantidad: 1 });
+    }
+
+    document.getElementById('codigo-busqueda').value = '';
+    document.getElementById('resultados-busqueda').innerHTML = '';
+    renderizarCarrito();
+}
+
+function renderizarCarrito() {
+    const tbody = document.getElementById('tabla-carrito');
+    let total = 0;
+
+    tbody.innerHTML = carrito.map((item, index) => {
+        const subtotal = item.price * item.cantidad;
+        total += subtotal;
+        return `
             <tr>
-                <td>${p.sku}</td>
-                <td>${p.name}</td>
-                <td><span class="badge ${p.stock <= p.min_stock ? 'danger' : 'success'}">${p.stock}</span></td>
-                <td>$${Number(p.price).toFixed(2)}</td>
-                <td>
-                    <button class="btn-action" onclick="alert('Función en desarrollo para ID: ${p.id}')">✏️</button>
-                </td>
+                <td>${item.name}</td>
+                <td>$${Number(item.price).toFixed(2)}</td>
+                <td>${item.cantidad}</td>
+                <td>$${subtotal.toFixed(2)}</td>
+                <td><button onclick="eliminarDelCarrito(${index})" style="color:red; background:none; border:none; cursor:pointer;">✕</button></td>
             </tr>
-        `).join('');
-    } catch (err) { console.error("Error cargando stock:", err); }
+        `;
+    }).join('');
+
+    document.getElementById('subtotal-display').innerText = `$${total.toFixed(2)}`;
+    document.getElementById('total-venta').innerText = `$${total.toFixed(2)}`;
 }
 
-//////////////////////
-// 📊 REPORTES
-//////////////////////
-async function obtenerResumen() {
+function eliminarDelCarrito(index) {
+    carrito.splice(index, 1);
+    renderizarCarrito();
+}
+
+function vaciarCarrito() {
+    carrito = [];
+    renderizarCarrito();
+}
+
+async function procesarVenta() {
+    if (carrito.length === 0) return alert("🛒 Carrito vacío");
+
     try {
-        const res = await api('/reports/daily-summary');
-        if (!res) return;
-
-        document.getElementById('rep-ingresos').innerText = `$${res.metrics.total_revenue.toFixed(2)}`;
-        document.getElementById('rep-cantidad').innerText = res.metrics.sales_count;
+        const total = carrito.reduce((acc, item) => acc + (item.price * item.cantidad), 0);
         
-        const lista = document.getElementById('lista-stock-bajo');
-        if (lista) {
-            lista.innerHTML = (res.metrics.critical_inventory.items || []).map(i => `
-                <li>⚠️ ${i.name} - Stock: ${i.stock}</li>
-            `).join('');
-        }
-    } catch (err) { console.error("Error en reportes:", err); }
+        // 1. Crear la venta en Supabase
+        const { data: venta, error: errorVenta } = await supabase
+            .from('sales')
+            .insert([{ 
+                total, 
+                payment_method: document.getElementById('metodo-pago').value,
+                created_by: (await supabase.auth.getUser()).data.user.id
+            }])
+            .select();
+
+        if (errorVenta) throw errorVenta;
+
+        // 2. Registrar items (El Trigger de SQL se encargará de restar el stock)
+        const itemsVenta = carrito.map(item => ({
+            sale_id: venta[0].id,
+            product_id: item.id,
+            quantity: item.cantidad,
+            price_at_sale: item.price
+        }));
+
+        const { error: errorItems } = await supabase.from('sales_items').insert(itemsVenta);
+        if (errorItems) throw errorItems;
+
+        alert("✨ Venta Completada con Éxito");
+        vaciarCarrito();
+        await sincronizarProductos(); // Actualiza stock local
+    } catch (err) {
+        alert("❌ Error al procesar: " + err.message);
+    }
 }
 
-// Control de secciones
+//////////////////////
+// 🚦 NAVEGACIÓN Y ATAJOS
+//////////////////////
 function mostrarSeccion(id) {
     document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-    const target = document.getElementById(id);
-    if (target) target.classList.add('activa');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    document.getElementById(id).classList.add('activa');
     
-    // Actualizar datos según sección
+    // Buscar el botón por el texto del span o el onclick
+    const btn = Array.from(document.querySelectorAll('.nav-item')).find(n => n.getAttribute('onclick').includes(id));
+    if (btn) btn.classList.add('active');
+
     if (id === 'inventario') cargarInventario();
-    if (id === 'reportes') obtenerResumen();
+    if (id === 'venta') document.getElementById('codigo-busqueda').focus();
 }
 
-// EJECUCIÓN INICIAL: Si ya hay token, saltar el login
-window.onload = () => {
-    if (localStorage.getItem('token')) {
-        inicializarApp();
-    }
-};
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'F1') { e.preventDefault(); mostrarSeccion('venta'); }
+    if (e.key === 'F2') { e.preventDefault(); mostrarSeccion('inventario'); }
+    if (e.key === 'F10') { e.preventDefault(); procesarVenta(); }
+});
+
+window.onload = inicializarApp;
