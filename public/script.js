@@ -60,27 +60,27 @@ const views = {
     reports: `
         <div class="reports-container">
             <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
-                <div class="metric-card" style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <div class="metric-card">
                     <h4>Ventas del Día</h4>
-                    <p id="m-revenue" style="font-size: 1.5rem; color: #d63384; font-weight: bold;">$0.00</p>
+                    <p id="m-revenue" style="color: #d63384; font-weight: bold;">$0.00</p>
                 </div>
-                <div class="metric-card" style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <div class="metric-card">
                     <h4>Transacciones</h4>
-                    <p id="m-count" style="font-size: 1.5rem; font-weight: bold;">0</p>
+                    <p id="m-count" style="font-weight: bold;">0</p>
                 </div>
-                <div class="metric-card" style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <div class="metric-card">
                     <h4>Alertas Stock</h4>
-                    <p id="m-alerts" style="font-size: 1.5rem; color: #dc3545; font-weight: bold;">0</p>
+                    <p id="m-alerts" style="color: #dc3545; font-weight: bold;">0</p>
                 </div>
             </div>
             <div class="reports-detail" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="card" style="background: white; padding: 20px; border-radius: 8px;">
+                <div class="card">
                     <h3>🏆 Top 5 Productos</h3>
-                    <ul id="top-products-list" style="list-style: none; padding: 0;"></ul>
+                    <ul id="top-products-list"></ul>
                 </div>
-                <div class="card" style="background: white; padding: 20px; border-radius: 8px;">
+                <div class="card">
                     <h3>⚠️ Stock Bajo</h3>
-                    <ul id="low-stock-list" style="list-style: none; padding: 0;"></ul>
+                    <ul id="low-stock-list"></ul>
                 </div>
             </div>
         </div>
@@ -94,25 +94,20 @@ async function loadReports() {
             headers: { 'Authorization': `Bearer ${state.token}` }
         });
         const json = await res.json();
-        
         if (json.status === 'success') {
             const { metrics } = json.data;
             document.getElementById('m-revenue').innerText = `$${parseFloat(metrics.total_revenue || 0).toFixed(2)}`;
             document.getElementById('m-count').innerText = metrics.sales_count;
             document.getElementById('m-alerts').innerText = metrics.critical_inventory.count;
-
             document.getElementById('top-products-list').innerHTML = metrics.top_products.map(p => 
-                `<li style="padding: 8px 0; border-bottom: 1px solid #eee;">${p.name} <span style="float:right; font-weight:bold;">${p.quantity}</span></li>`
-            ).join('') || '<li>Sin ventas hoy</li>';
-
+                `<li>${p.name} <span>${p.quantity}</span></li>`).join('') || '<li>Sin ventas</li>';
             document.getElementById('low-stock-list').innerHTML = metrics.critical_inventory.items.map(i => 
-                `<li style="color: #dc3545; padding: 8px 0; border-bottom: 1px solid #eee;">${i.name} <span style="float:right;">Quedan: ${i.stock}</span></li>`
-            ).join('') || '<li>Stock saludable</li>';
+                `<li style="color:red">${i.name} (Stock: ${i.stock})</li>`).join('') || '<li>Todo bien</li>';
         }
-    } catch (err) { console.error("Error cargando reportes:", err); }
+    } catch (err) { console.error(err); }
 }
 
-// --- 🛒 LÓGICA POS (BUSQUEDA Y CARRITO) ---
+// --- 🛒 LÓGICA POS ---
 async function handleSearch(e) {
     if (e.key === 'Enter') {
         const query = e.target.value.trim();
@@ -123,7 +118,7 @@ async function handleSearch(e) {
             });
             const json = await res.json();
             if (json.status === 'success' && json.data.length > 0) {
-                addToCart(json.data[0]); // Agrega el primer match
+                addToCart(json.data[0]);
                 e.target.value = '';
             } else { alert('Producto no encontrado'); }
         } catch (err) { console.error(err); }
@@ -169,7 +164,11 @@ async function processCheckout() {
             body: JSON.stringify(payload)
         });
         const json = await res.json();
-        if (json.status === 'success') { alert('✅ Venta Exitosa'); state.cart = []; renderCart(); }
+        if (json.status === 'success') { 
+            alert('✅ Venta Exitosa'); 
+            state.cart = []; 
+            renderCart(); 
+        } else { alert(json.message); }
     } catch (err) { alert('Error en venta'); }
 }
 
@@ -192,7 +191,12 @@ async function saveProduct(e) {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
             body: JSON.stringify(payload)
         });
-        if ((await res.json()).status === 'success') { alert('✅ Guardado'); document.getElementById('product-form').reset(); loadInventoryTable(); }
+        const json = await res.json();
+        if (json.status === 'success') { 
+            alert('✅ Guardado'); 
+            document.getElementById('product-form').reset(); 
+            loadInventoryTable(); 
+        }
     } catch (err) { alert('Error al guardar'); }
 }
 
@@ -218,8 +222,12 @@ async function login(e) {
             body: JSON.stringify({ identifier: document.getElementById('identifier').value, password: document.getElementById('password').value })
         });
         const json = await res.json();
-        if (json.status === 'success') { state.token = json.data.token; state.user = json.data.user; localStorage.setItem('token', state.token); initDashboard(); }
-        else { alert(json.message); }
+        if (json.status === 'success') { 
+            state.token = json.data.token; 
+            state.user = json.data.user; 
+            localStorage.setItem('token', state.token); 
+            initDashboard(); 
+        } else { alert(json.message); }
     } catch (err) { alert("Error"); }
 }
 
@@ -233,14 +241,23 @@ function initDashboard() {
 function loadView(name) {
     document.getElementById('view-container').innerHTML = views[name];
     if (name === 'inventory') { document.getElementById('product-form').onsubmit = saveProduct; loadInventoryTable(); }
-    if (name === 'pos') { document.getElementById('search-pro').addEventListener('keypress', handleSearch); document.getElementById('checkout-btn').onclick = processCheckout; renderCart(); }
+    if (name === 'pos') { 
+        document.getElementById('search-pro').addEventListener('keypress', handleSearch); 
+        document.getElementById('checkout-btn').onclick = processCheckout; 
+        renderCart(); 
+    }
     if (name === 'reports') { loadReports(); }
 }
 
 document.getElementById('login-form').onsubmit = login;
 document.getElementById('logout-btn').onclick = () => { localStorage.removeItem('token'); location.reload(); };
+
 document.querySelectorAll('.sidebar li[data-view]').forEach(li => {
-    li.onclick = () => { document.querySelectorAll('.sidebar li').forEach(el => el.classList.remove('active')); li.classList.add('active'); loadView(li.dataset.view); };
+    li.onclick = () => { 
+        document.querySelectorAll('.sidebar li').forEach(el => el.classList.remove('active')); 
+        li.classList.add('active'); 
+        loadView(li.dataset.view); 
+    };
 });
 
 if (state.token) { initDashboard(); }

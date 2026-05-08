@@ -4,15 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POS Maquillaje | Sistema de Ventas</title>
+    
+    <!-- 1. Estilos Locales -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- 2. Iconos (Corregido: Remix Icon CDN) -->
     <link href="https://jsdelivr.net" rel="stylesheet">
+    
+    <!-- 3. Fuente Google Fonts (Opcional pero pro) -->
+    <link href="https://googleapis.com" rel="stylesheet">
 </head>
 <body>
     <div id="app">
         <!-- Pantalla de Login -->
         <section id="login-screen" class="screen">
             <div class="login-card">
+                <div style="text-align: center; font-size: 3rem;">💄</div>
                 <h2>Iniciar Sesión</h2>
+                <p style="text-align: center; color: #666; margin-bottom: 20px;">Glow Beauty POS</p>
                 <form id="login-form">
                     <input type="text" id="identifier" placeholder="Usuario o Correo" required>
                     <input type="password" id="password" placeholder="Contraseña" required>
@@ -26,25 +35,39 @@
             <nav class="sidebar">
                 <div class="logo">💄 POS Glow</div>
                 <ul>
-                    <li data-view="pos" class="active"><i class="ri-shopping-cart-fill"></i> Ventas</li>
-                    <li data-view="inventory"><i class="ri-store-2-fill"></i> Inventario</li>
-                    <li data-view="reports"><i class="ri-bar-chart-fill"></i> Reportes</li>
-                    <li id="logout-btn"><i class="ri-logout-box-r-line"></i> Salir</li>
+                    <!-- Corregimos los <i> para que usen Remix Icon -->
+                    <li data-view="pos" class="active">
+                        <i class="ri-shopping-cart-2-line"></i> Ventas
+                    </li>
+                    <li data-view="inventory">
+                        <i class="ri-store-2-line"></i> Inventario
+                    </li>
+                    <li data-view="reports">
+                        <i class="ri-bar-chart-box-line"></i> Reportes
+                    </li>
+                    <li id="logout-btn" style="margin-top: auto; color: #ff4d4d;">
+                        <i class="ri-logout-box-r-line"></i> Salir
+                    </li>
                 </ul>
             </nav>
 
             <section class="content">
                 <header>
                     <h2 id="view-title">Punto de Venta</h2>
-                    <span id="user-display"></span>
+                    <div class="user-info">
+                        <i class="ri-user-smile-line"></i>
+                        <span id="user-display"></span>
+                    </div>
                 </header>
                 
                 <div id="view-container">
-                    <!-- El contenido se carga dinámicamente aquí -->
+                    <!-- El contenido se carga dinámicamente desde script.js -->
                 </div>
             </section>
         </main>
     </div>
+
+    <!-- Script Principal -->
     <script src="script.js" type="module"></script>
 </body>
 </html>
