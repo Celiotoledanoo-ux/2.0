@@ -6,7 +6,6 @@ import logger from '../../core/logger/logger.js';
  * 🚀 CREAR PRODUCTO NUEVO
  */
 export const createProduct = async (productData) => {
-  // Validamos que el SKU no esté repetido antes de intentar insertar
   const existing = await inventoryRepo.findBySku(productData.sku);
   if (existing) throw new AppError('Ya existe un producto con este SKU/Código de barras', 409);
 
@@ -14,7 +13,15 @@ export const createProduct = async (productData) => {
 };
 
 /**
- * 📉 AJUSTE DE STOCK (Manual o por Venta)
+ * 🔍 OBTENER PRODUCTOS (Con filtros para el POS)
+ */
+export const getProducts = async (filters) => {
+  // Pasamos los filtros (sku, name) directamente al repositorio
+  return await inventoryRepo.findAll(filters);
+};
+
+/**
+ * 📉 AJUSTE DE STOCK MANUAL
  */
 export const adjustStock = async (productId, quantity, userId, reason = 'Ajuste manual') => {
   if (!productId) throw new AppError('ID de producto requerido', 400);
@@ -22,15 +29,16 @@ export const adjustStock = async (productId, quantity, userId, reason = 'Ajuste 
   const product = await inventoryRepo.findById(productId);
   if (!product) throw new AppError('El producto no existe', 404);
 
-  // Verificamos que el ajuste no deje el stock en negativo (Doble validación)
+  // Doble validación de seguridad
   if (product.stock + quantity < 0) {
     throw new AppError(`Stock insuficiente. Solo quedan ${product.stock} unidades.`, 400);
   }
 
-  const result = await inventoryRepo.updateStock(productId, quantity, userId, reason);
-  const updatedProduct = Array.isArray(result) ? result[0] : result;
+  await inventoryRepo.updateStock(productId, quantity, userId, reason);
+  
+  // Refrescamos los datos para devolver el producto actualizado con su nuevo stock
+  const updatedProduct = await inventoryRepo.findById(productId);
 
-  // Alerta de Stock Bajo: Maquillaje suele tener min_stock de 2 o 3 piezas
   if (updatedProduct.stock <= (updatedProduct.min_stock || 0)) {
     logger.warn({
       event: 'LOW_STOCK_ALERT',

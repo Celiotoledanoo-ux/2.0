@@ -3,7 +3,7 @@ import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 📊 REPORTS REPOSITORY - VERSIÓN MAQUILLAJE POS
+ * 📊 REPORTS REPOSITORY - VERSIÓN MAQUILLAJE POS BLINDADA
  */
 
 export const getDailyRevenue = async (date) => {
@@ -38,12 +38,15 @@ export const getTopSellingProducts = async (limit = 100) => {
 };
 
 export const getLowStockAlerts = async () => {
-  // Perfeccionismo: Comparamos stock contra el mínimo real configurado en la DB
+  /**
+   * 💡 MEJORA PERFECCIONISTA:
+   * Para comparar dos columnas de la misma tabla en Supabase (PostgREST), 
+   * la forma más robusta es usar el filtro de sintaxis cruda.
+   */
   const { data, error } = await db
     .from(TABLES.INVENTORY || 'inventory')
     .select('name, stock, min_stock')
-    .lt('stock', 'min_stock'); // Supabase permite esto si min_stock es estático, 
-                               // de lo contrario usaríamos .filter('stock', 'lt', 'min_stock')
+    .filter('stock', 'lt', 'min_stock'); // Compara el valor de stock contra la columna min_stock
 
   if (error) throw new AppError('Error al consultar stock crítico', 500);
   return data;

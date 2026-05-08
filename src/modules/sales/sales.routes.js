@@ -6,11 +6,15 @@ import { validate } from '../../core/middlewares/validation.middlewares.js';
 
 const router = Router();
 
+// 🔒 Todas las rutas de ventas requieren estar logueado
 router.use(protect);
 
-// Todos los roles operativos pueden realizar ventas
+/**
+ * 🛒 REGISTRAR VENTA
+ * Al usar '/', la ruta final será: /api/v1/sales
+ */
 router.post(
-  '/checkout',
+  '/', // ✅ CAMBIO AQUÍ: Quitamos '/checkout' para usar la raíz
   restrictTo('ADMIN', 'CASHIER', 'MANAGER', 'OWNER'),
   validate(createSaleSchema), 
   salesController.checkout

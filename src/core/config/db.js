@@ -1,17 +1,19 @@
 /**
  * 🗄️ DATABASE CONFIGURATION (Immutable)
- * Centraliza el esquema y políticas de persistencia.
+ * Centraliza el esquema y políticas de persistencia del POS.
  */
 
 const TABLES = Object.freeze({
   USERS: 'users',
-  PROFILES: 'profiles',
+  CATEGORIES: 'categories', // 👈 ¡Faltaba esta para el inventario!
   INVENTORY: 'inventory',
   SALES: 'sales',
-  SALES_ITEMS: 'sales_items', // Crucial para normalización
+  SALES_ITEMS: 'sales_items', 
   RETURNS: 'returns',
   PAYMENTS: 'payments',
-  REPORTS: 'reports',
+  // Nota: 'reports' usualmente es una vista o lógica de servicio, 
+  // no una tabla física, pero la dejamos por si escalas a logs de reportes.
+  REPORTS_LOGS: 'reports_logs', 
 });
 
 const DB_SETTINGS = Object.freeze({
@@ -23,7 +25,6 @@ const DB_SETTINGS = Object.freeze({
     MAX_RETRIES: 3,
     DELAY_MS: 1000,
   }),
-  // Añadimos configuración de Schema para Supabase/Postgres
   SCHEMA: 'public',
 });
 
