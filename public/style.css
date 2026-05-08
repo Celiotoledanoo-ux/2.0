@@ -1,153 +1,43 @@
-/* 💄 POS SHOPPER BEAUTYMX - LUXURY RETAIL EDITION */
 :root {
-  --primary: #000000;      /* Negro puro - Elegancia */
-  --accent: #D4AF37;       /* Dorado - Premium */
-  --beauty-pink: #c71585;  /* Detalles de marca */
-  --success: #27ae60;
-  --danger: #c0392b;
-  --bg-main: #ffffff;      /* Fondo limpio */
-  --bg-soft: #f4f4f4;
-  --text: #1a1a1a;
-  --border: #e0e0e0;
-  --shadow-soft: 0 10px 40px rgba(0,0,0,0.05);
+    --primary: #d63384; /* Color maquillaje/rosa fuerte */
+    --dark: #212529;
+    --light: #f8f9fa;
+    --border: #dee2e6;
 }
 
-/* 🧱 RESET & BASE */
-* {
-  margin: 0; padding: 0; box-sizing: border-box;
-  font-family: 'Inter', -apple-system, sans-serif;
-  letter-spacing: -0.01em;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
 
-body {
-  background-color: var(--bg-main);
-  color: var(--text);
-  overflow-x: hidden;
-}
+body { background: var(--light); height: 100vh; overflow: hidden; }
 
-/* 🔐 PANTALLA DE LOGIN (FULL SCREEN) */
-.auth-wrapper {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #000;
-  position: fixed;
-  width: 100%;
-  top: 0; left: 0;
-  z-index: 1000;
-}
+.hidden { display: none !important; }
 
+/* Login */
+#login-screen {
+    display: flex; align-items: center; justify-content: center; height: 100vh;
+}
 .login-card {
-  background: var(--bg-main);
-  padding: 50px 40px;
-  width: 100%;
-  max-width: 400px;
-  border-radius: 4px;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 350px;
+}
+input {
+    width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 6px;
+}
+button {
+    width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer;
 }
 
-.brand-header h1 {
-  font-size: 1.5rem;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  margin-bottom: 5px;
+/* Dashboard Layout */
+#main-screen { display: grid; grid-template-columns: 250px 1fr; height: 100vh; }
+
+.sidebar { background: var(--dark); color: white; padding: 1.5rem; }
+.sidebar li { 
+    list-style: none; padding: 12px; cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.3s;
 }
-.brand-header span { color: var(--beauty-pink); }
-.brand-header p { font-size: 0.7rem; color: #888; margin-bottom: 30px; letter-spacing: 2px; }
+.sidebar li:hover, .sidebar li.active { background: var(--primary); }
 
-/* 🔝 HEADER & NAVEGACIÓN */
-.main-header {
-  background: white;
-  border-bottom: 1px solid var(--border);
-  padding: 10px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0; z-index: 100;
-}
+.content { padding: 2rem; overflow-y: auto; }
+header { display: flex; justify-content: space-between; margin-bottom: 2rem; border-bottom: 2px solid var(--border); padding-bottom: 1rem; }
 
-.header-brand { font-weight: 800; letter-spacing: 2px; text-transform: uppercase; font-size: 0.9rem; }
-
-.main-nav { display: flex; gap: 10px; }
-.nav-item {
-  background: none; border: none; padding: 15px 20px;
-  font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
-  cursor: pointer; color: #888; transition: 0.3s;
-  border-bottom: 2px solid transparent;
-}
-.nav-item.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
-.nav-item kbd { font-size: 9px; opacity: 0.5; margin-left: 5px; }
-
-.header-user { display: flex; align-items: center; gap: 20px; }
-.role-badge { background: var(--bg-soft); padding: 4px 10px; font-size: 0.6rem; font-weight: 800; border-radius: 2px; border: 1px solid var(--border); }
-.btn-logout { background: none; border: none; font-weight: bold; cursor: pointer; color: var(--danger); }
-
-/* 📐 LAYOUT DE SECCIONES */
-.seccion { display: none; padding: 30px 40px; }
-.seccion.activa { display: block; }
-
-/* 🛒 VENTA - POS GRID */
-.pos-grid { display: grid; grid-template-columns: 1fr 380px; gap: 30px; }
-
-.search-bar { position: relative; margin-bottom: 25px; }
-.search-bar input {
-  width: 100%; padding: 20px; font-size: 1.1rem;
-  border: 1px solid var(--border); border-radius: 0; outline: none;
-}
-.search-bar input:focus { border-color: var(--primary); box-shadow: var(--shadow-soft); }
-
-/* 📋 TABLAS RETAIL */
-.table-card { border: 1px solid var(--border); border-radius: 0; overflow: hidden; }
-.retail-table { width: 100%; border-collapse: collapse; background: white; }
-.retail-table th {
-  text-align: left; font-size: 0.65rem; text-transform: uppercase;
-  padding: 15px 20px; border-bottom: 2px solid var(--primary); color: #999;
-}
-.retail-table td { padding: 18px 20px; border-bottom: 1px solid var(--bg-soft); font-size: 0.9rem; }
-
-/* 💰 SIDEBAR DE VENTA */
-.summary-card { background: var(--bg-soft); padding: 30px; border-radius: 0; }
-.summary-row { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: 500; }
-.summary-row.total {
-  margin-top: 20px; padding-top: 20px;
-  border-top: 1px solid var(--border); font-size: 1.8rem; font-weight: 800;
-}
-
-.modern-select {
-  width: 100%; padding: 12px; margin-top: 10px;
-  border: 1px solid var(--border); background: white;
-}
-
-.btn-pay {
-  background: var(--primary); color: white; width: 100%; padding: 20px;
-  border: none; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 2px; margin-top: 20px; cursor: pointer; transition: 0.3s;
-}
-.btn-pay:hover { background: var(--beauty-pink); }
-
-/* 📦 INVENTARIO LAYOUT */
-.inventory-layout { display: grid; grid-template-columns: 320px 1fr; gap: 30px; }
-.card-form { padding: 25px; background: white; border: 1px solid var(--border); }
-.card-form h3 { font-size: 0.8rem; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; }
-.form-grid input {
-  width: 100%; padding: 12px; margin-bottom: 15px;
-  border: 1px solid var(--border); border-radius: 0;
-}
-.btn-add {
-  background: var(--primary); color: white; width: 100%; padding: 15px;
-  border: none; font-weight: 700; cursor: pointer; text-transform: uppercase;
-}
-
-/* 📊 REPORTES */
-.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-.kpi-card { padding: 30px; border: 1px solid var(--border); text-align: center; }
-.kpi-card label { font-size: 0.65rem; text-transform: uppercase; color: #888; letter-spacing: 1px; }
-.kpi-card .value { font-size: 2.2rem; font-weight: 800; margin-top: 10px; }
-
-/* 🏷️ BADGES */
-.badge { padding: 4px 8px; font-size: 0.7rem; font-weight: bold; border-radius: 2px; }
-.badge.success { background: #e8f5e9; color: var(--success); }
-.badge.danger { background: #ffebee; color: var(--danger); }
+/* POS Grid */
+.pos-container { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+.cart { background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); }
