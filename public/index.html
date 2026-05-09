@@ -3,77 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS Maquillaje | Sistema de Ventas</title>
+    <title>POS Glow Beauty | Panel de Control</title>
     
     <!-- 1. Estilos Locales -->
     <link rel="stylesheet" href="style.css">
     
-    <!-- 2. Iconos (Remix Icon) -->
+    <!-- 2. Iconos Remix Icon (Full CDN) -->
     <link href="https://jsdelivr.net" rel="stylesheet">
     
     <!-- 3. Fuente Poppins (Google Fonts) -->
-    <link href="https://googleapis.com" rel="stylesheet">
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
-        <!-- Pantalla de Login -->
+        <!-- 🔐 Pantalla de Login -->
         <section id="login-screen" class="screen">
             <div class="login-card">
-                <div style="text-align: center; font-size: 3rem;">💄</div>
-                <h2>Iniciar Sesión</h2>
-                <p style="text-align: center; color: #666; margin-bottom: 20px;">Glow Beauty POS</p>
+                <div style="text-align: center; font-size: 3.5rem; margin-bottom: 10px;">💄</div>
+                <h2>Glow Beauty POS</h2>
+                <p style="text-align: center; color: #666; margin-bottom: 25px;">Ingresa tus credenciales</p>
                 <form id="login-form">
-                    <input type="text" id="identifier" placeholder="Usuario o Correo" required>
-                    <input type="password" id="password" placeholder="Contraseña" required>
-                    <button type="submit">Entrar</button>
+                    <div class="input-group">
+                        <i class="ri-user-heart-line"></i>
+                        <input type="text" id="identifier" placeholder="Usuario o Correo" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="ri-lock-password-line"></i>
+                        <input type="password" id="password" placeholder="Contraseña" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Entrar al Sistema</button>
                 </form>
             </div>
         </section>
 
-        <!-- Dashboard Principal -->
+        <!-- 🚀 Dashboard Principal (Control Total) -->
         <main id="main-screen" class="screen hidden">
             <nav class="sidebar">
-                <div class="logo">💄 POS Glow</div>
+                <div class="logo">✨ GLOW POS</div>
                 <ul>
                     <li data-view="pos" class="active">
-                        <i class="ri-shopping-cart-2-line"></i> Ventas
+                        <i class="ri-shopping-bag-3-line"></i> Punto de Venta
                     </li>
                     <li data-view="inventory">
-                        <i class="ri-store-2-line"></i> Inventario
+                        <i class="ri-box-3-line"></i> Inventario
                     </li>
                     <li data-view="reports">
-                        <i class="ri-bar-chart-box-line"></i> Reportes
+                        <i class="ri-pie-chart-2-line"></i> Reportes
                     </li>
                     <li data-view="users">
-                        <i class="ri-team-line"></i> Usuarios
+                        <i class="ri-group-line"></i> Usuarios
                     </li>
-                    <!-- 💰 OPCIÓN DE CAJA AÑADIDA -->
                     <li data-view="cash">
                         <i class="ri-safe-2-line"></i> Caja
                     </li>
-                    
-                    <li id="logout-btn" style="margin-top: 50px; color: #ff4d4d;">
-                        <i class="ri-logout-box-r-line"></i> Salir
+                    <li id="logout-btn" class="logout-item">
+                        <i class="ri-logout-circle-r-line"></i> Cerrar Sesión
                     </li>
                 </ul>
             </nav>
 
             <section class="content">
                 <header>
-                    <h2 id="view-title">Punto de Venta</h2>
-                    <div class="user-info">
-                        <i class="ri-user-smile-line"></i>
-                        <span id="user-display"></span>
+                    <div class="header-info">
+                        <h2 id="view-title">Punto de Venta</h2>
+                        <p id="user-display" class="user-tag"></p>
+                    </div>
+                    <div class="header-actions">
+                        <span id="clock" style="font-weight: 600; color: #888;"></span>
                     </div>
                 </header>
                 
-                <div id="view-container">
-                    <!-- Se carga dinámicamente desde script.js -->
-                </div>
+                <!-- 📦 Contenedor Dinámico (Aquí el script.js inyecta las vistas) -->
+                <div id="view-container"></div>
             </section>
         </main>
     </div>
 
+    <!-- Script Maestro -->
     <script src="script.js" type="module"></script>
 </body>
 </html>
