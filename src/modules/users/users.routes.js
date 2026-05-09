@@ -13,8 +13,16 @@ const router = Router();
 // 1. Bloqueo de seguridad: Nadie entra sin sesión activa
 router.use(protect);
 
-// 2. Gestión de Personal: Solo dueños y administradores pueden crear o modificar
-// Añadimos 'OWNER' para que coincida con tu SQL y Schema
+// --- 🆕 RUTA PARA EL PANEL DE GESTIÓN ---
+// Listar a todos los empleados para que el OWNER los vea en la tabla
+router.get(
+  '/',
+  restrictTo('ADMIN', 'OWNER'),
+  userController.getAll
+);
+// ----------------------------------------
+
+// 2. Gestión de Personal: Solo dueños y administradores pueden crear
 router.post(
   '/',
   restrictTo('ADMIN', 'OWNER'), 
@@ -30,7 +38,7 @@ router.patch(
   userController.toggleStatus
 );
 
-// 4. Consulta de perfil: Cualquier usuario logueado puede ver un perfil (para ventas)
+// 4. Consulta de perfil individual
 router.get(
   '/:id',
   userController.getById

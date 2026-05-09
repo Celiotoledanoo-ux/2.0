@@ -3,6 +3,15 @@ import { db } from '../../core/database/supabaseClient.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
+ * 📋 OBTENER TODO EL PERSONAL
+ */
+export const getAllUsers = async () => {
+  const users = await userRepository.findAll(); // Llamamos al repo
+  if (!users) throw new AppError('No se pudo recuperar la lista de usuarios', 500);
+  return users;
+};
+
+/**
  * 👥 USERS SERVICE - VERSIÓN PERFECCIONADA
  */
 

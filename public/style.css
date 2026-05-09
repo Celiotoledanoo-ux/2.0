@@ -75,3 +75,45 @@ td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
     background: white; padding: 20px; border-radius: 12px; text-align: center; 
     box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid var(--primary);
 }
+
+/* 👥 Gestión de Usuarios */
+.users-layout {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #e9ecef;
+    color: var(--dark);
+    text-transform: uppercase;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    width: auto; /* Para que no ocupe todo el ancho en la tabla */
+    display: inline-block;
+}
+
+/* Efecto de entrada suave */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 📱 Mejoras de scroll para tablas en pantallas pequeñas */
+#users-table-container {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow-x: auto;
+}
+
+/* Estilo para el botón de "Desactivar" (Rojo suave) */
+button.btn-small:contains("Desactivar") {
+    background: #ff4d4d;
+}

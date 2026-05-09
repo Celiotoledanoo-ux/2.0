@@ -84,7 +84,71 @@ const views = {
                 </div>
             </div>
         </div>
+    `,
+    users: `
+        <div class="users-layout">
+            <div class="card">
+                <h3>👥 Gestión de Personal</h3>
+                <div id="users-table-container">
+                    <table style="width:100%; margin-top:20px;">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     `
+};
+
+// --- 👥 LÓGICA DE USUARIOS ---
+async function loadUsersTable() {
+    const tbody = document.getElementById('users-body');
+    if (!tbody) return;
+    try {
+        const res = await fetch(`${API_URL}/users`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            tbody.innerHTML = json.data.users.map(u => `
+                <tr>
+                    <td>${u.name}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge">${u.role}</span></td>
+                    <td>${u.active ? '🟢 Activo' : '🔴 Inactivo'}</td>
+                    <td>
+                        <button onclick="toggleUserStatus('${u.id}', ${u.active})" class="btn-small">
+                            ${u.active ? 'Desactivar' : 'Activar'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (err) { console.error(err); }
+}
+
+window.toggleUserStatus = async (id, currentStatus) => {
+    if (!confirm('¿Seguro que deseas cambiar el estado de este usuario?')) return;
+    try {
+        const res = await fetch(`${API_URL}/users/${id}/status`, {
+            method: 'PATCH',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}` 
+            },
+            body: JSON.stringify({ active: !currentStatus })
+        });
+        const json = await res.json();
+        if (json.status === 'success') { loadUsersTable(); }
+    } catch (err) { alert('Error al actualizar estado'); }
 };
 
 // --- 📊 LÓGICA DE REPORTES ---
@@ -247,6 +311,7 @@ function loadView(name) {
         renderCart(); 
     }
     if (name === 'reports') { loadReports(); }
+    if (name === 'users') { loadUsersTable(); }
 }
 
 document.getElementById('login-form').onsubmit = login;

@@ -8,10 +8,10 @@
     <!-- 1. Estilos Locales -->
     <link rel="stylesheet" href="style.css">
     
-    <!-- 2. Iconos (Corregido: Remix Icon CDN) -->
+    <!-- 2. Iconos (Remix Icon) -->
     <link href="https://jsdelivr.net" rel="stylesheet">
     
-    <!-- 3. Fuente Google Fonts (Opcional pero pro) -->
+    <!-- 3. Fuente Poppins (Google Fonts) -->
     <link href="https://googleapis.com" rel="stylesheet">
 </head>
 <body>
@@ -30,12 +30,11 @@
             </div>
         </section>
 
-        <!-- Dashboard Principal (Oculto al inicio) -->
+        <!-- Dashboard Principal -->
         <main id="main-screen" class="screen hidden">
             <nav class="sidebar">
                 <div class="logo">💄 POS Glow</div>
                 <ul>
-                    <!-- Corregimos los <i> para que usen Remix Icon -->
                     <li data-view="pos" class="active">
                         <i class="ri-shopping-cart-2-line"></i> Ventas
                     </li>
@@ -45,7 +44,11 @@
                     <li data-view="reports">
                         <i class="ri-bar-chart-box-line"></i> Reportes
                     </li>
-                    <li id="logout-btn" style="margin-top: auto; color: #ff4d4d;">
+                    <!-- 👥 OPCIÓN DE USUARIOS AÑADIDA -->
+                    <li data-view="users">
+                        <i class="ri-team-line"></i> Usuarios
+                    </li>
+                    <li id="logout-btn" style="margin-top: 50px; color: #ff4d4d;">
                         <i class="ri-logout-box-r-line"></i> Salir
                     </li>
                 </ul>
@@ -61,13 +64,12 @@
                 </header>
                 
                 <div id="view-container">
-                    <!-- El contenido se carga dinámicamente desde script.js -->
+                    <!-- Se carga desde script.js -->
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- Script Principal -->
     <script src="script.js" type="module"></script>
 </body>
 </html>
