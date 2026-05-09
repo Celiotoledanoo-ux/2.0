@@ -1,24 +1,24 @@
 import { z } from 'zod';
 
 /**
- * 📦 PRODUCT SCHEMA - MAQUILLAJE POS
+ * 📦 PRODUCT SCHEMA - MAQUILLAJE POS (VERSIÓN SLIM)
  */
 export const productSchema = z.object({
   body: z.object({
-    name: z.string().trim().min(3, 'Nombre demasiado corto'),
-    sku: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .min(4, 'El SKU debe tener mínimo 4 caracteres')
-      .max(30, 'El SKU es demasiado largo'),
-    price: z.coerce.number().positive('El precio debe ser mayor a 0'),
-    stock: z.coerce.number().int().nonnegative('El stock inicial no puede ser negativo'),
-    min_stock: z.coerce.number().int().nonnegative().default(5),
-    // CAMBIO CLAVE: Ahora aceptamos el ID de la categoría que creamos en SQL
-    category_id: z.string().uuid('ID de categoría inválido').optional(),
-    brand: z.string().trim().optional(), // Agregamos marca (ej: MAC, Maybelline)
-    description: z.string().trim().optional()
+    body: z.object({ // 👈 Esta es la capa que falta para conectar con el nuevo script.js
+      name: z.string().trim().min(3, 'Nombre demasiado corto'),
+      sku: z
+        .string()
+        .trim()
+        .toUpperCase()
+        .min(4, 'El SKU debe tener mínimo 4 caracteres'),
+      price: z.coerce.number().positive('El precio debe ser mayor a 0'),
+      stock: z.coerce.number().int().nonnegative('El stock no puede ser negativo'),
+      min_stock: z.coerce.number().int().nonnegative().default(5),
+      category_id: z.string().uuid('ID de categoría inválido').optional(),
+      brand: z.string().trim().optional(),
+      description: z.string().trim().optional()
+    })
   })
 });
 

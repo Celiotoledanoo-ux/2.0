@@ -28,6 +28,7 @@ const requiredEnvs = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+  JWT_SECRET: process.env.JWT_SECRET,
 };
 
 // 🔴 1. Verificar existencia de las llaves maestras
@@ -64,6 +65,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 export const env = {
   nodeEnv: requiredEnvs.NODE_ENV,
   port,
+  jwtSecret: requiredEnvs.JWT_SECRET,
 
   supabase: {
     url: requiredEnvs.SUPABASE_URL,
