@@ -14,6 +14,7 @@ const TABLES = Object.freeze({
   // Nota: 'reports' usualmente es una vista o lógica de servicio, 
   // no una tabla física, pero la dejamos por si escalas a logs de reportes.
   REPORTS_LOGS: 'reports_logs', 
+  CASH_SESSIONS: 'cash_sessions',
 });
 
 const DB_SETTINGS = Object.freeze({

@@ -105,8 +105,38 @@ const views = {
                 </div>
             </div>
         </div>
+    `, // 👈 Asegúrate de que esta coma esté aquí
+    cash: `
+        <div class="cash-container">
+            <div class="card">
+                <h3>💰 Control de Caja</h3>
+                <div id="cash-active-info" class="hidden">
+                    <p>Estado: <span class="badge" style="background: #28a745; color: white;">ABIERTA</span></p>
+                    <p style="margin: 10px 0;">Fondo Inicial: <b id="display-initial"></b></p>
+                    <p>Abierta el: <span id="display-time"></span></p>
+                    <button id="close-cash-btn" class="btn-danger" style="margin-top: 20px; background: #dc3545; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
+                        Realizar Corte y Cerrar Caja
+                    </button>
+                </div>
+                <div id="cash-no-session">
+                    <p>No hay una sesión activa. Debes abrir caja para vender.</p>
+                </div>
+            </div>
+        </div>
+    `,
+    modalOpenCash: `
+        <div id="cash-modal" class="modal-overlay" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index: 9999;">
+            <div class="modal-content" style="background: white; padding: 30px; border-radius: 15px; text-align: center; width: 350px;">
+                <h2 style="margin-bottom: 15px;">💰 Apertura de Caja</h2>
+                <p style="margin-bottom: 20px;">Ingresa el efectivo inicial en la caja de metal:</p>
+                <input type="number" id="initial-amount" placeholder="Ej: 500.00" step="0.01" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                <button id="confirm-open-btn" style="width: 100%; padding: 12px; background: #d63384; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    Abrir Caja e Iniciar Turno
+                </button>
+            </div>
+        </div>
     `
-};
+}; // 👈 Aquí cierra el objeto views
 
 // --- 👥 LÓGICA DE USUARIOS ---
 async function loadUsersTable() {
@@ -150,6 +180,90 @@ window.toggleUserStatus = async (id, currentStatus) => {
         if (json.status === 'success') { loadUsersTable(); }
     } catch (err) { alert('Error al actualizar estado'); }
 };
+
+// --- 💰 LÓGICA DE CONTROL DE CAJA ---
+
+async function checkCashStatus() {
+    try {
+        const res = await fetch(`${API_URL}/cash/status`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        const json = await res.json();
+        
+        // Si no hay sesión (null), lanzamos el modal que bloquea todo
+        if (json.status === 'success' && !json.data.session) {
+            showOpenCashModal();
+        } else {
+            state.cashSession = json.data.session;
+            console.log("🚀 Caja operativa");
+        }
+    } catch (err) { console.error("Error verificando caja:", err); }
+}
+
+function showOpenCashModal() {
+    // Si ya existe un modal en el DOM, no creamos otro
+    if (document.getElementById('cash-modal')) return;
+
+    const modalDiv = document.createElement('div');
+    modalDiv.id = "modal-wrapper";
+    modalDiv.innerHTML = views.modalOpenCash;
+    document.body.appendChild(modalDiv);
+
+    document.getElementById('confirm-open-btn').onclick = async () => {
+        const amount = document.getElementById('initial-amount').value;
+        
+        if (amount === "" || amount < 0) return alert("Ingresa un fondo inicial válido");
+
+        try {
+            const res = await fetch(`${API_URL}/cash/open`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.token}` 
+                },
+                body: JSON.stringify({ initial_amount: amount })
+            });
+
+            const json = await res.json();
+            if (json.status === 'success') {
+                state.cashSession = json.data.session;
+                modalDiv.remove(); // Quitamos el bloqueo
+                alert("✅ Caja abierta. ¡Buenas ventas!");
+            } else {
+                alert("Error: " + json.message);
+            }
+        } catch (err) { alert("Error de conexión al abrir caja"); }
+    };
+}
+
+async function handleCloseCash() {
+    const amount = prompt("💰 CORTE DE CAJA:\nContabiliza el efectivo físico en la caja de metal e ingresa el total:");
+    
+    if (amount === null) return; // Canceló el prompt
+    if (isNaN(amount) || amount === "") return alert("Debes ingresar un número válido");
+
+    try {
+        const res = await fetch(`${API_URL}/cash/close`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}` 
+            },
+            body: JSON.stringify({ actual_amount: amount })
+        });
+        const json = await res.json();
+        
+        if (json.status === 'success') {
+            const s = json.data.session;
+            alert(`🏁 CORTE FINALIZADO\n-------------------\nEsperado: $${s.expected_amount}\nContado: $${s.actual_amount}\nDiferencia: $${s.difference}\n\nEl sistema se reiniciará.`);
+            state.cashSession = null;
+            location.reload(); 
+        } else {
+            alert("Error al cerrar: " + json.message);
+        }
+    } catch (err) { alert("Error al conectar con el servidor"); }
+}
+
 
 // --- 📊 LÓGICA DE REPORTES ---
 async function loadReports() {
@@ -299,12 +413,20 @@ function initDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-screen').classList.remove('hidden');
     document.getElementById('user-display').innerText = `Admin: ${state.user?.name || 'User'}`;
+    
+    // 🔥 PASO MAESTRO: Chequeamos la caja en cuanto entramos
+    checkCashStatus();
+    
     loadView('pos');
 }
 
 function loadView(name) {
     document.getElementById('view-container').innerHTML = views[name];
-    if (name === 'inventory') { document.getElementById('product-form').onsubmit = saveProduct; loadInventoryTable(); }
+    
+    if (name === 'inventory') { 
+        document.getElementById('product-form').onsubmit = saveProduct; 
+        loadInventoryTable(); 
+    }
     if (name === 'pos') { 
         document.getElementById('search-pro').addEventListener('keypress', handleSearch); 
         document.getElementById('checkout-btn').onclick = processCheckout; 
@@ -312,6 +434,17 @@ function loadView(name) {
     }
     if (name === 'reports') { loadReports(); }
     if (name === 'users') { loadUsersTable(); }
+    
+    // ✅ NUEVO: Lógica para la vista de Caja (Corte de caja)
+    if (name === 'cash') {
+        if (state.cashSession) {
+            document.getElementById('cash-active-info').classList.remove('hidden');
+            document.getElementById('cash-no-session').classList.add('hidden');
+            document.getElementById('display-initial').innerText = `$${parseFloat(state.cashSession.initial_amount).toFixed(2)}`;
+            document.getElementById('display-time').innerText = new Date(state.cashSession.opened_at).toLocaleString();
+            document.getElementById('close-cash-btn').onclick = handleCloseCash;
+        }
+    }
 }
 
 document.getElementById('login-form').onsubmit = login;
