@@ -14,7 +14,16 @@ export default () => {
       throw new Error('El enrutador global no se pudo cargar. Revisa src/routes/index.js');
     }
 
-    const modules = ['Auth', 'Users', 'Inventory', 'Sales', 'Returns', 'Payments', 'Reports'];
+    const modules = [
+      'Auth',
+      'Users',
+      'Inventory',
+      'Sales',
+      'Returns',
+      'Payments',
+      'Cash',
+      'Reports'
+    ];
     
     logger.info(`✅ Inyección de módulos completada: [${modules.join(', ')}]`);
 
@@ -29,4 +38,3 @@ export default () => {
     process.exit(1);
   }
 };
-
