@@ -7,26 +7,31 @@ import { stockAdjustmentSchema, productSchema } from './inventory.schema.js';
 const router = Router();
 
 /**
- * 📦 RUTAS DE INVENTARIO - POS MAQUILLAJE
+ * 📦 RUTAS DE INVENTARIO - POS SYSTEM
+ * Control de existencias y catálogo de productos.
  */
 
-// 1. Ver inventario (Cualquier empleado logueado puede consultar stock)
-router.get('/', protect, inventoryController.getAll);
+// 1. Capa de Autenticación Global (Todos los endpoints requieren estar logueados)
+router.use(protect);
 
-// 2. Crear producto nuevo (Solo ADMIN, MANAGER o el DUEÑO)
+// 2. Consulta de Inventario (Accesible para CASHIER, ADMIN, MANAGER, OWNER)
+router.get('/', inventoryController.getAll);
+
+// 3. Operaciones de Gestión (Restringido a jerarquía de mando)
+const adminRoles = restrictTo('ADMIN', 'MANAGER', 'OWNER');
+
+// Crear producto nuevo
 router.post(
   '/',
-  protect,
-  restrictTo('ADMIN', 'MANAGER', 'OWNER'),
+  adminRoles,
   validate(productSchema),
   inventoryController.create
 );
 
-// 3. Ajustar stock manualmente (Auditoría de inventario)
+// Ajustar stock manualmente
 router.patch(
   '/:id/stock',
-  protect,
-  restrictTo('ADMIN', 'MANAGER', 'OWNER'),
+  adminRoles,
   validate(stockAdjustmentSchema), 
   inventoryController.updateStock
 );

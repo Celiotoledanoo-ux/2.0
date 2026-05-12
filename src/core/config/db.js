@@ -5,14 +5,14 @@
 
 const TABLES = Object.freeze({
   USERS: 'users',
-  CATEGORIES: 'categories', // 👈 ¡Faltaba esta para el inventario!
+  CATEGORIES: 'categories',
   INVENTORY: 'inventory',
   SALES: 'sales',
   SALES_ITEMS: 'sales_items', 
   RETURNS: 'returns',
+  // 🟢 AGREGADA: Necesaria para el historial detallado de devoluciones que vimos en el repo
+  RETURN_ITEMS: 'return_items', 
   PAYMENTS: 'payments',
-  // Nota: 'reports' usualmente es una vista o lógica de servicio, 
-  // no una tabla física, pero la dejamos por si escalas a logs de reportes.
   REPORTS_LOGS: 'reports_logs', 
   CASH_SESSIONS: 'cash_sessions',
 });
@@ -27,6 +27,8 @@ const DB_SETTINGS = Object.freeze({
     DELAY_MS: 1000,
   }),
   SCHEMA: 'public',
+  // 🟢 AGREGADO: Tiempo de espera para evitar que Render se cuelgue si Supabase tarda
+  TIMEOUT_MS: 10000 
 });
 
 export { TABLES, DB_SETTINGS };

@@ -3,42 +3,55 @@ import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 🔐 AUTH REPOSITORY - SINCRONIZACIÓN SQL ↔ AUTH
+ * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS
+ * Sincronización impecable entre Supabase Auth y nuestras tablas de negocio.
  */
 
-// 1. Buscar por ID (Crucial para el middleware de protección)
+// Definimos los campos que queremos traer siempre para no repetir código (DRY)
+const USER_FIELDS = 'id, email, role, active, name, avatar_url';
+
+/**
+ * Busca un usuario por su ID único.
+ * @param {string} id - UUID del usuario en Supabase.
+ */
 export const findById = async (id) => {
   if (!id) return null;
 
-  // Usamos TABLES.USERS pero con un fallback de seguridad a 'users'
-  const { data, error } = await db
-    .from(TABLES.USERS || 'users')
-    .select('id, email, role, active, name')
-    .eq('id', id)
-    .maybeSingle();
+  try {
+    const { data, error } = await db
+      .from(TABLES.USERS || 'users')
+      .select(USER_FIELDS)
+      .eq('id', id)
+      .maybeSingle();
 
-  if (error) {
-    console.error(`[DATABASE_ERROR]: ${error.message}`);
-    throw new AppError('Error crítico al validar la identidad del usuario', 500);
+    if (error) throw error;
+    return data;
+
+  } catch (error) {
+    console.error(`[REPO_ERROR][findById]: 🚨 ${error.message}`);
+    throw new AppError('No pudimos verificar tu identidad en la base de datos.', 500);
   }
-
-  return data;
 };
 
-// 2. Buscar por Email (Útil para validaciones previas)
+/**
+ * Busca un usuario por su correo electrónico.
+ * @param {string} email - Correo a consultar.
+ */
 export const findByEmail = async (email) => {
-  if (!email) throw new AppError('El email es requerido para la búsqueda', 400);
+  if (!email?.trim()) return null;
 
-  const { data, error } = await db
-    .from(TABLES.USERS || 'users')
-    .select('id, email, role, active, name')
-    .eq('email', email.toLowerCase().trim())
-    .maybeSingle();
+  try {
+    const { data, error } = await db
+      .from(TABLES.USERS || 'users')
+      .select(USER_FIELDS)
+      .eq('email', email.toLowerCase().trim())
+      .maybeSingle();
 
-  if (error) {
-    console.error(`[DATABASE_ERROR]: ${error.message}`);
-    throw new AppError('Error al consultar el registro de usuario', 500);
+    if (error) throw error;
+    return data;
+
+  } catch (error) {
+    console.error(`[REPO_ERROR][findByEmail]: 🚨 ${error.message}`);
+    throw new AppError('Error al rastrear el correo en el sistema.', 500);
   }
-
-  return data;
 };

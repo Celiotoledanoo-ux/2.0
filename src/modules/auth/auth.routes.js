@@ -7,13 +7,19 @@ import { loginSchema } from './auth.schema.js';
 const router = Router();
 
 /**
- * 🔐 RUTAS DE AUTENTICACIÓN - POS MAQUILLAJE
+ * 🔐 RUTAS DE AUTENTICACIÓN - POS SYSTEM
+ * Cada ruta está protegida por validaciones de esquema y seguridad.
  */
 
-// LOGIN: Valida que el 'identifier' sea correcto antes de procesar
+// POST /api/v1/auth/login
+// Público: Valida el esquema antes de tocar la lógica de negocio
 router.post('/login', validate(loginSchema), authController.login);
 
-// LOGOUT: Requiere token válido (protect) para registrar quién cierra sesión
+// POST /api/v1/auth/logout
+// Privado: Requiere sesión activa para invalidar el token en Supabase
 router.post('/logout', protect, authController.logout);
+
+// Nota: Si luego implementas Register, iría aquí con validate(registerSchema)
+// router.post('/register', validate(registerSchema), authController.register);
 
 export default router;

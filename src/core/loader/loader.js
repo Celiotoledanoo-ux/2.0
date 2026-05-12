@@ -1,40 +1,39 @@
 import logger from '../logger/logger.js';
-// Usamos el path relativo exacto desde src/core/loader hasta src/routes
 import globalRouter from '../../routes/index.js'; 
 
 /**
- * 🏗️ SYSTEM LOADER - VERSIÓN MAQUILLAJE POS
+ * 🏗️ SYSTEM LOADER - EL CORAZÓN DEL POS
+ * Responsabilidad Única: Orquestar la carga de rutas y verificar la integridad del sistema.
  */
 export default () => { 
   try {
-    logger.info('🚀 Iniciando secuencia de carga del núcleo...');
+    logger.info('🚀 Iniciando secuencia de ignición del POS...');
 
-    // Validamos que el import no haya fallado silenciosamente
+    // 1. Validación de Integridad
     if (!globalRouter) {
-      throw new Error('El enrutador global no se pudo cargar. Revisa src/routes/index.js');
+      throw new Error('Fallo crítico: El mapa de rutas global (Router) es inaccesible.');
     }
 
-    const modules = [
-      'Auth',
-      'Users',
-      'Inventory',
-      'Sales',
-      'Returns',
-      'Payments',
-      'Cash',
-      'Reports'
+    // 2. Inventario de Módulos (Capa Informativa para Logs)
+    const activeModules = [
+      'Auth', 'Users', 'Inventory', 'Sales', 
+      'Returns', 'Payments', 'Cash', 'Reports'
     ];
     
-    logger.info(`✅ Inyección de módulos completada: [${modules.join(', ')}]`);
+    logger.info(`📦 Módulos sincronizados y listos: [${activeModules.join(' | ')}]`);
+    logger.info('✅ Sistema de enrutamiento cargado exitosamente.');
 
-    // Retornamos el router tal cual para que app.js lo use
+    // 3. Entrega de la infraestructura al Servidor (app.js)
     return globalRouter; 
     
   } catch (error) {
     logger.error({
-      event: 'LOADER_CRITICAL_ERROR',
-      message: error.message
+      event: 'LOADER_CRITICAL_FAILURE',
+      message: error.message,
+      recommendation: 'Verifica las exportaciones en src/routes/index.js'
     });
+    
+    // Detenemos el proceso: mejor apagar el motor que correr con fallos de rutas
     process.exit(1);
   }
 };

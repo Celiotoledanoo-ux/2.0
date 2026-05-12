@@ -2,77 +2,63 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// 🔹 Helpers de validación (Tus guardias de seguridad)
-const isNonEmptyString = (value) =>
-  typeof value === 'string' && value.trim().length > 0;
+/**
+ * 🔒 ENV CONFIGURATION - EL GUARDIÁN DEL ENTORNO
+ * Valida que todas las llaves maestras existan y sean íntegras antes de arrancar.
+ */
 
-const isValidUrl = (value) => {
-  try {
-    new URL(value);
-    return true;
-  } catch {
-    return false;
-  }
+// 🔹 Helpers de validación
+const isNonEmptyString = (val) => typeof val === 'string' && val.trim().length > 0;
+
+const isValidUrl = (val) => {
+  try { return Boolean(new URL(val)); } catch { return false; }
 };
 
-const isValidNodeEnv = (value) => {
-  return ['development', 'production', 'test'].includes(value);
+// 🔹 Extracción y Limpieza (Trim preventivo para evitar errores de copiado)
+const rawEnvs = {
+  NODE_ENV: process.env.NODE_ENV?.trim() || 'development',
+  SUPABASE_URL: process.env.SUPABASE_URL?.trim(),
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY?.trim(),
+  JWT_SECRET: process.env.JWT_SECRET?.trim(),
 };
 
-const hasMinLength = (value, min = 20) =>
-  typeof value === 'string' && value.length >= min;
-
-// 🔹 Variables Críticas (Quitamos PORT de aquí para evitar que el servidor se mate en Render)
-const requiredEnvs = {
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-  JWT_SECRET: process.env.JWT_SECRET,
-};
-
-// 🔴 1. Verificar existencia de las llaves maestras
-const missing = Object.entries(requiredEnvs)
+// 🔴 1. Verificación de Existencia
+const missing = Object.entries(rawEnvs)
   .filter(([, value]) => !isNonEmptyString(value))
   .map(([key]) => key);
 
 if (missing.length > 0) {
-  console.error(`❌ Error Crítico: Faltan variables esenciales: ${missing.join(', ')}`);
+  console.error(`❌ ERROR CRÍTICO: Faltan variables en el .env: ${missing.join(', ')}`);
+  process.exit(1); // Detenemos el servidor si no hay llaves
+}
+
+// 🔴 2. Validaciones de Integridad Técnica
+if (!isValidUrl(rawEnvs.SUPABASE_URL)) {
+  console.error('❌ SUPABASE_URL no es una URL válida. Revisa tu .env');
   process.exit(1);
 }
 
-// 🔴 2. Validaciones de Integridad
-if (!isValidNodeEnv(requiredEnvs.NODE_ENV)) {
-  console.error('❌ NODE_ENV inválido. Usa: development | production | test');
+if (rawEnvs.SUPABASE_SERVICE_ROLE_KEY.length < 50) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY es demasiado corta. Posible error de copiado.');
   process.exit(1);
 }
 
-if (!isValidUrl(requiredEnvs.SUPABASE_URL)) {
-  console.error('❌ SUPABASE_URL no tiene un formato de URL válido');
-  process.exit(1);
-}
-
-if (!hasMinLength(requiredEnvs.SUPABASE_SERVICE_ROLE_KEY)) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY parece estar incompleta o corrupta');
-  process.exit(1);
-}
-
-// 🔹 Normalización de Puerto (La llave maestra para Render)
-// Render asigna el puerto dinámicamente; si no existe, usamos 3000 por defecto.
+// 🔹 Normalización de Puerto (Vital para el deploy en Render)
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// 🚀 Exportación Final Blindada
-export const env = {
-  nodeEnv: requiredEnvs.NODE_ENV,
+// 🚀 Exportación Final Inmutable
+export const env = Object.freeze({
+  nodeEnv: rawEnvs.NODE_ENV,
   port,
-  jwtSecret: requiredEnvs.JWT_SECRET,
+  jwtSecret: rawEnvs.JWT_SECRET,
 
   supabase: {
-    url: requiredEnvs.SUPABASE_URL,
-    serviceRoleKey: requiredEnvs.SUPABASE_SERVICE_ROLE_KEY,
-    anonKey: requiredEnvs.SUPABASE_ANON_KEY,
+    url: rawEnvs.SUPABASE_URL,
+    serviceRoleKey: rawEnvs.SUPABASE_SERVICE_ROLE_KEY,
+    anonKey: rawEnvs.SUPABASE_ANON_KEY,
   },
 
-  isDevelopment: requiredEnvs.NODE_ENV === 'development',
-  isProduction: requiredEnvs.NODE_ENV === 'production',
-};
+  isDevelopment: rawEnvs.NODE_ENV === 'development',
+  isProduction: rawEnvs.NODE_ENV === 'production',
+});

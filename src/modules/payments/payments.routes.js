@@ -1,20 +1,24 @@
 import { Router } from 'express';
 import * as paymentsController from './payments.controller.js';
-// ✅ Importamos los middlewares con los nombres físicos exactos (plural)
-import { protect } from '../../core/middlewares/auth.middlewares.js';
+import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
 import { validate } from '../../core/middlewares/validation.middlewares.js';
 import { createPaymentSchema } from './payments.schema.js';
 
 const router = Router();
 
-// Todas las rutas de pagos requieren estar logueado
+/**
+ * 💳 PAYMENTS ROUTES - POS SYSTEM
+ * Control de ingresos y validación de transacciones.
+ */
+
+// 1. Seguridad Global: Solo usuarios autenticados
 router.use(protect);
 
-/**
- * 💰 RUTA: POST /api/v1/payments
- */
+// 2. Registro de Pagos
+// POST /api/v1/payments
 router.post(
   '/',
+  restrictTo('CASHIER', 'MANAGER', 'ADMIN', 'OWNER'), // Agregamos restricción por jerarquía
   validate(createPaymentSchema),
   paymentsController.processPayment
 );

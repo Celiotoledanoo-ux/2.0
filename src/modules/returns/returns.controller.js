@@ -3,31 +3,36 @@ import catchAsync from '../../shared/utils/async.utils.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 🔍 OBTENER TODAS LAS DEVOLUCIONES
+ * 🔄 RETURNS CONTROLLER - GESTIÓN DE REVERSOS
  */
-export const getAllReturns = catchAsync(async (req, res, next) => {
-  // Aquí llamaríamos a un service de búsqueda si lo necesitas
-  const returns = await returnsService.getAllReturns(); 
+
+// 1. LISTAR HISTORIAL DE DEVOLUCIONES
+export const getAllReturns = catchAsync(async (req, res) => {
+  const history = await returnsService.getAllReturns(); 
   
   res.status(200).json({
     status: 'success',
-    data: { returns }
+    results: history.length,
+    data: { returns: history }
   });
 });
 
-/**
- * 🔄 PROCESAR DEVOLUCIÓN COMPLETA
- */
+// 2. PROCESAR DEVOLUCIÓN (Restock + Refund)
 export const createReturn = catchAsync(async (req, res, next) => {
-  const { sale_id, reason } = req.body;
-  const userId = req.user.id; // Extraído por el middleware protect
+  // Manejamos la anidación del body por si viene del apiFetch
+  const data = req.body.body || req.body;
+  const { sale_id, reason } = data;
 
-  // 🔥 LLAMADA MAESTRA: Ejecutamos el flujo que devuelve stock y actualiza venta
-  const newReturn = await returnsService.processFullReturn(sale_id, reason, userId);
+  if (!sale_id) {
+    return next(new AppError('Debes proporcionar el ID de la venta para la devolución.', 400));
+  }
+
+  // Ejecutamos la lógica maestra del service
+  const result = await returnsService.processFullReturn(sale_id, reason, req.user.id);
 
   res.status(201).json({
     status: 'success',
-    message: 'Devolución procesada y stock actualizado correctamente',
-    data: { return: newReturn }
+    message: `🔄 Devolución completada. Se restauraron ${result.items_restored} productos al stock.`,
+    data: { return: result }
   });
 });

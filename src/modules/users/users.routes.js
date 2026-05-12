@@ -1,3 +1,6 @@
+
+
+
 import { Router } from 'express';
 import * as userController from './users.controller.js';
 import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
@@ -7,22 +10,22 @@ import { createUserSchema, toggleStatusSchema } from './users.schema.js';
 const router = Router();
 
 /**
- * 👥 RUTAS DE USUARIOS - POS MAQUILLAJE
+ * 👥 RUTAS DE USUARIOS - POS MANAGEMENT
+ * Seguridad por capas: Autenticación -> Autorización -> Validación.
  */
 
-// 1. Bloqueo de seguridad: Nadie entra sin sesión activa
+// 1. Capa de Protección Global (Middleware en cascada)
 router.use(protect);
 
-// --- 🆕 RUTA PARA EL PANEL DE GESTIÓN ---
-// Listar a todos los empleados para que el OWNER los vea en la tabla
+// 2. Rutas de Gestión de Personal (Solo jerarquía alta)
+// GET /api/v1/users - Listar empleados
 router.get(
   '/',
   restrictTo('ADMIN', 'OWNER'),
   userController.getAll
 );
-// ----------------------------------------
 
-// 2. Gestión de Personal: Solo dueños y administradores pueden crear
+// POST /api/v1/users - Crear nuevo empleado
 router.post(
   '/',
   restrictTo('ADMIN', 'OWNER'), 
@@ -30,7 +33,7 @@ router.post(
   userController.create
 );
 
-// 3. Control de acceso: Activar/Desactivar empleados
+// PATCH /api/v1/users/:id/status - Activar/Desactivar
 router.patch(
   '/:id/status',
   restrictTo('ADMIN', 'OWNER'),
@@ -38,7 +41,8 @@ router.patch(
   userController.toggleStatus
 );
 
-// 4. Consulta de perfil individual
+// 3. Rutas de Consulta General
+// GET /api/v1/users/:id - Ver perfil específico
 router.get(
   '/:id',
   userController.getById

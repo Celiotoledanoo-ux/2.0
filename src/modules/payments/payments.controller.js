@@ -4,39 +4,43 @@ import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
- * 💰 REGISTRAR PAGO
+ * 💰 PAYMENTS CONTROLLER - GESTIÓN DE COBROS
+ * El puente final entre la venta y el dinero en caja.
  */
 export const processPayment = catchAsync(async (req, res, next) => {
-  const { sale_id, amount, method } = req.body;
+  // 1. Extracción flexible (Sincronizada con tu apiFetch)
+  const data = req.body.body || req.body;
+  const { sale_id, amount, method } = data;
 
-  // 1. Validación rápida (Calculada)
+  // 2. Validación de presencia
   if (!sale_id || amount === undefined || !method) {
-    throw new AppError('Faltan datos obligatorios para registrar el pago', 400);
+    return next(new AppError('Datos incompletos. Necesitamos ID de venta, monto y método.', 400));
   }
 
-  // 2. Ejecutar lógica en el Service
-  // Pasamos los datos que el service espera recibir
-  const payment = await paymentsService.processPayment({
+  // 3. Ejecución de la lógica financiera
+  const result = await paymentsService.processPayment({
     sale_id,
-    amount,
+    amount: Number(amount),
     method
   });
 
-  // 3. Auditoría de Seguridad (Log de flujo de caja)
+  // 4. Auditoría de Seguridad (Caja)
   logger.info({
-    event: 'PAYMENT_RECEIVED',
-    paymentId: payment.id,
+    event: 'PAYMENT_SUCCESS',
     saleId: sale_id,
-    amount,
-    method,
-    receivedBy: req.user.id, // ID del cajero/admin logueado
+    amount: result.amount,
+    method: result.method,
+    cashier: req.user.name,
     ip: req.ip
   });
 
-  // 4. Respuesta Estructurada
+  // 5. Respuesta Pro
   res.status(201).json({
     status: 'success',
-    message: 'Pago registrado correctamente',
-    data: { payment }
+    message: `✅ Pago de $${result.amount} recibido por ${result.method}.`,
+    data: { 
+      payment: result,
+      change: result.change || 0
+    }
   });
 });

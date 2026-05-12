@@ -4,18 +4,24 @@ import catchAsync from '../../shared/utils/async.utils.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 👤 CREAR USUARIO (Sincronizado con Script Slim)
+ * 👤 CREAR USUARIO
+ * Registra un nuevo empleado en Auth y SQL.
  */
 export const create = catchAsync(async (req, res, next) => {
-  // Extraemos 'body' de 'req.body' porque así lo manda el nuevo apiFetch
-  const { body } = req.body; 
+  // Extraemos 'body' por compatibilidad con tu apiFetch, fallback al body directo
+  const userData = req.body.body || req.body; 
   
-  if (!body) return next(new AppError('No se recibieron datos del usuario', 400));
+  if (!userData || Object.keys(userData).length === 0) {
+    return next(new AppError('No se recibieron datos para crear el usuario, bro.', 400));
+  }
 
-  const newUser = await userService.registerUser(body);
+  const newUser = await userService.registerUser(userData);
+
+  logger.info({ event: 'USER_CREATED', adminId: req.user?.id, newUserId: newUser.id });
 
   return res.status(201).json({
     status: 'success',
+    message: `Usuario ${newUser.name} creado correctamente`,
     data: { user: newUser }
   });
 });
@@ -23,7 +29,7 @@ export const create = catchAsync(async (req, res, next) => {
 /**
  * 📋 LISTAR TODO EL PERSONAL
  */
-export const getAll = catchAsync(async (req, res, next) => {
+export const getAll = catchAsync(async (req, res) => {
   const users = await userService.getAllUsers();
 
   return res.status(200).json({
@@ -36,7 +42,7 @@ export const getAll = catchAsync(async (req, res, next) => {
 /**
  * 🔍 OBTENER USUARIO POR ID
  */
-export const getById = catchAsync(async (req, res, next) => {
+export const getById = catchAsync(async (req, res) => {
   const { id } = req.params;
   const user = await userService.getUserById(id);
 
@@ -53,13 +59,17 @@ export const toggleStatus = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { active } = req.body;
 
-  if (active === undefined) return next(new AppError('El estado "active" es requerido', 400));
+  if (active === undefined) {
+    return next(new AppError('Debes indicar si el estado es true o false.', 400));
+  }
 
   const updatedUser = await userService.toggleUserStatus(id, Boolean(active));
 
+  logger.warn({ event: 'USER_STATUS_TOGGLE', targetId: id, status: updatedUser.active });
+
   return res.status(200).json({
     status: 'success',
-    message: `Acceso ${updatedUser.active ? 'habilitado' : 'restringido'}`,
+    message: `Acceso ${updatedUser.active ? 'habilitado ✅' : 'restringido 🚫'}`,
     data: { user: updatedUser }
   });
 });

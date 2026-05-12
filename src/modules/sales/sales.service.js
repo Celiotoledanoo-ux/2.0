@@ -1,43 +1,57 @@
 import * as salesRepo from './sales.repository.js';
 import * as inventoryRepo from '../inventory/inventory.repository.js';
 import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
+/**
+ * 💰 SALES SERVICE - EL MOTOR DE INGRESOS
+ * Procesa ventas, valida stock y asegura la integridad del inventario.
+ */
 export const createSale = async (saleData, user) => {
   const { items, payment_method, discount = 0, received_amount = 0 } = saleData;
 
-  // 1. 🛡️ VALIDACIÓN Y CÁLCULO (Confianza Cero en el Front)
+  if (!items || items.length === 0) throw new AppError('No puedes vender aire, bro. Agrega productos.', 400);
+
+  // 1. 🛡️ VALIDACIÓN Y CÁLCULO (Server-Side Truth)
   let totalCalculado = 0;
-  
-  // Usamos for...of para asegurar que las validaciones de stock ocurran en orden
+  const validatedItems = [];
+
   for (const item of items) {
     const product = await inventoryRepo.findById(item.product_id);
-    if (!product) throw new AppError(`Producto no encontrado`, 404);
+    
+    if (!product) throw new AppError(`El producto con ID ${item.product_id} desapareció.`, 404);
     
     if (product.stock < item.quantity) {
-      throw new AppError(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}`, 400);
+      throw new AppError(`¡Stock insuficiente para ${product.name}! Solo quedan ${product.stock} unidades.`, 400);
     }
 
-    totalCalculado += Number(product.price) * Number(item.quantity);
-    item.price_at_sale = product.price; // Congelamos el precio actual para el ticket
+    const subtotal = Number(product.price) * Number(item.quantity);
+    totalCalculado += subtotal;
+
+    // Preparamos el item con el precio "congelado" de este momento
+    validatedItems.push({
+      ...item,
+      price_at_sale: product.price,
+      name: product.name // Para el log/ticket
+    });
   }
 
-  const finalTotal = Math.max(0, totalCalculado - discount);
+  const finalTotal = Math.max(0, totalCalculado - Number(discount));
 
-  // 2. 🚀 REGISTRO EN BASE DE DATOS
+  // 2. 🚀 REGISTRO Y ATOMICIDAD
   try {
-    // Registramos la venta (Incluimos received_amount para calcular cambio si fuera necesario)
+    // Creamos la cabecera de la venta
     const sale = await salesRepo.create({
       total: finalTotal,
-      payment_method,
-      discount,
-      received_amount: received_amount || finalTotal,
+      payment_method: payment_method || 'CASH',
+      discount: Number(discount),
+      received_amount: Number(received_amount) || finalTotal,
       created_by: user.id,
       status: 'COMPLETED'
     });
 
-    // Insertamos los detalles
-    // El Trigger 'tr_update_stock_on_sale' se activará por cada uno de estos:
-    const itemPromises = items.map(item => 
+    // Insertamos los detalles (Esto disparará el trigger SQL de stock que armamos)
+    const itemPromises = validatedItems.map(item => 
       salesRepo.createItem({
         sale_id: sale.id,
         product_id: item.product_id,
@@ -47,14 +61,25 @@ export const createSale = async (saleData, user) => {
     );
 
     await Promise.all(itemPromises);
+
+    // 3. 📊 AUDITORÍA
+    logger.info({
+      event: 'SALE_COMPLETED',
+      saleId: sale.id,
+      total: finalTotal,
+      seller: user.name,
+      itemsCount: validatedItems.length
+    });
     
     return {
         ...sale,
-        change: Math.max(0, (received_amount || finalTotal) - finalTotal)
+        change: Math.max(0, (Number(received_amount) || finalTotal) - finalTotal),
+        items: validatedItems
     };
 
   } catch (error) {
-    // Si algo falla, el error se propaga y el usuario ve que la venta no se hizo
-    throw new AppError(`Error crítico en venta: ${error.message}`, 500);
+    // Si falla, notificamos pero recordamos que el SQL Trigger tiene el ROLLBACK de stock
+    console.error(`[CRITICAL_SALE_ERROR]: ${error.message}`);
+    throw new AppError(`Venta fallida: ${error.message}`, 500);
   }
 };

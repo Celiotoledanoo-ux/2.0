@@ -4,52 +4,70 @@ import AppError from '../../core/errors/AppError.js';
 
 /**
  * 👥 USERS REPOSITORY - CONEXIÓN SQL DIRECTA
+ * Encargado de la persistencia de datos del personal.
  */
 
-// 1. Obtener todos los usuarios (El que necesita tu nuevo getAllUsers)
+const USER_SELECT = 'id, email, name, role, active, avatar_url, created_at';
+const TARGET_TABLE = TABLES.USERS || 'users';
+
+// 1. Obtener todos los usuarios
 export const findAll = async () => {
   const { data, error } = await db
-    .from(TABLES.USERS)
-    .select('*')
+    .from(TARGET_TABLE)
+    .select(USER_SELECT)
     .order('created_at', { ascending: false });
 
-  if (error) throw new AppError('Error al recuperar usuarios de la base de datos', 500);
+  if (error) {
+    console.error(`[REPO_ERROR]: ${error.message}`);
+    throw new AppError('Error al recuperar la lista de personal.', 500);
+  }
   return data;
 };
 
-// 2. Crear registro (El que usa tu registerUser)
+// 2. Crear registro sincronizado
 export const create = async (userData) => {
   const { data, error } = await db
-    .from(TABLES.USERS)
+    .from(TARGET_TABLE)
     .insert([userData])
-    .select()
+    .select(USER_SELECT)
     .single();
 
-  if (error) throw new AppError(`Error al sincronizar usuario: ${error.message}`, 500);
+  if (error) {
+    console.error(`[REPO_ERROR]: ${error.message}`);
+    throw new AppError(`No se pudo crear el perfil en SQL: ${error.message}`, 500);
+  }
   return data;
 };
 
 // 3. Buscar por ID
 export const findById = async (id) => {
+  if (!id) return null;
+
   const { data, error } = await db
-    .from(TABLES.USERS)
-    .select('*')
+    .from(TARGET_TABLE)
+    .select(USER_SELECT)
     .eq('id', id)
     .maybeSingle();
 
-  if (error) throw new AppError('Error al buscar el perfil del usuario', 500);
+  if (error) {
+    console.error(`[REPO_ERROR]: ${error.message}`);
+    throw new AppError('Error al consultar el perfil del usuario.', 500);
+  }
   return data;
 };
 
-// 4. Actualizar datos o estado (El que usa tu toggleUserStatus)
+// 4. Actualizar datos (Perfil o Estado)
 export const update = async (id, updateData) => {
   const { data, error } = await db
-    .from(TABLES.USERS)
+    .from(TARGET_TABLE)
     .update(updateData)
     .eq('id', id)
-    .select()
+    .select(USER_SELECT)
     .single();
 
-  if (error) throw new AppError('Error al actualizar los datos del usuario', 500);
+  if (error) {
+    console.error(`[REPO_ERROR]: ${error.message}`);
+    throw new AppError('Error al intentar actualizar al usuario.', 500);
+  }
   return data;
 };

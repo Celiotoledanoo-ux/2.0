@@ -3,48 +3,77 @@ import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
- * 🚀 CREAR PRODUCTO NUEVO
+ * 📦 INVENTORY SERVICE - GESTIÓN DE PRODUCTOS Y EXISTENCIAS
  */
+
+// --- 1. CREACIÓN ---
 export const createProduct = async (productData) => {
-  const existing = await inventoryRepo.findBySku(productData.sku);
-  if (existing) throw new AppError('Ya existe un producto con este SKU/Código de barras', 409);
+  const { sku, name, price } = productData;
 
-  return await inventoryRepo.create(productData);
+  // Validación de seguridad: El SKU es la identidad del producto
+  const existing = await inventoryRepo.findBySku(sku?.trim());
+  if (existing) {
+    throw new AppError(`El SKU [${sku}] ya está asignado a: ${existing.name}`, 409);
+  }
+
+  if (price < 0) throw new AppError('El precio no puede ser negativo, fiera.', 400);
+
+  return await inventoryRepo.create({
+    ...productData,
+    sku: sku.trim().toUpperCase(),
+    name: name.trim()
+  });
 };
 
-/**
- * 🔍 OBTENER PRODUCTOS (Con filtros para el POS)
- */
-export const getProducts = async (filters) => {
-  // Pasamos los filtros (sku, name) directamente al repositorio
-  return await inventoryRepo.findAll(filters);
+// --- 2. BÚSQUEDA ---
+export const getProducts = async (filters = {}) => {
+  // Filtros limpios para evitar inyecciones o basura
+  const cleanFilters = {
+    name: filters.name?.trim(),
+    sku: filters.sku?.trim()?.toUpperCase(),
+    category_id: filters.category_id,
+    activeOnly: filters.activeOnly !== 'false'
+  };
+
+  const products = await inventoryRepo.findAll(cleanFilters);
+  if (!products) throw new AppError('Error al cargar el inventario.', 500);
+  
+  return products;
 };
 
-/**
- * 📉 AJUSTE DE STOCK MANUAL
- */
-export const adjustStock = async (productId, quantity, userId, reason = 'Ajuste manual') => {
+// --- 3. MOVIMIENTOS DE STOCK ---
+export const adjustStock = async (productId, quantity, userId, reason = 'AJUSTE MANUAL') => {
   if (!productId) throw new AppError('ID de producto requerido', 400);
   
   const product = await inventoryRepo.findById(productId);
-  if (!product) throw new AppError('El producto no existe', 404);
+  if (!product) throw new AppError('El producto no existe en inventario.', 404);
 
-  // Doble validación de seguridad
-  if (product.stock + quantity < 0) {
-    throw new AppError(`Stock insuficiente. Solo quedan ${product.stock} unidades.`, 400);
+  // Validación de seguridad: No podemos vender lo que no tenemos
+  const newStock = product.stock + quantity;
+  if (newStock < 0) {
+    throw new AppError(`Operación rechazada. Stock actual: ${product.stock}, intento de ajuste: ${quantity}`, 400);
   }
 
-  await inventoryRepo.updateStock(productId, quantity, userId, reason);
-  
-  // Refrescamos los datos para devolver el producto actualizado con su nuevo stock
-  const updatedProduct = await inventoryRepo.findById(productId);
+  // Actualización en repositorio
+  const updatedProduct = await inventoryRepo.updateStock(productId, quantity, userId, reason.toUpperCase());
 
-  if (updatedProduct.stock <= (updatedProduct.min_stock || 0)) {
+  // Log de auditoría para Render
+  logger.info({
+    event: 'STOCK_ADJUSTMENT',
+    productId,
+    change: quantity,
+    finalStock: updatedProduct.stock,
+    user: userId,
+    reason
+  });
+
+  // Alerta de Stock Bajo (Si el stock llega al mínimo o menos)
+  if (updatedProduct.stock <= (updatedProduct.min_stock || 5)) {
     logger.warn({
       event: 'LOW_STOCK_ALERT',
-      productId: updatedProduct.id,
       name: updatedProduct.name,
-      current_stock: updatedProduct.stock
+      stock: updatedProduct.stock,
+      min: updatedProduct.min_stock
     });
   }
 

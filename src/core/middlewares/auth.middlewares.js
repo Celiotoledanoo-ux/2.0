@@ -3,42 +3,47 @@ import { db } from '../database/supabaseClient.js';
 import * as authRepo from '../../modules/auth/auth.repository.js';
 import logger from '../logger/logger.js';
 
+/**
+ * 🛡️ MIDDLEWARE DE PROTECCIÓN
+ * El guardián que valida tokens, integridad en DB y estado del usuario.
+ */
 export const protect = async (req, res, next) => {
   try {
-    // 1. Validación del Header
+    // 1. Extracción y validación del Header
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      return next(new AppError('No se encontró una sesión activa. Por favor, inicia sesión.', 401));
+      return next(new AppError('No se detectó una sesión. Identifícate, fiera.', 401));
     }
 
     const token = authHeader.split(' ')[1];
 
-    // 2. Verificación con Supabase Auth (Valida que el token sea auténtico)
-    const { data: { user: authUser }, error } = await db.auth.getUser(token);
+    // 2. Verificación de autenticidad del Token (Supabase)
+    const { data: { user: authUser }, error: authError } = await db.auth.getUser(token);
 
-    if (error || !authUser) {
-      return next(new AppError('Tu sesión ha expirado o es inválida.', 401));
+    if (authError || !authUser) {
+      return next(new AppError('Tu sesión expiró o el token es basura. Inicia sesión de nuevo.', 401));
     }
 
-    // 3. Validación de integridad en SQL (Estado y Rol real)
+    // 3. Sincronización con SQL (Estado, Rol y Existencia)
     const dbUser = await authRepo.findById(authUser.id);
 
     if (!dbUser) {
-      return next(new AppError('Usuario no encontrado en la base de datos local.', 401));
+      return next(new AppError('Tu perfil ya no existe en nuestro sistema SQL.', 401));
     }
 
     if (!dbUser.active) {
-      return next(new AppError('Acceso restringido: Esta cuenta se encuentra desactivada.', 403));
+      return next(new AppError('🚫 Acceso bloqueado. Esta cuenta está fuera de servicio.', 403));
     }
 
-    // 4. Lógica de Identificación de Punto de Venta
-    // Adaptamos para que reconozca "ventas", "caja" o el nombre del local
+    // 4. Lógica de Identificación de Punto de Venta (Display de Caja)
     const emailPrefix = dbUser.email.split('@')[0].toUpperCase();
-    const displayCaja = dbUser.email.includes('@sistema.local') 
+    const isLocalSystem = dbUser.email.includes('@pos.system') || dbUser.email.includes('@sistema.local');
+    
+    const displayCaja = isLocalSystem 
       ? emailPrefix.replace('CAJA', 'CAJA ').replace('VENTAS', 'PUNTO ')
-      : 'ADMINISTRACIÓN';
+      : 'GESTIÓN CENTRAL';
 
-    // 5. Inyección de Contexto (Inmutable para evitar alteraciones en el camino)
+    // 5. Inyección de Contexto Global (Congelado para seguridad)
     req.user = Object.freeze({
       id: dbUser.id,
       email: dbUser.email,
@@ -50,20 +55,22 @@ export const protect = async (req, res, next) => {
     next();
   } catch (error) {
     logger.error({ 
-      event: 'AUTH_PROTECT_ERROR', 
+      event: 'MIDDLEWARE_AUTH_CRASH', 
       message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+      path: req.originalUrl 
     });
-    next(new AppError('Fallo interno en la verificación de identidad.', 500));
+    next(new AppError('Algo tronó internamente al validar tu identidad.', 500));
   }
 };
 
-// Mantenemos tu restrictTo pero nos aseguramos de que maneje el OWNER correctamente
+/**
+ * 🚦 MIDDLEWARE DE RESTRICCIÓN DE ROLES
+ */
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
-    // Si req.user no existe o el rol no está permitido, bloqueamos
+    // El OWNER siempre tiene permiso a todo, pero aquí validamos la lista permitida
     if (!req.user || !roles.includes(req.user.role)) {
-      return next(new AppError('No tienes los permisos necesarios para realizar esta acción.', 403));
+      return next(new AppError('No tienes el nivel suficiente para esta zona, bro.', 403));
     }
     next();
   };

@@ -1,48 +1,64 @@
 import logger from '../logger/logger.js';
 
+/**
+ * 🚨 GLOBAL ERROR HANDLER - EL ÚLTIMO MURO
+ * Centraliza fallos, limpia logs y protege la info sensible en producción.
+ */
 export const globalErrorHandler = (err, req, res, next) => {
   let statusCode = err?.statusCode || 500;
   let status = err?.status || 'error';
-  let message = err.message;
+  let message = err.message || 'Algo salió mal en el servidor.';
 
-  // 1. 🛡️ SANITIZACIÓN (No logueamos datos sensibles)
+  // 1. 🛡️ SANITIZACIÓN DE AUDITORÍA
   const sanitizedBody = { ...req.body };
-  ['password', 'token', 'oldPassword', 'newPassword'].forEach(key => delete sanitizedBody[key]);
+  const sensitiveKeys = ['password', 'token', 'oldPassword', 'newPassword', 'refreshToken'];
+  sensitiveKeys.forEach(key => delete sanitizedBody[key]);
 
-  // 2. 🔥 LOGGING DE PRECISIÓN
+  // 2. 🔥 LOGGING DE PRECISIÓN (Oro puro para Render)
   logger.error({
-    event: 'REQUEST_FAILED',
+    event: 'API_ERROR',
+    status,
     message: err.message,
     path: req.originalUrl,
-    userId: req.user?.id || 'GUEST',
-    method: req.method
+    method: req.method,
+    userId: req.user?.id || 'ANONYMOUS',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 
-  // 3. 🧪 MODO DESARROLLO
+  // 3. 🧪 RESPUESTA EN DESARROLLO
   if (process.env.NODE_ENV === 'development') {
-    return res.status(statusCode).json({ status, message, stack: err.stack, error: err });
-  }
-
-  // 4. 🛡️ MODO PRODUCCIÓN (Traducción de códigos de Supabase/Postgres)
-  // Errores de integridad (Postgres codes)
-  if (err.code === '23505') message = 'El registro ya existe (Dato duplicado).';
-  if (err.code === '23503') message = 'No se puede completar: El elemento relacionado no existe.';
-  if (err.code === '23514') message = 'Restricción violada: Verifica el stock o los valores mínimos.';
-  
-  // Errores de conexión (Network/Render)
-  if (err.code === 'ECONNREFUSED') message = 'Error de conexión con la base de datos.';
-
-  // Errores operacionales (Lanzados por nosotros con AppError)
-  if (err.isOperational || statusCode < 500) {
     return res.status(statusCode).json({
       status,
-      message
+      message,
+      error: err,
+      stack: err.stack
     });
   }
 
-  // 5. ERROR CRÍTICO (Fallo de sistema no previsto)
+  // 4. 🛡️ TRADUCCIÓN PARA PRODUCCIÓN (Postgres & Supabase)
+  let prodMessage = message;
+
+  // Errores de Base de Datos
+  if (err.code === '23505') prodMessage = 'Este registro ya existe, no lo dupliques fiera.';
+  if (err.code === '23503') prodMessage = 'Operación inválida: hay una referencia que no existe.';
+  if (err.code === '42P01') prodMessage = 'Error interno: Tabla no encontrada. Avisa al admin.';
+  
+  // Errores de JWT / Auth (Comunes en Render)
+  if (err.name === 'JsonWebTokenError') prodMessage = 'Token inválido. Acceso denegado.';
+  if (err.name === 'TokenExpiredError') prodMessage = 'Tu sesión expiró. Vuelve a entrar, bro.';
+
+  // Errores Operacionales (Nuestros AppError)
+  if (err.isOperational || statusCode < 500) {
+    return res.status(statusCode).json({
+      status,
+      message: prodMessage
+    });
+  }
+
+  // 5. 🔥 ERROR CRÍTICO (500 Real)
+  // No le damos pistas al hacker, solo un mensaje genérico.
   return res.status(500).json({
     status: 'error',
-    message: 'Servicio temporalmente no disponible. Inténtalo más tarde.'
+    message: 'Servicio en mantenimiento. Estamos trabajando en ello 🛠️'
   });
 };

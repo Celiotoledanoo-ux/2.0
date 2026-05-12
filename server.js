@@ -1,27 +1,34 @@
-// ✅ VERSIÓN FUSIONADA (Poder de producción + Carga dinámica)
-import app from './app.js'; // Ahora viene cargada asíncronamente
+/**
+ * 🚀 SERVER.JS - EL MOTOR DE ARRANQUE
+ * Responsabilidad: Levantar el puerto, vigilar fallos críticos y cerrar con elegancia.
+ */
+import app from './app.js';
 import { env } from './src/core/config/env.js';
 import logger from './src/core/logger/logger.js';
 
 let server;
 let isShuttingDown = false;
 
-// 📴 Shutdown centralizado (Tu lógica original, es impecable)
+/**
+ * 📴 GESTOR DE CIERRE (Graceful Shutdown)
+ * Evita la pérdida de datos cerrando conexiones antes de morir.
+ */
 function handleShutdown(code = 0) {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  logger.info('🛑 Iniciando cierre elegante...');
+  logger.info('🛑 Señal de cierre recibida. Finalizando procesos...');
 
+  // Si el servidor no cierra en 10s, forzamos la salida
   const forceExit = setTimeout(() => {
-    logger.warn('⚠️ Forzando salida por timeout');
+    logger.warn('⚠️ Cierre forzado por tiempo límite excedido.');
     process.exit(code);
   }, 10000);
 
   if (server) {
     server.close(() => {
       clearTimeout(forceExit);
-      logger.info('💤 Servidor cerrado correctamente');
+      logger.info('💤 Servidor HTTP fuera de línea de forma segura.');
       process.exit(code);
     });
   } else {
@@ -29,29 +36,31 @@ function handleShutdown(code = 0) {
   }
 }
 
-// 🔥 Errores críticos y Promesas (Indispensable)
+// 🔥 VIGILANCIA DE ERRORES CATASTRÓFICOS
 process.on('uncaughtException', (err) => {
-  logger.fatal({ msg: 'UNCAUGHT EXCEPTION 💥', error: err.message, stack: err.stack });
+  logger.fatal({ 
+    event: 'UNCAUGHT_EXCEPTION', 
+    error: err.message, 
+    stack: env.isDevelopment ? err.stack : undefined 
+  });
   handleShutdown(1);
 });
 
 process.on('unhandledRejection', (err) => {
-  logger.error({ msg: 'UNHANDLED REJECTION 🔗', error: err instanceof Error ? err.message : err });
+  logger.error({ 
+    event: 'UNHANDLED_REJECTION', 
+    message: err instanceof Error ? err.message : err 
+  });
   handleShutdown(1);
 });
 
-// 🚀 Iniciar servidor 
-// app ya es la instancia lista porque usamos 'export default await' en app.js
+// 🚀 IGNICIÓN DEL POS
 server = app.listen(env.port, () => {
-  logger.info(`🚀 Servidor POS en puerto ${env.port} [${env.nodeEnv}]`);
+  logger.info(`✨ POS System [${env.nodeEnv.toUpperCase()}]`);
+  logger.info(`📡 Escuchando en puerto: ${env.port}`);
+  logger.info('✅ Todos los sistemas operativos.');
 });
 
-// ⚠️ Manejo de errores del servidor
-server.on('error', (err) => {
-  logger.fatal({ msg: 'Error en servidor HTTP', error: err });
-  handleShutdown(1);
-});
-
-// 📡 Señales de sistema
+// 📡 SEÑALES DE TERMINACIÓN (Render/Docker)
 process.on('SIGTERM', () => handleShutdown(0));
 process.on('SIGINT', () => handleShutdown(0));

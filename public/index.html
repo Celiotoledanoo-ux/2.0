@@ -3,85 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS Glow Beauty | Panel de Control</title>
-    
-    <!-- 1. Estilos Locales -->
+    <title>GLAM POS | Punto de Venta</title>
     <link rel="stylesheet" href="style.css">
-    
-    <!-- 2. Iconos Remix Icon (Corregido y Actualizado) -->
+    <!-- Google Fonts: Inter para lectura rápida y Playfair para el toque elegante -->
+    <link href="https://googleapis.com" rel="stylesheet">
+    <!-- Remix Icons (Íconos ligeros) -->
     <link href="https://jsdelivr.net" rel="stylesheet">
-    
-    <!-- 3. Fuente Poppins (Google Fonts - URLs Corregidas) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div id="app">
-        <!-- 🔐 Pantalla de Login -->
-        <section id="login-screen" class="screen">
-            <div class="login-card">
-                <div style="text-align: center; font-size: 3.5rem; margin-bottom: 10px;">💄</div>
-                <h2>Glow Beauty POS</h2>
-                <p style="text-align: center; color: #666; margin-bottom: 25px;">Ingresa tus credenciales</p>
-                <form id="login-form">
-                    <div class="input-group">
-                        <i class="ri-user-heart-line"></i>
-                        <input type="text" id="identifier" placeholder="Usuario o Correo" required>
-                    </div>
-                    <div class="input-group">
-                        <i class="ri-lock-password-line"></i>
-                        <input type="password" id="password" placeholder="Contraseña" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Entrar al Sistema</button>
-                </form>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-text">GLAM<span>POS</span></span>
             </div>
-        </section>
+            <ul class="nav-links">
+                <li class="active"><i class="ri- layout-grid-fill"></i></li>
+                <li><i class="ri-box-3-line"></i></li>
+                <li><i class="ri-history-line"></i></li>
+                <li><i class="ri-settings-3-line"></i></li>
+            </ul>
+            <div class="user-profile">
+                <div class="avatar">JS</div>
+            </div>
+        </nav>
 
-        <!-- 🚀 Dashboard Principal (Control Total) -->
-        <main id="main-screen" class="screen hidden">
-            <nav class="sidebar">
-                <div class="logo">✨ GLOW POS</div>
-                <ul>
-                    <li data-view="pos" class="active">
-                        <i class="ri-shopping-bag-3-line"></i> Punto de Venta
-                    </li>
-                    <li data-view="inventory">
-                        <i class="ri-box-3-line"></i> Inventario
-                    </li>
-                    <li data-view="reports">
-                        <i class="ri-pie-chart-2-line"></i> Reportes
-                    </li>
-                    <li data-view="users">
-                        <i class="ri-group-line"></i> Usuarios
-                    </li>
-                    <li data-view="cash">
-                        <i class="ri-safe-2-line"></i> Caja
-                    </li>
-                    <li id="logout-btn" class="logout-item">
-                        <i class="ri-logout-circle-r-line"></i> Cerrar Sesión
-                    </li>
-                </ul>
-            </nav>
+        <!-- Main Content -->
+        <main class="pos-content">
+            <header class="top-bar">
+                <div class="search-container">
+                    <i class="ri-search-line"></i>
+                    <input type="text" id="product-search" placeholder="Busca por nombre o SKU (F2)..." autocomplete="off">
+                </div>
+                <div class="stats">
+                    <span class="live-clock">12:45 PM</span>
+                </div>
+            </header>
 
-            <section class="content">
-                <header>
-                    <div class="header-info">
-                        <h2 id="view-title">Punto de Venta</h2>
-                        <p id="user-display" class="user-tag"></p>
-                    </div>
-                    <div class="header-actions">
-                        <span id="clock" style="font-weight: 600; color: #888;"></span>
-                    </div>
-                </header>
-                
-                <!-- 📦 Contenedor Dinámico (Aquí el script.js inyecta las vistas) -->
-                <div id="view-container"></div>
+            <section class="catalog-grid" id="catalog-container">
+                <!-- Los productos se inyectan aquí vía scrip.js -->
+                <!-- Ejemplo de Skeleton Loader -->
+                <div class="product-card skeleton"></div>
+                <div class="product-card skeleton"></div>
+                <div class="product-card skeleton"></div>
             </section>
         </main>
+
+        <!-- Right Checkout Sidebar -->
+        <aside class="checkout-panel">
+            <div class="cart-header">
+                <h2>Carrito Actual</h2>
+                <button class="btn-clear"><i class="ri-delete-bin-line"></i></button>
+            </div>
+            
+            <div class="cart-items" id="cart-items">
+                <!-- Items de venta -->
+            </div>
+
+            <div class="summary">
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span id="subtotal-val">$0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>IVA (16%)</span>
+                    <span id="tax-val">$0.00</span>
+                </div>
+                <div class="total-row">
+                    <span>TOTAL</span>
+                    <span id="total-val">$0.00</span>
+                </div>
+                <button class="btn-checkout" id="btn-pay">
+                    COBRAR (F8)
+                </button>
+            </div>
+        </aside>
     </div>
 
-    <!-- Script Maestro -->
     <script src="script.js" type="module"></script>
 </body>
 </html>

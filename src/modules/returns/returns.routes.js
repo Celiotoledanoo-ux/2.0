@@ -6,21 +6,29 @@ import { validate } from '../../core/middlewares/validation.middlewares.js';
 
 const router = Router();
 
-// 1. Bloqueo total: Nadie sin sesión entra aquí
+/**
+ * 🔄 RETURNS ROUTES - SISTEMA DE REVERSOS
+ * Única responsabilidad: Mapear endpoints de devoluciones y asegurar el acceso.
+ */
+
+// 1. Capa de Autenticación (Middleware en cascada)
 router.use(protect);
 
-// 2. Procesar Devolución: Solo jerarquías altas (Añadimos OWNER)
+// 2. Definición de Jerarquía para Devoluciones
+const adminAccess = restrictTo('ADMIN', 'MANAGER', 'OWNER');
+
+// POST /api/v1/returns -> Procesar nueva devolución (Restock + Refund)
 router.post(
   '/',
-  restrictTo('ADMIN', 'MANAGER', 'OWNER'),
+  adminAccess,
   validate(createReturnSchema),
   returnsController.createReturn
 );
 
-// 3. Historial: Solo jerarquías altas para auditoría
+// GET /api/v1/returns -> Listar historial para auditoría
 router.get(
   '/',
-  restrictTo('ADMIN', 'MANAGER', 'OWNER'),
+  adminAccess,
   returnsController.getAllReturns
 );
 
