@@ -1,251 +1,75 @@
-:root {
-    --bg-main: #0a0a0a;
-    --bg-card: #141414;
-    --accent: #d4af37;
-    --text-main: #ffffff;
-    --text-muted: #888;
-    --border: rgba(255, 255, 255, 0.1);
-    --radius: 12px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ================= RESET ================= */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* Tipografía controlada (NO global agresivo) */
 body {
-    font-family: 'Inter', sans-serif;
-    background: var(--bg-main);
-    color: var(--text-main);
-    overflow: hidden;
-}
-
-/* ================= APP LAYOUT ================= */
-.app-container {
-    display: grid;
-    grid-template-columns: 80px 1fr 380px;
-    height: 100vh;
-}
-
-/* ================= SIDEBAR ================= */
-.sidebar {
-    background: #000;
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem 0;
-}
-
-.logo-text {
-    font-family: 'Playfair Display', serif;
-    font-weight: 600;
-    letter-spacing: 2px;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    color: var(--accent);
-}
-
-.nav-links {
-    list-style: none;
-    margin-top: 4rem;
-    flex-grow: 1;
-}
-
-.nav-links li {
-    font-size: 1.5rem;
-    margin-bottom: 2rem;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: var(--transition);
-    position: relative;
-}
-
-.nav-links li.active {
-    color: var(--accent);
-}
-
-/* indicador visual activo */
-.nav-links li.active::before {
-    content: '';
-    position: absolute;
-    left: -10px;
-    top: 30%;
-    width: 3px;
-    height: 40%;
-    background: var(--accent);
-    border-radius: 5px;
-}
-
-/* ================= MAIN ================= */
-.pos-content {
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    overflow-y: auto;
+  margin: 0;
+  font-family: "Arial", sans-serif;
+  background: #f6f6f8;
 }
 
 /* TOP BAR */
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #111;
+  color: white;
+  padding: 10px 15px;
 }
 
-/* SEARCH FIX */
-.search-container {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.8rem 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    max-width: 500px;
+.hamburger {
+  font-size: 22px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
 }
 
-.search-container input {
-    background: transparent;
-    border: none;
-    color: white;
-    width: 100%;
-    outline: none;
-    font-size: 1rem;
+/* LAYOUT */
+.container {
+  display: flex;
+  height: calc(100vh - 50px);
 }
 
-/* ================= CATALOG ================= */
-.catalog-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1.5rem;
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  background: #1a1a1a;
+  color: white;
+  padding: 10px;
+  transition: 0.3s;
 }
 
-.product-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1rem;
-    text-align: center;
-    transition: var(--transition);
-    cursor: pointer;
+.sidebar button {
+  width: 100%;
+  padding: 12px;
+  margin: 5px 0;
+  border: none;
+  cursor: pointer;
+  background: #2a2a2a;
+  color: white;
+  text-align: left;
 }
 
-.product-card:hover {
-    transform: translateY(-5px);
-    border-color: var(--accent);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+.sidebar.hidden {
+  width: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
-/* estado seleccionado teclado */
-.product-card.selected {
-    border-color: var(--accent);
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-    transform: translateY(-5px) scale(1.02);
-    background: rgba(255, 255, 255, 0.03);
+/* CONTENT */
+.content {
+  flex: 1;
+  padding: 20px;
 }
 
-.product-card .brand {
-    font-size: 0.7rem;
-    color: var(--accent);
-    text-transform: uppercase;
+.module {
+  display: none;
 }
 
-.product-card .price {
-    font-weight: 600;
-    font-size: 1.2rem;
-    margin-top: 0.5rem;
-    display: block;
+.module.active {
+  display: block;
 }
 
-/* ================= CHECKOUT ================= */
-.checkout-panel {
-    background: var(--bg-card);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem;
-}
-
-.cart-items {
-    flex-grow: 1;
-    overflow-y: auto;
-    margin: 1.5rem 0;
-}
-
-.summary {
-    border-top: 1px solid var(--border);
-    padding-top: 1.5rem;
-}
-
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.8rem;
-    color: var(--text-muted);
-}
-
-.total-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin: 1rem 0;
-    color: var(--accent);
-}
-
-/* BUTTON */
-.btn-checkout {
-    width: 100%;
-    padding: 1.2rem;
-    border-radius: var(--radius);
-    border: none;
-    background: var(--accent);
-    color: black;
-    font-weight: 700;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.btn-checkout:hover {
-    filter: brightness(1.2);
-    transform: scale(1.02);
-}
-
-/* ================= SKELETON ================= */
-.skeleton {
-    height: 200px;
-    background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-    will-change: background-position;
-}
-
-@keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-/* ================= SCROLL ================= */
-::-webkit-scrollbar {
-    width: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--bg-main);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--accent);
+/* estilo premium ligero */
+h2 {
+  color: #222;
+  font-weight: 600;
 }

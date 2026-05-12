@@ -1,85 +1,73 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GLAM POS | Punto de Venta</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Google Fonts: Inter para lectura rápida y Playfair para el toque elegante -->
-    <link href="https://googleapis.com" rel="stylesheet">
-    <!-- Remix Icons (Íconos ligeros) -->
-    <link href="https://jsdelivr.net" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>POS Maquillaje Premium</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="dark-theme">
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <nav class="sidebar">
-            <div class="logo">
-                <span class="logo-text">GLAM<span>POS</span></span>
-            </div>
-            <ul class="nav-links">
-                <li class="active"><i class="ri- layout-grid-fill"></i></li>
-                <li><i class="ri-box-3-line"></i></li>
-                <li><i class="ri-history-line"></i></li>
-                <li><i class="ri-settings-3-line"></i></li>
-            </ul>
-            <div class="user-profile">
-                <div class="avatar">JS</div>
-            </div>
-        </nav>
 
-        <!-- Main Content -->
-        <main class="pos-content">
-            <header class="top-bar">
-                <div class="search-container">
-                    <i class="ri-search-line"></i>
-                    <input type="text" id="product-search" placeholder="Busca por nombre o SKU (F2)..." autocomplete="off">
-                </div>
-                <div class="stats">
-                    <span class="live-clock">12:45 PM</span>
-                </div>
-            </header>
+<body>
 
-            <section class="catalog-grid" id="catalog-container">
-                <!-- Los productos se inyectan aquí vía scrip.js -->
-                <!-- Ejemplo de Skeleton Loader -->
-                <div class="product-card skeleton"></div>
-                <div class="product-card skeleton"></div>
-                <div class="product-card skeleton"></div>
-            </section>
-        </main>
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <button id="toggleBtn" class="hamburger">☰</button>
+    <h1>Beauty POS</h1>
+  </header>
 
-        <!-- Right Checkout Sidebar -->
-        <aside class="checkout-panel">
-            <div class="cart-header">
-                <h2>Carrito Actual</h2>
-                <button class="btn-clear"><i class="ri-delete-bin-line"></i></button>
-            </div>
-            
-            <div class="cart-items" id="cart-items">
-                <!-- Items de venta -->
-            </div>
+  <div class="container">
 
-            <div class="summary">
-                <div class="summary-row">
-                    <span>Subtotal</span>
-                    <span id="subtotal-val">$0.00</span>
-                </div>
-                <div class="summary-row">
-                    <span>IVA (16%)</span>
-                    <span id="tax-val">$0.00</span>
-                </div>
-                <div class="total-row">
-                    <span>TOTAL</span>
-                    <span id="total-val">$0.00</span>
-                </div>
-                <button class="btn-checkout" id="btn-pay">
-                    COBRAR (F8)
-                </button>
-            </div>
-        </aside>
-    </div>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+      <button onclick="showModule('users')">Users</button>
+      <button onclick="showModule('auth')">Auth</button>
+      <button onclick="showModule('inventory')">Inventory</button>
+      <button onclick="showModule('sales')">Sales</button>
+      <button onclick="showModule('payments')">Payments</button>
+      <button onclick="showModule('reports')">Reports</button>
+      <button onclick="showModule('returns')">Returns</button>
+      <button onclick="showModule('cash')">Cash</button>
+    </aside>
 
-    <script src="script.js" type="module"></script>
+    <!-- CONTENT -->
+    <main class="content">
+
+      <section id="users" class="module active">
+        <h2>Users</h2>
+      </section>
+
+      <section id="auth" class="module">
+        <h2>Auth</h2>
+      </section>
+
+      <section id="inventory" class="module">
+        <h2>Inventory (Maquillaje)</h2>
+      </section>
+
+      <section id="sales" class="module">
+        <h2>Sales</h2>
+      </section>
+
+      <section id="payments" class="module">
+        <h2>Payments</h2>
+      </section>
+
+      <section id="reports" class="module">
+        <h2>Reports</h2>
+      </section>
+
+      <section id="returns" class="module">
+        <h2>Returns</h2>
+      </section>
+
+      <section id="cash" class="module">
+        <h2>Cash Control</h2>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
