@@ -1,73 +1,91 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>POS Maquillaje Premium</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glow Beauty POS | Premium</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://jsdelivr.net" rel="stylesheet">
 </head>
-
 <body>
+    <div id="app">
+        <!-- 🔐 CAPA 1: LOGIN (Bloqueo Total) -->
+        <section id="auth-screen" class="login-container">
+            <div class="login-card">
+                <span class="brand-icon">💄</span>
+                <h2>Glow Beauty</h2>
+                <form id="login-form">
+                    <input type="text" id="email" placeholder="Usuario o Correo" required>
+                    <input type="password" id="password" placeholder="Contraseña" required>
+                    <button type="submit" class="btn-primary">Entrar al Sistema</button>
+                </form>
+            </div>
+        </section>
 
-  <!-- TOP BAR -->
-  <header class="topbar">
-    <button id="toggleBtn" class="hamburger">☰</button>
-    <h1>Beauty POS</h1>
-  </header>
+        <!-- 🚀 CAPA 2: SISTEMA PRINCIPAL -->
+        <div id="main-system" class="hidden">
+            <header class="topbar">
+                <div class="header-left">
+                    <button id="toggleBtn" class="hamburger">☰</button>
+                    <h1>Beauty POS</h1>
+                </div>
+                <div class="header-right">
+                    <span id="user-display" class="user-badge"></span>
+                    <button id="logoutBtn" class="btn-logout"><i class="ri-logout-box-r-line"></i></button>
+                </div>
+            </header>
 
-  <div class="container">
+            <div class="container">
+                <aside id="sidebar" class="sidebar">
+                    <button onclick="showModule('pos')"><i class="ri-shopping-cart-2-line"></i> <span>Ventas</span></button>
+                    <button onclick="showModule('inventory')"><i class="ri-box-3-line"></i> <span>Inventario</span></button>
+                    <button onclick="showModule('cash')"><i class="ri-safe-2-line"></i> <span>Caja</span></button>
+                    <button onclick="showModule('reports')"><i class="ri-pie-chart-line"></i> <span>Reportes</span></button>
+                    <button onclick="showModule('users')"><i class="ri-group-line"></i> <span>Usuarios</span></button>
+                </aside>
 
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="sidebar">
-      <button onclick="showModule('users')">Users</button>
-      <button onclick="showModule('auth')">Auth</button>
-      <button onclick="showModule('inventory')">Inventory</button>
-      <button onclick="showModule('sales')">Sales</button>
-      <button onclick="showModule('payments')">Payments</button>
-      <button onclick="showModule('reports')">Reports</button>
-      <button onclick="showModule('returns')">Returns</button>
-      <button onclick="showModule('cash')">Cash</button>
-    </aside>
+                <main class="content">
+                    <!-- 🛒 MÓDULO POS (EL SISTEMA DE 2 COLUMNAS) -->
+                    <section id="pos" class="module">
+                        <div class="pos-grid">
+                            <!-- Izquierda: Buscador -->
+                            <div class="search-area card">
+                                <div class="search-input-wrapper">
+                                    <i class="ri-barcode-line"></i>
+                                    <input type="text" id="sku-search" placeholder="Escanea SKU o busca por nombre..." onkeypress="handlePosSearch(event)">
+                                </div>
+                                <div id="products-result" class="products-grid">
+                                    <p class="placeholder-text">Esperando escaneo de producto...</p>
+                                </div>
+                            </div>
+                            <!-- Derecha: Carrito -->
+                            <div class="cart-area card">
+                                <h3>🛒 Carrito</h3>
+                                <div id="cart-items-list" class="cart-list"></div>
+                                <div class="cart-totals">
+                                    <div class="total-row">
+                                        <span>Total:</span>
+                                        <h3 id="total-amount">$0.00</h3>
+                                    </div>
+                                    <select id="payment-method">
+                                        <option value="CASH">💵 Efectivo</option>
+                                        <option value="CARD">💳 Tarjeta</option>
+                                    </select>
+                                    <button onclick="processSale()" class="btn-success">Finalizar Venta</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
-    <!-- CONTENT -->
-    <main class="content">
-
-      <section id="users" class="module active">
-        <h2>Users</h2>
-      </section>
-
-      <section id="auth" class="module">
-        <h2>Auth</h2>
-      </section>
-
-      <section id="inventory" class="module">
-        <h2>Inventory (Maquillaje)</h2>
-      </section>
-
-      <section id="sales" class="module">
-        <h2>Sales</h2>
-      </section>
-
-      <section id="payments" class="module">
-        <h2>Payments</h2>
-      </section>
-
-      <section id="reports" class="module">
-        <h2>Reports</h2>
-      </section>
-
-      <section id="returns" class="module">
-        <h2>Returns</h2>
-      </section>
-
-      <section id="cash" class="module">
-        <h2>Cash Control</h2>
-      </section>
-
-    </main>
-
-  </div>
-
-  <script src="script.js"></script>
+                    <!-- Otros módulos (vacíos para inyectar por JS) -->
+                    <section id="inventory" class="module"><h2>Inventario</h2><div class="card" id="inv-table"></div></section>
+                    <section id="cash" class="module"><h2>Control de Caja</h2></section>
+                    <section id="reports" class="module"><h2>Reportes</h2></section>
+                    <section id="users" class="module"><h2>Usuarios</h2></section>
+                </main>
+            </div>
+        </div>
+    </div>
+    <script src="script.js" type="module"></script>
 </body>
 </html>
