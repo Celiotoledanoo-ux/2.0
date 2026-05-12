@@ -1,151 +1,311 @@
-// --- ⚙️ CONFIG & STATE ---
-const API_URL = '/api'; // Ajusta según tu proxy
+// ======================================================
+// ⚙️ GLAM POS - SCRIPT FINAL INTEGRADO
+// ======================================================
+
+// ---------------- CONFIG ----------------
+const API_URL = '/api/v1';
+
 const state = {
     token: localStorage.getItem('token'),
-    user: JSON.parse(localStorage.getItem('user')),
-    cart: []
+    user: JSON.parse(localStorage.getItem('user')) || null,
+    cart: [],
+    selectedIndex: -1,
+    currentView: 'pos'
 };
 
-// --- ⚡ CORE API (Optimizado) ---
-const api = async (url, method = 'GET', data = null) => {
+// ---------------- DOM CACHE ----------------
+const DOM = {
+    catalog: document.getElementById('catalog-container'),
+    cartItems: document.getElementById('cart-items'),
+    subtotal: document.getElementById('subtotal-val'),
+    tax: document.getElementById('tax-val'),
+    total: document.getElementById('total-val'),
+    payBtn: document.getElementById('btn-pay'),
+    search: document.getElementById('product-search'),
+    clock: document.getElementById('live-clock'),
+    avatar: document.getElementById('user-avatar'),
+    clearCart: document.getElementById('clear-cart'),
+    navItems: document.querySelectorAll('.nav-links li')
+};
+
+// ======================================================
+// ⚡ API CORE
+// ======================================================
+const apiFetch = async (endpoint, method = 'GET', payload = null) => {
+
     const opts = {
         method,
-        headers: { 
+        headers: {
             'Authorization': `Bearer ${state.token}`,
-            'Content-Type': 'application/json' 
+            'Content-Type': 'application/json'
         }
     };
-    // Mantiene la estructura body.body para tu Zod Schema
-    if (data) opts.body = JSON.stringify({ body: data });
 
-    const res = await fetch(`${API_URL}${url}`, opts);
+    if (payload) {
+        opts.body = JSON.stringify({ body: payload });
+    }
+
+    const res = await fetch(`${API_URL}${endpoint}`, opts);
     const json = await res.json();
-    if (!res.ok) throw new Error(json.message || 'Error API');
+
+    if (!res.ok) {
+        throw new Error(json.message || 'Error API');
+    }
+
     return json;
 };
 
-// --- 🔑 AUTH ---
-document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = Object.fromEntries(new FormData(e.target));
-    
-    try {
-        const { data } = await api('/auth/login', 'POST', payload);
-        localStorage.setItem('token', data.session.accessToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        location.reload();
-    } catch (err) {
-        alert("Error: " + err.message);
-    }
-});
+// ======================================================
+// 🕒 LIVE CLOCK
+// ======================================================
+const initClock = () => {
+    const update = () => {
+        const now = new Date();
+        DOM.clock.textContent = now.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
-// --- 📦 INVENTARIO (Renderizado Elegante) ---
-const loadInventory = async () => {
-    try {
-        const { data } = await api('/inventory');
-        const container = document.getElementById('catalog-container');
-        
-        container.innerHTML = data.map(p => `
-            <div class="product-card" onclick="addToCart('${p.id}', '${p.name}', ${p.price})">
-                <span class="brand">${p.brand || 'Luxury'}</span>
-                <h4>${p.name}</h4>
-                <span class="price">$${p.price}</span>
-                <small>Stock: ${p.stock}</small>
-            </div>
-        `).join('');
-    } catch (err) { console.error(err); }
+    update();
+    setInterval(update, 1000);
 };
 
-// --- 🛒 CARRITO & VENTA ---
-window.addToCart = (id, name, price) => {
-    const item = state.cart.find(i => i.id === id);
-    item ? item.qty++ : state.cart.push({ id, name, price, qty: 1 });
+// ======================================================
+// 👤 USER UI
+// ======================================================
+const initUser = () => {
+    if (!state.user) return;
+
+    const initials = state.user.name
+        ? state.user.name.split(' ').map(n => n[0]).join('')
+        : 'U';
+
+    DOM.avatar.textContent = initials.toUpperCase();
+};
+
+// ======================================================
+// 📦 INVENTORY
+// ======================================================
+const loadInventory = async () => {
+
+    try {
+        const { data } = await apiFetch('/inventory');
+        renderInventory(data);
+
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+const renderInventory = (products) => {
+
+    if (!DOM.catalog) return;
+
+    DOM.catalog.innerHTML = products.map(p => `
+        <div class="product-card"
+            data-id="${p.id}"
+            data-name="${p.name}"
+            data-price="${p.price}">
+
+            <span class="brand">${p.brand || 'GLAM'}</span>
+            <h4>${p.name}</h4>
+            <span class="price">$${p.price}</span>
+            <small>Stock: ${p.stock}</small>
+
+        </div>
+    `).join('');
+
+    document.querySelectorAll('.product-card')
+        .forEach(card => {
+            card.onclick = () => {
+                addToCart({
+                    id: card.dataset.id,
+                    name: card.dataset.name,
+                    price: parseFloat(card.dataset.price)
+                });
+            };
+        });
+};
+
+// ======================================================
+// 🛒 CART
+// ======================================================
+const addToCart = (product) => {
+
+    const item = state.cart.find(i => i.id === product.id);
+
+    if (item) item.qty++;
+    else state.cart.push({ ...product, qty: 1 });
+
     renderCart();
 };
 
 const renderCart = () => {
-    const cartBox = document.getElementById('cart-items');
-    const totalLabel = document.getElementById('total-val');
-    
-    cartBox.innerHTML = state.cart.map(i => `
-        <div class="summary-row">
-            <span>${i.name} x${i.qty}</span>
-            <span>$${(i.price * i.qty).toFixed(2)}</span>
-        </div>
-    `).join('');
 
-    const total = state.cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-    totalLabel.innerText = `$${total.toFixed(2)}`;
+    let subtotal = 0;
+
+    DOM.cartItems.innerHTML = state.cart.map(i => {
+
+        const totalItem = i.price * i.qty;
+        subtotal += totalItem;
+
+        return `
+            <div class="summary-row">
+                <span>${i.name} x${i.qty}</span>
+                <span>$${totalItem.toFixed(2)}</span>
+            </div>
+        `;
+    }).join('');
+
+    const tax = subtotal * 0.16;
+    const total = subtotal + tax;
+
+    DOM.subtotal.textContent = `$${subtotal.toFixed(2)}`;
+    DOM.tax.textContent = `$${tax.toFixed(2)}`;
+    DOM.total.textContent = `$${total.toFixed(2)}`;
 };
 
-document.getElementById('btn-pay')?.addEventListener('click', async () => {
-    if (!state.cart.length) return alert("Carrito vacío");
-    
-    const amount = prompt(`Total: ${document.getElementById('total-val').innerText}\nEfectivo:`);
+// ======================================================
+// 💳 CHECKOUT
+// ======================================================
+const checkout = async () => {
+
+    if (!state.cart.length) {
+        return alert('Carrito vacío');
+    }
+
+    const amount = prompt(
+        `Total: ${DOM.total.textContent}\nEfectivo:`
+    );
+
     if (!amount) return;
 
+    const payload = {
+        items: state.cart.map(i => ({
+            product_id: i.id,
+            quantity: i.qty
+        })),
+        payment_method: 'CASH',
+        received_amount: parseFloat(amount)
+    };
+
     try {
-        const payload = {
-            items: state.cart.map(i => ({ product_id: i.id, quantity: i.qty })),
-            payment_method: 'CASH',
-            received_amount: parseFloat(amount)
-        };
-        const res = await api('/sales', 'POST', payload);
-        alert(`Venta Exitosa. Cambio: $${res.data.sale.change}`);
+
+        const res = await apiFetch('/sales', 'POST', payload);
+
+        alert(
+            `Venta exitosa\nCambio: $${res.data.sale.change || 0}`
+        );
+
         state.cart = [];
         renderCart();
-        loadInventory(); // Refresca stock
-    } catch (err) { alert(err.message); }
+        loadInventory();
+
+    } catch (err) {
+        alert(err.message);
+    }
+};
+
+// ======================================================
+// 🔍 SEARCH FILTER
+// ======================================================
+DOM.search?.addEventListener('input', (e) => {
+
+    const term = e.target.value.toLowerCase();
+
+    document.querySelectorAll('.product-card')
+        .forEach(card => {
+
+            const name = card.dataset.name.toLowerCase();
+            const brand = card.querySelector('.brand').textContent.toLowerCase();
+
+            const show =
+                name.includes(term) ||
+                brand.includes(term);
+
+            card.style.display = show ? 'block' : 'none';
+        });
 });
 
-// --- ⌨️ NAVEGACIÓN PRO (INSERTAR AQUÍ) ---
-let selectedIndex = -1;
-
+// ======================================================
+// ⌨️ KEYBOARD UX PRO
+// ======================================================
 window.addEventListener('keydown', (e) => {
-    const cards = document.querySelectorAll('.product-card');
-    
-    // Navegación con flechas (solo si no estás escribiendo en el buscador)
-    if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
-        if (cards.length === 0 || document.activeElement.id === 'product-search') return;
-        e.preventDefault();
-        if (selectedIndex >= 0) cards[selectedIndex].classList.remove('selected');
 
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-            selectedIndex = (selectedIndex + 1) % cards.length;
-        } else {
-            selectedIndex = (selectedIndex - 1 + cards.length) % cards.length;
+    const cards = [
+        ...document.querySelectorAll('.product-card')
+    ].filter(c => c.style.display !== 'none');
+
+    if (['ArrowRight','ArrowLeft','ArrowDown','ArrowUp'].includes(e.key)) {
+
+        if (!cards.length || document.activeElement === DOM.search) return;
+
+        e.preventDefault();
+
+        if (state.selectedIndex >= 0) {
+            cards[state.selectedIndex]?.classList.remove('selected');
         }
 
-        cards[selectedIndex].classList.add('selected');
-        cards[selectedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+            state.selectedIndex = (state.selectedIndex + 1) % cards.length;
+        } else {
+            state.selectedIndex = (state.selectedIndex - 1 + cards.length) % cards.length;
+        }
+
+        cards[state.selectedIndex]?.classList.add('selected');
+        cards[state.selectedIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Enter para seleccionar el producto marcado
-    if (e.key === 'Enter' && document.activeElement.id !== 'product-search') {
-        if (selectedIndex >= 0) cards[selectedIndex].click();
+    if (e.key === 'Enter' && document.activeElement !== DOM.search) {
+        cards[state.selectedIndex]?.click();
     }
+
+    if (e.key === 'F2') DOM.search?.focus();
+    if (e.key === 'F8') checkout();
 });
 
-// --- 🔍 FILTRO EN TIEMPO REAL ---
-document.getElementById('product-search')?.addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    const cards = document.querySelectorAll('.product-card');
-    selectedIndex = -1; // Resetea selección al buscar
+// ======================================================
+// 🧭 SPA NAVIGATION
+// ======================================================
+DOM.navItems.forEach(item => {
 
-    cards.forEach(card => {
-        const name = card.querySelector('h4').innerText.toLowerCase();
-        const brand = card.querySelector('.brand').innerText.toLowerCase();
-        // Muestra/Oculta si coincide el nombre o la marca
-        card.style.display = (name.includes(term) || brand.includes(term)) ? 'block' : 'none';
+    item.addEventListener('click', () => {
+
+        DOM.navItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        state.currentView = item.dataset.view;
+
+        if (state.currentView === 'pos') loadInventory();
+        if (state.currentView === 'inventory') alert('Vista inventario no implementada aún');
     });
 });
 
-// --- 🚀 INIT ---
-if (state.token) {
-    loadInventory();
-    // Atajos de teclado Pro
-    window.onkeydown = (e) => {
-        if(e.key === 'F2') document.getElementById('product-search').focus();
-        if(e.key === 'F8') document.getElementById('btn-pay').click();
-    };
-}
+// ======================================================
+// 🧹 CLEAR CART
+// ======================================================
+DOM.clearCart?.addEventListener('click', () => {
+    state.cart = [];
+    renderCart();
+});
+
+// ======================================================
+// 💳 PAY BUTTON
+// ======================================================
+DOM.payBtn?.addEventListener('click', checkout);
+
+// ======================================================
+// 🚀 INIT
+// ======================================================
+const init = async () => {
+
+    initClock();
+    initUser();
+
+    if (state.token) {
+        await loadInventory();
+    }
+};
+
+init();
