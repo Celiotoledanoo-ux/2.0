@@ -11,7 +11,6 @@ let isShuttingDown = false;
 
 /**
  * 📴 GESTOR DE CIERRE (Graceful Shutdown)
- * Evita la pérdida de datos cerrando conexiones antes de morir.
  */
 function handleShutdown(code = 0) {
   if (isShuttingDown) return;
@@ -19,7 +18,6 @@ function handleShutdown(code = 0) {
 
   logger.info('🛑 Señal de cierre recibida. Finalizando procesos...');
 
-  // Si el servidor no cierra en 10s, forzamos la salida
   const forceExit = setTimeout(() => {
     logger.warn('⚠️ Cierre forzado por tiempo límite excedido.');
     process.exit(code);
@@ -55,12 +53,13 @@ process.on('unhandledRejection', (err) => {
 });
 
 // 🚀 IGNICIÓN DEL POS
+// Usamos el puerto de 'env' que ya está normalizado para Render
 server = app.listen(env.port, () => {
   logger.info(`✨ POS System [${env.nodeEnv.toUpperCase()}]`);
   logger.info(`📡 Escuchando en puerto: ${env.port}`);
-  logger.info('✅ Todos los sistemas operativos.');
+  logger.info('✅ Todos los sistemas operativos y listos para la venta.');
 });
 
-// 📡 SEÑALES DE TERMINACIÓN (Render/Docker)
+// 📡 SEÑALES DE TERMINACIÓN
 process.on('SIGTERM', () => handleShutdown(0));
 process.on('SIGINT', () => handleShutdown(0));
