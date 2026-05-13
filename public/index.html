@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glow Beauty POS | Premium</title>
+    <title>Glow Beauty POS | Sistema Integral</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://jsdelivr.net" rel="stylesheet">
+    <link href="jsdelivr.net" rel="stylesheet">
 </head>
 <body>
     <div id="app">
-        <!-- 🔐 CAPA 1: LOGIN (Bloqueo Total) -->
+        <!-- 🔐 CAPA 1: LOGIN -->
         <section id="auth-screen" class="login-container">
             <div class="login-card">
                 <span class="brand-icon">💄</span>
                 <h2>Glow Beauty</h2>
+                <p>Ingresa tus credenciales para operar</p>
                 <form id="login-form">
                     <input type="text" id="email" placeholder="Usuario o Correo" required>
                     <input type="password" id="password" placeholder="Contraseña" required>
@@ -31,11 +32,12 @@
                 </div>
                 <div class="header-right">
                     <span id="user-display" class="user-badge"></span>
-                    <button id="logoutBtn" class="btn-logout"><i class="ri-logout-box-r-line"></i></button>
+                    <button id="logoutBtn" class="btn-logout" title="Cerrar Sesión"><i class="ri-logout-box-r-line"></i></button>
                 </div>
             </header>
 
             <div class="container">
+                <!-- SIDEBAR NAVEGACIÓN -->
                 <aside id="sidebar" class="sidebar">
                     <button onclick="showModule('pos')"><i class="ri-shopping-cart-2-line"></i> <span>Ventas</span></button>
                     <button onclick="showModule('inventory')"><i class="ri-box-3-line"></i> <span>Inventario</span></button>
@@ -44,11 +46,12 @@
                     <button onclick="showModule('users')"><i class="ri-group-line"></i> <span>Usuarios</span></button>
                 </aside>
 
+                <!-- CONTENIDO DINÁMICO SPA -->
                 <main class="content">
-                    <!-- 🛒 MÓDULO POS (EL SISTEMA DE 2 COLUMNAS) -->
+                    
+                    <!-- 🛒 MÓDULO POS (2 COLUMNAS) -->
                     <section id="pos" class="module">
                         <div class="pos-grid">
-                            <!-- Izquierda: Buscador -->
                             <div class="search-area card">
                                 <div class="search-input-wrapper">
                                     <i class="ri-barcode-line"></i>
@@ -58,7 +61,6 @@
                                     <p class="placeholder-text">Esperando escaneo de producto...</p>
                                 </div>
                             </div>
-                            <!-- Derecha: Carrito -->
                             <div class="cart-area card">
                                 <h3>🛒 Carrito</h3>
                                 <div id="cart-items-list" class="cart-list"></div>
@@ -77,11 +79,84 @@
                         </div>
                     </section>
 
-                    <!-- Otros módulos (vacíos para inyectar por JS) -->
-                    <section id="inventory" class="module"><h2>Inventario</h2><div class="card" id="inv-table"></div></section>
-                    <section id="cash" class="module"><h2>Control de Caja</h2></section>
-                    <section id="reports" class="module"><h2>Reportes</h2></section>
-                    <section id="users" class="module"><h2>Usuarios</h2></section>
+                    <!-- 📦 MÓDULO INVENTARIO -->
+                    <section id="inventory" class="module">
+                        <div class="inventory-layout">
+                            <div class="card">
+                                <h3>✨ Nuevo Producto</h3>
+                                <form id="product-form">
+                                    <input type="text" id="p-name" placeholder="Nombre del Producto" required>
+                                    <input type="text" id="p-sku" placeholder="SKU / Código Único" required>
+                                    <input type="number" id="p-price" step="0.01" placeholder="Precio ($)" required>
+                                    <input type="number" id="p-stock" placeholder="Stock Inicial" required>
+                                    <button type="submit">Guardar en Catálogo</button>
+                                </form>
+                            </div>
+                            <div class="card table-card">
+                                <h3>📦 Existencias Actuales</h3>
+                                <table>
+                                    <thead>
+                                        <tr><th>SKU</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr>
+                                    </thead>
+                                    <tbody id="inventory-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 💰 MÓDULO CONTROL DE CAJA -->
+                    <section id="cash" class="module">
+                        <div class="card text-center" id="cash-status-card">
+                            <!-- JS inyectará la info si está abierta o cerrada -->
+                        </div>
+                    </section>
+
+                    <!-- 📊 MÓDULO REPORTES FINANCIEROS -->
+                    <section id="reports" class="module">
+                        <div class="metrics-grid" id="metrics-container">
+                            <!-- Tarjetas de métricas dinámicas -->
+                        </div>
+                        <div class="reports-tables-grid">
+                            <div class="card">
+                                <h3>🏆 Top 5 Más Vendidos</h3>
+                                <ul id="top-products-list" class="report-list"></ul>
+                            </div>
+                            <div class="card">
+                                <h3>⚠️ Stock Crítico</h3>
+                                <ul id="low-stock-list" class="report-list"></ul>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 👥 MÓDULO GESTIÓN DE PERSONAL -->
+                    <section id="users" class="module">
+                        <div class="users-layout">
+                            <div class="card">
+                                <h3>✨ Registrar Empleado</h3>
+                                <form id="add-user-form">
+                                    <input type="text" id="new-u-name" placeholder="Nombre Completo" required>
+                                    <input type="email" id="new-u-email" placeholder="Correo Electrónico" required>
+                                    <input type="password" id="new-u-pass" placeholder="Contraseña de Acceso" required>
+                                    <select id="new-u-role">
+                                        <option value="CASHIER">Cajero(a)</option>
+                                        <option value="MANAGER">Gerente</option>
+                                        <option value="ADMIN">Administrador</option>
+                                    </select>
+                                    <button type="submit">Registrar Personal</button>
+                                </form>
+                            </div>
+                            <div class="card table-card">
+                                <h3>👥 Lista de Personal</h3>
+                                <table>
+                                    <thead>
+                                        <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acción</th></tr>
+                                    </thead>
+                                    <tbody id="users-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
                 </main>
             </div>
         </div>

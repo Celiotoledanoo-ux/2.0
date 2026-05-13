@@ -28,3 +28,61 @@ body { background: var(--light); height: 100vh; overflow: hidden; }
 .module { display: none; height: 100%; }
 .module.active { display: block; }
 input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px; }
+
+/* 📦 LAYOUT DE INVENTARIO Y USUARIOS */
+.inventory-layout, .users-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 25px;
+    align-items: start;
+}
+
+.table-card {
+    overflow-x: auto;
+    border-radius: 15px;
+}
+
+/* 📊 ESTILOS DE REPORTES FINANCIEROS */
+.reports-tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-top: 25px;
+}
+
+.report-list {
+    list-style: none;
+    margin-top: 15px;
+}
+
+.report-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+}
+
+.danger-list-item {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.text-center { text-align: center; }
+
+/* 💰 CONTENEDOR INTERNO DE CAJA */
+.cash-active, .cash-inactive {
+    padding: 40px;
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.badge-success {
+    background: #c6f6d5;
+    color: #22543d;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    display: inline-block;
+}
