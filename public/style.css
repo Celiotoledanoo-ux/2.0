@@ -1,88 +1,164 @@
-:root { --primary: #d63384; --dark: #1a1d20; --light: #f8f9fa; --border: #dee2e6; }
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-body { background: var(--light); height: 100vh; overflow: hidden; }
+/* ==========================================================================
+   PALETA PREMIUM Y CONFIGURACIÓN GENERAL
+   ========================================================================== */
+:root {
+    --bg-dark: #0b0a0d;
+    --bg-card: #131217;
+    --bg-input: #1a1920;
+    --accent-rose: #e2a89f;
+    --accent-gold: #cca625;
+    --text-main: #f0eff4;
+    --text-muted: #96949c;
+    --border-color: #212027;
+    --success: #24bcae;
+    --danger: #df4759;
+    --radius-lg: 14px;
+    --radius-md: 8px;
+    --transition: all 0.2s ease-in-out;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    overflow-x: hidden;
+}
+
 .hidden { display: none !important; }
 
-/* 🔐 CAPA LOGIN */
-.login-container { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary), #8e44ad); }
-.login-card { background: white; padding: 40px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; }
-.brand-icon { font-size: 3rem; }
-
-/* 🚀 MAIN LAYOUT */
-#main-system { display: grid; grid-template-rows: 60px 1fr; height: 100vh; }
-.topbar { background: var(--dark); color: white; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
-.container { display: flex; height: 100%; }
-.sidebar { width: 240px; background: #2c2f33; padding: 15px; transition: 0.3s; }
-.sidebar.hidden { width: 0; padding: 0; overflow: hidden; }
-.sidebar button { width: 100%; padding: 12px; margin-bottom: 10px; border: none; background: transparent; color: #ccc; text-align: left; cursor: pointer; border-radius: 8px; }
-.sidebar button:hover { background: var(--primary); color: white; }
-
-/* 🛒 POS 2 COLUMNAS */
-.pos-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; padding: 20px; height: 100%; }
-.card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.cart-area { display: flex; flex-direction: column; height: 100%; border-left: 3px solid var(--primary); }
-.cart-list { flex-grow: 1; overflow-y: auto; }
-.cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f1f1; }
-.btn-success { background: #28a745; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-
-.module { display: none; height: 100%; }
-.module.active { display: block; }
-input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px; }
-
-/* 📦 LAYOUT DE INVENTARIO Y USUARIOS */
-.inventory-layout, .users-layout {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 25px;
-    align-items: start;
-}
-
-.table-card {
-    overflow-x: auto;
-    border-radius: 15px;
-}
-
-/* 📊 ESTILOS DE REPORTES FINANCIEROS */
-.reports-tables-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 25px;
-    margin-top: 25px;
-}
-
-.report-list {
-    list-style: none;
-    margin-top: 15px;
-}
-
-.report-list li {
+/* ==========================================================================
+   🔐 ACCESO / LOGIN
+   ========================================================================== */
+.login-container {
+    height: 100vh;
+    width: 100vw;
     display: flex;
-    justify-content: space-between;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.95rem;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #1f171c 0%, var(--bg-dark) 100%);
 }
 
-.danger-list-item {
-    color: var(--danger);
-    font-weight: 600;
+.login-card {
+    background: var(--bg-card);
+    padding: 2.5rem;
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 380px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
 }
 
-.text-center { text-align: center; }
+.brand-logo { font-size: 2.8rem; margin-bottom: 0.5rem; }
+.login-card h2 { font-weight: 700; letter-spacing: 0.5px; }
+.login-subtitle { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
 
-/* 💰 CONTENEDOR INTERNO DE CAJA */
-.cash-active, .cash-inactive {
-    padding: 40px;
-    max-width: 450px;
-    margin: 0 auto;
+.input-group { position: relative; margin-bottom: 1rem; }
+.input-group i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+.input-group input, .input-group select, .search-input-wrapper input, .cash-action-inputs input, #product-form input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    font-size: 0.9rem;
+    transition: var(--transition);
 }
 
-.badge-success {
-    background: #c6f6d5;
-    color: #22543d;
-    padding: 6px 16px;
-    border-radius: 50px;
-    font-weight: bold;
-    font-size: 0.85rem;
-    display: inline-block;
+.input-group select, .payment-area select { padding-left: 2.5rem; appearance: none; }
+.input-group input:focus, .search-input-wrapper input:focus { border-color: var(--accent-rose); outline: none; }
+
+.btn-primary, .btn-success, .btn-submit {
+    width: 100%; padding: 0.75rem;
+    background: linear-gradient(135deg, var(--accent-rose), #ca9289);
+    border: none; border-radius: var(--radius-md);
+    color: #0b0a0d; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: var(--transition);
 }
+.btn-primary:hover, .btn-submit:hover { transform: translateY(-1px); opacity: 0.9; }
+
+/* ==========================================================================
+   🚀 TOPBAR Y MENÚ LATERAL (SIDEBAR)
+   ========================================================================== */
+.topbar {
+    height: 65px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+}
+.header-left, .header-right { display: flex; align-items: center; gap: 1rem; }
+.hamburger { background: none; border: none; color: var(--text-main); font-size: 1.2rem; cursor: pointer; }
+.topbar h1 { font-size: 1rem; font-weight: 700; }
+.sub-logo { font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: -4px; }
+.btn-logout { background: none; border: 1px solid var(--border-color); color: var(--danger); width: 34px; height: 34px; border-radius: var(--radius-md); cursor: pointer; }
+
+.container { display: flex; margin-top: 65px; min-height: calc(100vh - 65px); }
+.sidebar { width: 220px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 1rem 0.5rem; }
+.sidebar-menu { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.sidebar-menu button {
+    width: 100%; padding: 0.75rem 1rem; background: none; border: none;
+    color: var(--text-muted); border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; font-weight: 500;
+    transition: var(--transition);
+}
+.sidebar-menu button:hover, .sidebar-menu button.active { color: var(--accent-rose); background: rgba(226, 168, 159, 0.08); }
+
+.content { flex-grow: 1; padding: 1.5rem; max-width: calc(100vw - 220px); }
+.card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; }
+.section-desc { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem; }
+
+/* ==========================================================================
+   🛒 PUNTO DE VENTA Y PAGO MIXO
+   ========================================================================== */
+.search-input-wrapper { position: relative; margin-bottom: 1rem; }
+.search-input-wrapper i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--accent-rose); }
+.cart-list { min-height: 120px; max-height: 240px; overflow-y: auto; margin: 1rem 0; border-bottom: 1px solid var(--border-color); }
+.payment-area { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; max-width: 320px; }
+.payment-area select { width: 100%; padding: 0.65rem; background: var(--bg-input); color: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+#mixed-payment-inputs { display: flex; gap: 0.5rem; }
+#mixed-payment-inputs input { padding-left: 0.75rem; }
+.btn-success { background: linear-gradient(135deg, var(--success), #1da195); color: #0b0a0d; }
+
+/* ==========================================================================
+   💰 CAJA, REPORTES Y SEGURIDAD MÓDULOS
+   ========================================================================== */
+.cash-grid, .inventory-layout, .users-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.25rem; }
+.cash-action-inputs input { padding-left: 1rem; margin-bottom: 0.75rem; }
+.cash-action-buttons { display: flex; gap: 0.5rem; }
+.cash-action-buttons button { padding: 0.65rem; font-size: 0.85rem; }
+
+.restricted-box {
+    background: rgba(223, 71, 89, 0.04); border: 1px dashed var(--danger);
+    border-radius: var(--radius-lg); padding: 3rem; text-align: center; color: var(--danger);
+}
+.restricted-box i { font-size: 3rem; display: block; margin-bottom: 1rem; }
+.restricted-box h3 { font-weight: 600; margin-bottom: 0.5rem; }
+.restricted-box p { color: var(--text-muted); font-size: 0.85rem; }
+
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+.metric-card { display: flex; align-items: center; gap: 1rem; border-left: 3px solid var(--accent-rose); }
+.metric-icon { font-size: 1.8rem; }
+.metric-info h4 { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+.metric-info p { font-size: 1.2rem; font-weight: 700; }
+
+.reports-tables-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1.25rem; }
+.report-list { list-style: none; }
+.report-list li { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+
+/* ==========================================================================
+   📦 TABLAS RESPONSIVAS
+   ========================================================================== */
+.table-responsive { width: 100%; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: 0.75rem; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+th { color: var(--text-muted); font-weight: 600; }
+code { background: var(--bg-input); padding: 2px 6px; border-radius: 4px; color: var(--accent-rose); }

@@ -4,163 +4,299 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Glow Beauty POS | Sistema Integral</title>
+
+    <!-- CSS -->
     <link rel="stylesheet" href="style.css">
-    <link href="jsdelivr.net" rel="stylesheet">
+
+    <!-- REMIX ICONS (CORRECTO) -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
+
+    <!-- GOOGLE FONTS (CORRECTO) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- CHART.JS (CORRECTO) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div id="app">
-        <!-- 🔐 CAPA 1: LOGIN -->
-        <section id="auth-screen" class="login-container">
-            <div class="login-card">
-                <span class="brand-icon">💄</span>
-                <h2>Glow Beauty</h2>
-                <p>Ingresa tus credenciales para operar</p>
-                <form id="login-form">
-                    <input type="text" id="email" placeholder="Usuario o Correo" required>
-                    <input type="password" id="password" placeholder="Contraseña" required>
-                    <button type="submit" class="btn-primary">Entrar al Sistema</button>
-                </form>
+
+<div id="app">
+
+    <!-- 🔐 LOGIN -->
+    <section id="auth-screen" class="login-container" role="region" aria-label="Login">
+        <div class="login-overlay"></div>
+
+        <div class="login-card">
+            <div class="brand-logo">
+                <span role="img" aria-label="logo">💄</span>
             </div>
-        </section>
 
-        <!-- 🚀 CAPA 2: SISTEMA PRINCIPAL -->
-        <div id="main-system" class="hidden">
-            <header class="topbar">
-                <div class="header-left">
-                    <button id="toggleBtn" class="hamburger">☰</button>
-                    <h1>Beauty POS</h1>
+            <h2>Glow Beauty</h2>
+            <p class="login-subtitle">Sistema POS Profesional</p>
+
+            <form id="login-form" autocomplete="off">
+                <div class="input-group">
+                    <i class="ri-user-3-line"></i>
+                    <input type="email" id="email" placeholder="Correo" required>
                 </div>
-                <div class="header-right">
-                    <span id="user-display" class="user-badge"></span>
-                    <button id="logoutBtn" class="btn-logout" title="Cerrar Sesión"><i class="ri-logout-box-r-line"></i></button>
+
+                <div class="input-group">
+                    <i class="ri-lock-2-line"></i>
+                    <input type="password" id="password" placeholder="Contraseña" required>
                 </div>
-            </header>
 
-            <div class="container">
-                <!-- SIDEBAR NAVEGACIÓN -->
-                <aside id="sidebar" class="sidebar">
-                    <button onclick="showModule('pos')"><i class="ri-shopping-cart-2-line"></i> <span>Ventas</span></button>
-                    <button onclick="showModule('inventory')"><i class="ri-box-3-line"></i> <span>Inventario</span></button>
-                    <button onclick="showModule('cash')"><i class="ri-safe-2-line"></i> <span>Caja</span></button>
-                    <button onclick="showModule('reports')"><i class="ri-pie-chart-line"></i> <span>Reportes</span></button>
-                    <button onclick="showModule('users')"><i class="ri-group-line"></i> <span>Usuarios</span></button>
-                </aside>
+                <div class="input-group">
+                    <i class="ri-shield-user-line"></i>
+                    <select id="login-role">
+                        <option value="CASHIER">Cajero</option>
+                        <option value="MANAGER">Gerente</option>
+                        <option value="ADMIN">Administrador</option>
+                        <option value="OWNER">Owner</option>
+                    </select>
+                </div>
 
-                <!-- CONTENIDO DINÁMICO SPA -->
-                <main class="content">
-                    
-                    <!-- 🛒 MÓDULO POS (2 COLUMNAS) -->
-                    <section id="pos" class="module">
-                        <div class="pos-grid">
-                            <div class="search-area card">
-                                <div class="search-input-wrapper">
-                                    <i class="ri-barcode-line"></i>
-                                    <input type="text" id="sku-search" placeholder="Escanea SKU o busca por nombre..." onkeypress="handlePosSearch(event)">
-                                </div>
-                                <div id="products-result" class="products-grid">
-                                    <p class="placeholder-text">Esperando escaneo de producto...</p>
-                                </div>
-                            </div>
-                            <div class="cart-area card">
-                                <h3>🛒 Carrito</h3>
-                                <div id="cart-items-list" class="cart-list"></div>
-                                <div class="cart-totals">
-                                    <div class="total-row">
-                                        <span>Total:</span>
-                                        <h3 id="total-amount">$0.00</h3>
-                                    </div>
-                                    <select id="payment-method">
-                                        <option value="CASH">💵 Efectivo</option>
-                                        <option value="CARD">💳 Tarjeta</option>
-                                    </select>
-                                    <button onclick="processSale()" class="btn-success">Finalizar Venta</button>
-                                </div>
-                            </div>
+                <button type="submit" class="btn-primary">
+                    <i class="ri-login-circle-line"></i> Entrar
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- 🚀 SISTEMA -->
+    <div id="main-system" class="hidden">
+
+        <!-- TOPBAR -->
+        <header class="topbar" role="banner">
+            <div class="header-left">
+                <button id="toggleBtn" class="hamburger" aria-label="Abrir menú" type="button">
+                    <i class="ri-menu-line"></i>
+                </button>
+
+                <div>
+                    <h1>Glow Beauty POS</h1>
+                    <span class="sub-logo">Management System</span>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <span id="user-display" aria-live="polite"></span>
+
+                <button id="logoutBtn" class="btn-logout" type="button" aria-label="Cerrar sesión">
+                    <i class="ri-logout-box-r-line"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="container">
+
+            <!-- SIDEBAR -->
+            <aside class="sidebar" role="navigation">
+                <nav class="sidebar-menu">
+                    <button id="nav-pos" type="button"><i class="ri-shopping-cart-2-line"></i> Ventas</button>
+                    <button id="nav-inventory" type="button"><i class="ri-store-2-line"></i> Inventario</button>
+                    <button id="nav-cash" type="button"><i class="ri-safe-2-line"></i> Caja</button>
+                    <button id="nav-reports" type="button"><i class="ri-bar-chart-box-line"></i> Reportes</button>
+                    <button id="nav-users" type="button"><i class="ri-team-line"></i> Usuarios</button>
+                </nav>
+            </aside>
+
+            <main class="content" role="main">
+
+                <!-- 🛒 POS -->
+                <section id="pos" class="module" aria-label="Punto de venta">
+                    <h2>Punto de Venta</h2>
+                    <p class="section-desc">Escanea o busca productos</p>
+
+                    <div class="search-input-wrapper">
+                        <i class="ri-search-line"></i>
+                        <input id="sku-search" autocomplete="off" placeholder="SKU o nombre">
+                    </div>
+
+                    <div id="products-result"></div>
+                    <div id="cart-items-list" class="cart-list"></div>
+
+                    <h3>Total: <span id="total-amount">$0.00</span></h3>
+
+                    <div class="payment-area">
+                        <select id="payment-method">
+                            <option value="CASH">Efectivo</option>
+                            <option value="CARD">Tarjeta</option>
+                            <option value="TRANSFER">Transferencia</option>
+                            <option value="MIXED">Mixto</option>
+                        </select>
+
+                        <div id="mixed-payment-inputs" class="hidden">
+                            <input type="number" id="mixed-cash" placeholder="Efectivo $">
+                            <input type="number" id="mixed-digital" placeholder="Digital $">
                         </div>
-                    </section>
 
-                    <!-- 📦 MÓDULO INVENTARIO -->
-                    <section id="inventory" class="module">
+                        <button id="btn-finish-sale" class="btn-success" type="button">
+                            Finalizar Venta
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 📦 INVENTARIO -->
+                <section id="inventory" class="module hidden" aria-label="Inventario">
+                    <div id="inventory-restricted-msg" class="restricted-box hidden">
+                        <i class="ri-lock-password-line"></i>
+                        <h3>Acceso Restringido</h3>
+                        <p>Solo usuarios autorizados.</p>
+                    </div>
+
+                    <div id="inventory-content">
+                        <h2>Inventario</h2>
                         <div class="inventory-layout">
                             <div class="card">
-                                <h3>✨ Nuevo Producto</h3>
-                                <form id="product-form">
-                                    <input type="text" id="p-name" placeholder="Nombre del Producto" required>
-                                    <input type="text" id="p-sku" placeholder="SKU / Código Único" required>
-                                    <input type="number" id="p-price" step="0.01" placeholder="Precio ($)" required>
-                                    <input type="number" id="p-stock" placeholder="Stock Inicial" required>
-                                    <button type="submit">Guardar en Catálogo</button>
+                                <h3>Nuevo Producto</h3>
+                                <form id="product-form" autocomplete="off">
+                                    <input id="p-name" placeholder="Nombre" required>
+                                    <input id="p-sku" placeholder="SKU" required>
+                                    <input id="p-price" type="number" step="0.01" placeholder="Precio" required>
+                                    <input id="p-stock" type="number" placeholder="Stock" required>
+                                    <button type="submit" class="btn-submit">Guardar</button>
                                 </form>
                             </div>
+
                             <div class="card table-card">
-                                <h3>📦 Existencias Actuales</h3>
-                                <table>
-                                    <thead>
-                                        <tr><th>SKU</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr>
-                                    </thead>
-                                    <tbody id="inventory-body"></tbody>
-                                </table>
+                                <h3>Stock</h3>
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>SKU</th>
+                                                <th>Nombre</th>
+                                                <th>Precio</th>
+                                                <th>Stock</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="inventory-body"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                    <!-- 💰 MÓDULO CONTROL DE CAJA -->
-                    <section id="cash" class="module">
+                <!-- 💰 CAJA -->
+                <section id="cash" class="module hidden" aria-label="Control de Caja">
+                    <h2>Flujo de Caja</h2>
+                    <p class="section-desc">Auditoría, entradas y salidas de efectivo</p>
+
+                    <div class="cash-grid">
                         <div class="card text-center" id="cash-status-card">
-                            <!-- JS inyectará la info si está abierta o cerrada -->
+                            <!-- Inyección JS de estado -->
                         </div>
-                    </section>
 
-                    <!-- 📊 MÓDULO REPORTES FINANCIEROS -->
-                    <section id="reports" class="module">
-                        <div class="metrics-grid" id="metrics-container">
-                            <!-- Tarjetas de métricas dinámicas -->
+                        <div class="card" id="cash-actions-card">
+                            <h3>Movimientos de Caja Chica</h3>
+                            <div class="cash-action-inputs">
+                                <input type="number" id="cash-flow-amount" step="0.01" placeholder="Monto $">
+                                <input type="text" id="cash-flow-reason" placeholder="Concepto / Razón">
+                                <div class="cash-action-buttons">
+                                    <button id="btn-cash-in" class="btn-primary" type="button"><i class="ri-arrow-down-circle-line"></i> Entrada</button>
+                                    <button id="btn-cash-out" class="btn-logout" type="button"><i class="ri-arrow-up-circle-line"></i> Salida</button>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- 📊 REPORTES FINANCIEROS -->
+                <section id="reports" class="module hidden" aria-label="Reportes">
+                    <div id="reports-restricted-msg" class="restricted-box hidden">
+                        <i class="ri-lock-password-line"></i>
+                        <h3>Acceso Restringido</h3>
+                        <p>Gráficas financieras reservadas para perfiles de Gerencia, Admin u Owner.</p>
+                    </div>
+
+                    <div id="reports-content">
+                        <h2>Reportes Financieros</h2>
+                        <div class="metrics-grid">
+                            <div class="card metric-card">
+                                <span class="metric-icon">💰</span>
+                                <div class="metric-info"><h4>Ganancias</h4><p id="metric-earnings">$0.00</p></div>
+                            </div>
+                            <div class="card metric-card">
+                                <span class="metric-icon">🛍️</span>
+                                <div class="metric-info"><h4>Transacciones</h4><p id="metric-sales-count">0</p></div>
+                            </div>
+                            <div class="card metric-card">
+                                <span class="metric-icon">💄</span>
+                                <div class="metric-info"><h4>Piezas</h4><p id="metric-items-count">0 pz</p></div>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card">
+                            <h3>📈 Flujo de Ventas del Turno</h3>
+                            <div class="chart-container" style="position: relative; height:260px; width:100%;">
+                                <canvas id="financial-chart"></canvas>
+                            </div>
+                        </div>
+
                         <div class="reports-tables-grid">
                             <div class="card">
                                 <h3>🏆 Top 5 Más Vendidos</h3>
                                 <ul id="top-products-list" class="report-list"></ul>
                             </div>
                             <div class="card">
-                                <h3>⚠️ Stock Crítico</h3>
+                                <h3>⚠️ Alerta Stock Crítico</h3>
                                 <ul id="low-stock-list" class="report-list"></ul>
                             </div>
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                    <!-- 👥 MÓDULO GESTIÓN DE PERSONAL -->
-                    <section id="users" class="module">
+                <!-- 👥 GESTIÓN DE PERSONAL / USUARIOS -->
+                <section id="users" class="module hidden" aria-label="Usuarios">
+                    <div id="users-restricted-msg" class="restricted-box hidden">
+                        <i class="ri-lock-password-line"></i>
+                        <h3>Acceso Restringido</h3>
+                        <p>Solo personal de administración de alto nivel tiene acceso a este módulo.</p>
+                    </div>
+
+                    <div id="users-content">
+                        <h2>Personal de Boutique</h2>
                         <div class="users-layout">
                             <div class="card">
-                                <h3>✨ Registrar Empleado</h3>
-                                <form id="add-user-form">
+                                <h3>Registrar Colaborador</h3>
+                                <form id="add-user-form" autocomplete="off">
                                     <input type="text" id="new-u-name" placeholder="Nombre Completo" required>
-                                    <input type="email" id="new-u-email" placeholder="Correo Electrónico" required>
-                                    <input type="password" id="new-u-pass" placeholder="Contraseña de Acceso" required>
+                                    <input type="email" id="new-u-email" placeholder="Correo" required>
+                                    <input type="password" id="new-u-pass" placeholder="Contraseña" required>
                                     <select id="new-u-role">
-                                        <option value="CASHIER">Cajero(a)</option>
+                                        <option value="CASHIER">Cajero</option>
                                         <option value="MANAGER">Gerente</option>
                                         <option value="ADMIN">Administrador</option>
+                                        <option value="OWNER">Owner</option>
                                     </select>
-                                    <button type="submit">Registrar Personal</button>
+                                    <button type="submit" class="btn-submit">Registrar</button>
                                 </form>
                             </div>
                             <div class="card table-card">
-                                <h3>👥 Lista de Personal</h3>
-                                <table>
-                                    <thead>
-                                        <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acción</th></tr>
-                                    </thead>
-                                    <tbody id="users-body"></tbody>
-                                </table>
+                                <h3>Lista de Permisos</h3>
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Email</th>
+                                                <th>Rol</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="users-body"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                </main>
-            </div>
+            </main>
         </div>
     </div>
-    <script src="script.js" type="module"></script>
+</div>
+
+<!-- LÓGICA CORE -->
+<script src="script.js" type="module"></script>
 </body>
 </html>
