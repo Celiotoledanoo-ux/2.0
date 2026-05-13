@@ -62,16 +62,25 @@ app.use(express.static(path.join(__dirname, 'public')));
 // El loader devuelve el router global unificado
 app.use('/api/v1', initLoader());
 
-// --- 8. MANEJO DE RUTAS MUERTAS (404) ---
-app.all('*', (req, _res, next) => {
-  next(new AppError(`La ruta ${req.originalUrl} no existe en Glow POS 🧐`, HTTP_STATUS.NOT_FOUND));
+// --- 8. COMPATIBILIDAD CON RENDERIZADO DINÁMICO (SPA) ---
+// Si el cliente solicita una ruta de navegación web, le entregamos el index.html
+app.get(/^(?!\/api\/v1).*$/, (req, res, next) => {
+  // Ignoramos peticiones que busquen archivos con extensión (ej. .ico, .png)
+  if (path.extname(req.path)) return next();
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- 9. GESTOR DE ERRORES GLOBAL ---
+// --- 9. MANEJO DE RUTAS API MUERTAS REALES (404) ---
+// Solo caerán aquí las rutas que empiecen con /api/v1 y no existan en el loader
+app.all('/api/v1/*', (req, _res, next) => {
+  next(new AppError(`La ruta de la API ${req.originalUrl} no existe en Glow POS 🧐`, HTTP_STATUS.NOT_FOUND));
+});
+
+// --- 10. GESTOR DE ERRORES GLOBAL ---
 // Siempre al final de todos los middlewares
 app.use(globalErrorHandler);
 
 // Reportamos que el motor está listo para recibir el server.js
-logger.info('✅ App.js configurado y listo para ignición.');
+logger.info('✅ App.js configurado, blindado para SPA y listo para ignición.');
 
 export default app;

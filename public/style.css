@@ -34,6 +34,16 @@ body {
     display: none !important;
 }
 
+/* Transición fluida para la inyección de módulos dinámicos */
+@keyframes fadeInModule {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade {
+    animation: fadeInModule 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 /* ==========================================================================
    🔐 INTERFAZ DE INGRESO (LOGIN CARD)
    ========================================================================== */
@@ -355,8 +365,8 @@ form input, form select {
 }
 
 .cart-list {
-    min-height: 200px;
-    max-height: 300px;
+    min-height: 180px;
+    max-height: 280px;
     overflow-y: auto;
     margin: 1rem 0;
     border-bottom: 1px solid var(--border-color);
@@ -383,12 +393,6 @@ form input, form select {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    width: 100%;
-}
-
-.payment-area select, .payment-area input {
-    width: 100% !important;
-    padding: 0.75rem 1rem !important;
 }
 
 .btn-success {
@@ -401,7 +405,7 @@ form input, form select {
 }
 
 /* ==========================================================================
-   📦 INVENTARIO Y TABLAS DE DATOS
+   📦 TABLAS E INVENTARIO RESPONSIVO
    ========================================================================== */
 .inventory-layout, .users-layout {
     display: grid;
@@ -418,6 +422,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+    margin-top: 1rem;
 }
 
 th, td {
@@ -431,12 +436,19 @@ th {
     font-weight: 600;
 }
 
+code {
+    background: var(--bg-input);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    color: var(--accent-rose);
+}
+
 /* ==========================================================================
-   📊 REPORTES FINANCIEROS Y METRICAS
+   📊 INDICADORES Y REPORTES
    ========================================================================== */
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.25rem;
     margin-bottom: 1.5rem;
 }
@@ -444,30 +456,37 @@ th {
 .metric-card {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
     border-left: 4px solid var(--accent-rose);
 }
 
 .metric-icon {
-    font-size: 2rem;
-    background: rgba(224, 163, 154, 0.1);
+    font-size: 1.8rem;
+    background: rgba(224, 163, 154, 0.08);
     padding: 0.5rem;
     border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .metric-info h4 {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     text-transform: uppercase;
-    margin-bottom: 0.25rem;
 }
 
 .metric-info p {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     font-weight: 700;
+}
+
+.reports-tables-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.report-list {
+    list-style: none;
+    margin-top: 1rem;
 }
 
 .report-list li {
@@ -479,31 +498,31 @@ th {
 }
 
 /* ==========================================================================
-   🔒 INTERFAZ DE BLOQUEO DE SEGURIDAD (RESTRICTED)
+   🛑 INTERFAZ DE ACCESO DENEGADO (ROLES)
    ========================================================================== */
 .restricted-box {
-    background: rgba(230, 57, 70, 0.05);
+    background: rgba(230, 57, 70, 0.03);
     border: 1px dashed var(--danger);
-    padding: 3rem;
     border-radius: var(--radius-lg);
+    padding: 2.5rem;
     text-align: center;
-    margin: 2rem 0;
+    max-width: 450px;
+    margin: 2rem auto;
 }
 
 .restricted-box i {
-    font-size: 3.5rem;
+    font-size: 3rem;
     color: var(--danger);
+    margin-bottom: 0.75rem;
     display: block;
-    margin-bottom: 1rem;
 }
 
 .restricted-box h3 {
-    font-size: 1.4rem;
-    color: #fff;
-    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
 }
 
 .restricted-box p {
     color: var(--text-muted);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
 }

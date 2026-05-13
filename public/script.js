@@ -16,10 +16,8 @@ const state = {
         { name: "Gerente Turno", email: "manager@glow.com", role: "MANAGER" },
         { name: "Cajero Vitrina", email: "cashier@glow.com", role: "CASHIER" }
     ],
-    // --- CONTROL DE EFECTIVO ---
     cashBalance: 2500.00,
     cashTransactions: [],
-    // --- MÉTRICAS FINANCIERAS ---
     totalEarnings: 0,
     totalSalesCount: 0,
     totalItemsCount: 0,
@@ -32,92 +30,238 @@ const state = {
 };
 
 /* ==========================================================================
-   INICIALIZADOR DE EVENTOS (MANEJO DE MÓDULOS)
+   PLANTILLAS HTML DINÁMICAS (MÓDULOS BAJO DEMANDA)
+   ========================================================================== */
+const modulesHTML = {
+    pos: () => `
+        <div class="animate-fade">
+            <div class="module-header">
+                <h2>Punto de Venta</h2>
+                <p>Procesa las ventas y escanea productos de maquillaje</p>
+            </div>
+            <div class="pos-grid">
+                <div class="search-area card">
+                    <div class="search-header"><h3>Buscar Productos</h3></div>
+                    <div class="search-input-wrapper">
+                        <i class="ri-barcode-line"></i>
+                        <input type="text" id="sku-search" placeholder="Escanear SKU o buscar por nombre..." autocomplete="off">
+                    </div>
+                    <div id="products-result" class="products-grid">
+                        <p class="placeholder-text">Esperando escaneo de producto...</p>
+                    </div>
+                </div>
+                <div class="cart-area card">
+                    <div class="cart-header"><h3><i class="ri-shopping-cart-2-line"></i> Carrito de Compras</h3></div>
+                    <div id="cart-items-list" class="cart-list"></div>
+                    <div class="cart-totals">
+                        <div class="total-row"><span>Total a Pagar:</span><h3 id="total-amount">$0.00</h3></div>
+                        <div class="payment-area">
+                            <select id="payment-method">
+                                <option value="CASH">💵 Efectivo</option>
+                                <option value="CARD">💳 Tarjeta</option>
+                                <option value="TRANSFER">📱 Transferencia</option>
+                                <option value="MIXED">🔄 Pago Mixto (Combinado)</option>
+                            </select>
+                            <div id="mixed-payment-inputs" class="hidden" style="display: flex; gap: 0.5rem; width: 100%;">
+                                <input type="number" id="mixed-cash" step="0.01" min="0" placeholder="Efectivo $">
+                                <input type="number" id="mixed-digital" step="0.01" min="0" placeholder="Digital $">
+                            </div>
+                            <button id="btn-finish-sale" class="btn-success"><i class="ri-checkbox-circle-line"></i> Finalizar Venta</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`,
+        
+    inventory: (isCashier) => `
+        <div class="animate-fade">
+            <div class="module-header">
+                <h2>Gestión de Inventario</h2>
+                <p>Controla el stock y consulta el catálogo de cosméticos</p>
+            </div>
+            <div class="inventory-layout" style="${isCashier ? 'grid-template-columns: 1fr;' : ''}">
+                ${isCashier ? '' : `
+                <div class="card">
+                    <h3>Nuevo Producto</h3>
+                    <form id="product-form" autocomplete="off">
+                        <input id="p-name" placeholder="Nombre" required>
+                        <input id="p-sku" placeholder="SKU" required>
+                        <input id="p-price" type="number" step="0.01" placeholder="Precio" required>
+                        <input id="p-stock" type="number" placeholder="Stock" required>
+                        <button type="submit" class="btn-submit">Guardar</button>
+                    </form>
+                </div>`}
+                <div class="card table-card">
+                    <h3>Existencias en Vitrina</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead><tr><th>SKU</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr></thead>
+                            <tbody id="inventory-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>`,
+
+    cash: () => `
+        <div class="animate-fade">
+            <div class="module-header">
+                <h2>Control de Caja Chica</h2>
+                <p>Auditoría de gastos, entradas, salidas y flujo de efectivo del turno</p>
+            </div>
+            <div class="inventory-layout">
+                <div class="card">
+                    <h3>Registrar Movimiento</h3>
+                    <input type="number" id="cash-flow-amount" step="0.01" placeholder="Monto $">
+                    <input type="text" id="cash-flow-concept" placeholder="Concepto (ej. Proveedor Labiales)">
+                    <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                        <button id="btn-cash-in" class="btn-success" style="padding:0.6rem;"><i class="ri-arrow-down-circle-line"></i> Entrada</button>
+                        <button id="btn-cash-out" class="btn-primary" style="padding:0.6rem; background:linear-gradient(135deg, var(--danger), #c0392b); color:white;"><i class="ri-arrow-up-circle-line"></i> Salida</button>
+                    </div>
+                </div>
+                <div class="card text-center" id="cash-status-card"></div>
+            </div>
+        </div>`,
+
+    reports: () => `
+        <div class="animate-fade">
+            <div class="module-header">
+                <h2>Reportes Financieros</h2>
+                <p>Análisis comercial e indicadores analíticos de la boutique</p>
+            </div>
+            <div id="metrics-container"></div>
+            <div class="card">
+                <h3>📈 Flujo de Ventas</h3>
+                <div style="position: relative; height:240px; width:100%;"><canvas id="financial-chart"></canvas></div>
+            </div>
+            <div class="reports-tables-grid" style="margin-top:1.5rem;">
+                <div class="card"><h3>🏆 Top 5 Más Vendidos</h3><ul id="top-products-list" class="report-list"></ul></div>
+                <div class="card"><h3>⚠️ Alerta de Stock Crítico</h3><ul id="low-stock-list" class="report-list"></ul></div>
+            </div>
+        </div>`,
+
+    users: () => `
+        <div class="animate-fade">
+            <div class="module-header">
+                <h2>Gestión de Personal</h2>
+                <p>Administra los empleados del sistema y asignación de roles oficiales</p>
+            </div>
+            <div class="users-layout">
+                <div class="card">
+                    <h3>✨ Registrar Empleado</h3>
+                    <form id="add-user-form" autocomplete="off">
+                        <input type="text" id="new-u-name" placeholder="Nombre Completo" required>
+                        <input type="email" id="new-u-email" placeholder="Correo Electrónico" required>
+                        <select id="new-u-role">
+                            <option value="CASHIER">Cajero(a)</option>
+                            <option value="MANAGER">Gerente</option>
+                            <option value="ADMIN">Administrador</option>
+                        </select>
+                        <button type="submit" class="btn-submit">Registrar Personal</button>
+                    </form>
+                </div>
+                <div class="card table-card">
+                    <h3>👥 Lista de Personal</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th></tr></thead>
+                            <tbody id="users-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>`
+};
+
+/* ==========================================================================
+   INICIALIZADOR DE EVENTOS E INTERFAZ CENTRAL
    ========================================================================== */
 document.addEventListener("DOMContentLoaded", () => {
-    // Navegación
     setupNavigation();
-    
-    // Autenticación
     document.getElementById("login-form").addEventListener("submit", handleLogin);
     document.getElementById("logoutBtn").addEventListener("click", handleLogout);
-    
-    // Punto de Venta (POS)
-    document.getElementById("sku-search").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") handlePosSearch(e.target.value);
-    });
-    document.getElementById("btn-finish-sale").addEventListener("click", processSale);
-
-    // Módulos de Operación
-    document.getElementById("product-form").addEventListener("submit", handleAddProduct);
-    document.getElementById("add-user-form").addEventListener("submit", handleRegisterUser);
-    
-    // Botones de Caja Chica
-    document.getElementById("btn-cash-in").addEventListener("click", () => handleCashFlow("IN"));
-    document.getElementById("btn-cash-out").addEventListener("click", () => handleCashFlow("OUT"));
-
-    // Renderizado base pasivo
-    renderInventory();
-    renderUsersTable();
-    updateCashUI();
 });
 
 /* ==========================================================================
-   SISTEMA DE NAVEGACIÓN Y PERMISOS POR ROL DE USUARIO
+   SISTEMA DE NAVEGACIÓN Y VALIDACIÓN POR MATRIZ DE ROLES
    ========================================================================== */
 function setupNavigation() {
-    const navMapping = {
-        'nav-pos': 'pos',
-        'nav-inventory': 'inventory',
-        'nav-cash': 'cash',
-        'nav-reports': 'reports',
-        'nav-users': 'users'
-    };
+    document.querySelectorAll(".sidebar-menu button").forEach(button => {
+        button.addEventListener("click", () => {
+            const targetModule = button.getAttribute("data-module");
+            
+            if (!checkModulePermission(targetModule)) {
+                alert(`⛔ Acceso Denegado: Tu rol de ${state.currentRole} no tiene autorización para abrir el módulo de ${targetModule}.`);
+                return;
+            }
 
-    Object.keys(navMapping).forEach(btnId => {
-        const button = document.getElementById(btnId);
-        if (button) {
-            button.addEventListener("click", () => {
-                const targetModule = navMapping[btnId];
-                
-                // Aplicar el bloqueo de seguridad basado en tus 4 roles oficiales
-                if (!checkModulePermission(targetModule)) {
-                    alert(`⛔ Tu rol de ${state.currentRole} no tiene permisos para abrir este módulo.`);
-                    return;
-                }
+            document.querySelectorAll(".sidebar-menu button").forEach(b => b.classList.remove("active"));
+            button.classList.add("active");
 
-                // Intercambio visual de pestañas si pasa el filtro de seguridad
-                document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
-                document.querySelectorAll(".module").forEach(m => m.classList.add("hidden"));
-                
-                button.classList.add("active");
-                document.getElementById(targetModule).classList.remove("hidden");
-                
-                // Forzar refresco visual si abre gráficas
-                if (targetModule === 'reports') {
-                    setTimeout(initFinancialChart, 50);
-                }
-            });
-        }
+            // Renderizar dinámicamente el módulo seleccionado en el contenedor raíz
+            renderModule(targetModule);
+        });
     });
 }
 
-// Matriz estricta de permisos para tus 4 roles específicos
 function checkModulePermission(moduleName) {
     const role = state.currentRole;
-    if (role === "OWNER" || role === "ADMIN") return true; // Acceso total
-    
-    if (role === "MANAGER") {
-        // El gerente puede todo menos gestionar usuarios de la empresa
-        return moduleName !== "users";
-    }
-    
-    if (role === "CASHIER") {
-        // El cajero está estrictamente limitado al Punto de venta y la Caja chica
-        return moduleName === "pos" || moduleName === "cash";
-    }
-    
+    if (role === "OWNER" || role === "ADMIN") return true;
+    if (role === "MANAGER") return moduleName !== "users";
+    if (role === "CASHIER") return moduleName === "pos" || moduleName === "inventory" || moduleName === "cash";
     return false;
+}
+
+function renderModule(moduleName) {
+    const root = document.getElementById("content-root");
+    if (!root) return;
+
+    // Ejecutar inyección del HTML dinámico
+    const isCashier = (state.currentRole === "CASHIER");
+    root.innerHTML = modulesHTML[moduleName](isCashier);
+
+    // Enlazar los escuchadores de eventos únicamente cuando el módulo correspondiente esté vivo
+    if (moduleName === "pos") {
+        document.getElementById("sku-search").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") handlePosSearch(e.target.value);
+        });
+        document.getElementById("payment-method").addEventListener("change", (e) => {
+            const mixedInputs = document.getElementById("mixed-payment-inputs");
+            if (e.target.value === "MIXED") {
+                mixedInputs.classList.remove("hidden");
+                const currentTotal = state.cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+                document.getElementById("mixed-cash").value = (currentTotal / 2).toFixed(2);
+                document.getElementById("mixed-digital").value = (currentTotal / 2).toFixed(2);
+            } else {
+                mixedInputs.classList.add("hidden");
+            }
+        });
+        document.getElementById("btn-finish-sale").addEventListener("click", processSale);
+        updateCartUI();
+    }
+
+    if (moduleName === "inventory") {
+        if (!isCashier) {
+            document.getElementById("product-form").addEventListener("submit", handleAddProduct);
+        }
+        renderInventory();
+    }
+
+    if (moduleName === "cash") {
+        document.getElementById("btn-cash-in").addEventListener("click", () => handleCashFlow("IN"));
+        document.getElementById("btn-cash-out").addEventListener("click", () => handleCashFlow("OUT"));
+        updateCashUI();
+    }
+
+    if (moduleName === "reports") {
+        updateReportsUI();
+        setTimeout(initFinancialChart, 50); // Tiempo de espera mínimo seguro para levantar el Canvas
+    }
+
+    if (moduleName === "users") {
+        document.getElementById("add-user-form").addEventListener("submit", handleRegisterUser);
+        renderUsersTable();
+    }
 }
 
 /* ==========================================================================
@@ -129,19 +273,13 @@ function handleLogin(e) {
     const selectedRole = document.getElementById("login-role").value;
 
     state.currentUser = email.split('@')[0];
-    state.currentRole = selectedRole; // Captura exacta de los 4 roles seleccionados
+    state.currentRole = selectedRole;
 
-    // Desplegar información del empleado activo en la cabecera
     document.getElementById("user-display").innerText = `✨ ${state.currentUser} (${state.currentRole})`;
-    
-    // Switch estructural de pantallas
     document.getElementById("auth-screen").classList.add("hidden");
     document.getElementById("main-system").classList.remove("hidden");
 
-    // Limpiar bloqueos visuales inline del HTML según los permisos del rol actual
-    applyUIBlockers();
-
-    // Redirigir al Punto de Venta automáticamente
+    // Abrir por defecto el punto de venta tras acceder con éxito
     document.getElementById("nav-pos").click();
 }
 
@@ -149,32 +287,10 @@ function handleLogout() {
     state.currentUser = null;
     state.currentRole = null;
     state.cart = [];
-    updateCartUI();
     document.getElementById("main-system").classList.add("hidden");
     document.getElementById("auth-screen").classList.remove("hidden");
     document.getElementById("login-form").reset();
-}
-
-function applyUIBlockers() {
-    const isRestricted = (state.currentRole === "CASHIER");
-    
-    // Bloquear pantallas secundarias de configuración
-    const invMsg = document.getElementById("inventory-restricted-msg");
-    const invContent = document.getElementById("inventory-content");
-    const repMsg = document.getElementById("reports-restricted-msg");
-    const repContent = document.getElementById("reports-content");
-
-    if (isRestricted) {
-        if(invMsg) invMsg.classList.remove("hidden");
-        if(invContent) invContent.classList.add("hidden");
-        if(repMsg) repMsg.classList.remove("hidden");
-        if(repContent) repContent.classList.add("hidden");
-    } else {
-        if(invMsg) invMsg.classList.add("hidden");
-        if(invContent) invContent.classList.remove("hidden");
-        if(repMsg) repMsg.classList.add("hidden");
-        if(repContent) repContent.classList.remove("hidden");
-    }
+    document.getElementById("content-root").innerHTML = "";
 }
 
 /* ==========================================================================
@@ -225,7 +341,7 @@ function updateCartUI() {
         total += subtotal;
         
         const itemRow = document.createElement("div");
-        itemRow.style.cssText = "display:flex; justify-content:space-between; padding:0.4rem; border-bottom:1px solid #ddd;";
+        itemRow.style.cssText = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;";
         itemRow.innerHTML = `<span>💄 ${item.name} (x${item.quantity})</span><strong>$${subtotal.toFixed(2)}</strong>`;
         list.appendChild(itemRow);
     });
@@ -242,22 +358,26 @@ function processSale() {
 
     const method = document.getElementById("payment-method").value;
 
-    // --- ENRUTAMIENTO DE CAJA SEGURO ---
     if (method === "MIXED") {
-        // En una venta mixta el sistema de maquillaje asume liquidación balanceada 50/50 
-        state.paymentMethodsStats.cash += (total / 2);
-        state.paymentMethodsStats.card += (total / 2);
-        state.cashBalance += (total / 2); // Solo ingresa a la caja chica el dinero físico
+        const cashInput = parseFloat(document.getElementById("mixed-cash").value) || 0;
+        const digitalInput = parseFloat(document.getElementById("mixed-digital").value) || 0;
+        
+        if (Math.abs((cashInput + digitalInput) - total) > 0.01) {
+            alert(`❌ Ajuste incorrecto: La suma combinada ($${(cashInput + digitalInput).toFixed(2)}) no cuadra con el total ($${total.toFixed(2)}).`);
+            return;
+        }
+        state.paymentMethodsStats.cash += cashInput;
+        state.paymentMethodsStats.card += digitalInput;
+        state.cashBalance += cashInput;
     } else {
         if (method === "CASH") {
             state.paymentMethodsStats.cash += total;
-            state.cashBalance += total; // Suma directa al efectivo físico
+            state.cashBalance += total;
         }
         if (method === "CARD") state.paymentMethodsStats.card += total;
         if (method === "TRANSFER") state.paymentMethodsStats.transfer += total;
     }
 
-    // Actualizar existencias e indicadores analíticos
     state.cart.forEach(cartItem => {
         const item = state.inventory.find(p => p.sku === cartItem.sku);
         if (item) {
@@ -269,18 +389,12 @@ function processSale() {
     state.totalEarnings += total;
     state.totalSalesCount++;
     state.totalItemsCount += state.cart.reduce((s, i) => s + i.quantity, 0);
-    
-    // Inyectar venta al último bloque horario de la gráfica
-    state.salesHistory.data[4] += total;
+    state.salesHistory.data[4] += total; // Carga al bloque horario por defecto
 
     alert(`✨ Venta completada de forma exitosa ($${total.toFixed(2)}).`);
     
-    // Limpieza de estados del ciclo de venta
     state.cart = [];
     updateCartUI();
-    renderInventory();
-    updateCashUI();
-    updateReportsUI();
     document.getElementById("products-result").innerText = "";
 }
 
@@ -301,7 +415,6 @@ function handleAddProduct(e) {
 
     state.inventory.push({ sku, name, price, stock, sold: 0 });
     renderInventory();
-    updateReportsUI();
     document.getElementById("product-form").reset();
 }
 
@@ -318,7 +431,7 @@ function renderInventory() {
 }
 
 /* ==========================================================================
-   💰 CONTROL DE ENTRADAS Y SALIDAS DE CAJA CHICA (AUDITORÍA DE GASTOS)
+   💰 CONTROL DE CAJA CHICA (ENTRADAS/SALIDAS)
    ========================================================================== */
 function handleCashFlow(type) {
     const amountInput = document.getElementById("cash-flow-amount");
@@ -328,25 +441,23 @@ function handleCashFlow(type) {
     const concept = conceptInput.value.trim();
 
     if (isNaN(amount) || amount <= 0 || !concept) {
-        alert("Por favor introduce un monto numérico válido y el concepto del movimiento.");
+        alert("Introduce un monto numérico válido y el concepto del movimiento.");
         return;
     }
 
     if (type === "OUT" && amount > state.cashBalance) {
-        alert("❌ Transacción rechazada: No cuentas con suficiente fondo de efectivo para cubrir esa salida.");
+        alert("❌ Fondos Insuficientes en caja chica.");
         return;
     }
 
-    // Procesamiento financiero del movimiento
     if (type === "IN") {
         state.cashBalance += amount;
-        state.cashTransactions.push(`📥 Entrada: +$${amount.toFixed(2)} - Concepto: ${concept}`);
+        state.cashTransactions.push(`📥 Entrada: +$${amount.toFixed(2)} - Motivo: ${concept}`);
     } else {
         state.cashBalance -= amount;
-        state.cashTransactions.push(`📤 Salida: -$${amount.toFixed(2)} - Concepto: ${concept}`);
+        state.cashTransactions.push(`📤 Salida: -$${amount.toFixed(2)} - Motivo: ${concept}`);
     }
 
-    // Resetear formulario interno de caja
     amountInput.value = "";
     conceptInput.value = "";
     updateCashUI();
@@ -356,19 +467,19 @@ function updateCashUI() {
     const container = document.getElementById("cash-status-card");
     if (!container) return;
 
-    // Generar render dinámico con el balance real y la tira de auditoría de movimientos
-    let historyHTML = state.cashTransactions.map(t => `<p style="font-size:0.85rem; border-bottom:1px solid #333; padding:2px 0;">${t}</p>`).join("");
+    let historyHTML = state.cashTransactions.map(t => `<p style="font-size:0.85rem; border-bottom:1px solid var(--border-color); padding:4px 0; text-align:left;">${t}</p>`).join("");
     
     container.innerHTML = `
-        <div style="margin-top:1rem; padding:1rem; border:1px solid var(--border-color); border-radius:8px; background: rgba(255,255,255,0.02)">
-            <h4 style="color:var(--accent-rose)">Efectivo Real en Caja Chica</h4>
-            <h2 style="font-size:2rem; margin:0.5rem 0; color:var(--success)">$${state.cashBalance.toFixed(2)}</h2>
-            <div style="margin-top:1rem; text-align:left;">
-                <h5 style="color:var(--text-muted); margin-bottom:0.5rem;">Bitácora de movimientos del turno:</h5>
-                ${historyHTML || '<p style="color:var(--text-muted); font-size:0.85rem;">Sin movimientos manuales registrados.</p>'}
+        <div style="margin-top:0.5rem; padding:1.25rem; border:1px solid var(--border-color); border-radius:8px; background: rgba(255,255,255,0.01)">
+            <h4 style="color:var(--accent-rose); text-align:left;">Efectivo Disponible</h4>
+            <h2 style="font-size:2.2rem; margin:0.5rem 0; color:var(--success); text-align:left;">$${state.cashBalance.toFixed(2)}</h2>
+            <div style="margin-top:1.25rem; text-align:left;">
+                <h5 style="color:var(--text-muted); margin-bottom:0.5rem;">Auditoría de Movimientos:</h5>
+                <div style="max-height: 150px; overflow-y:auto;">
+                    ${historyHTML || '<p style="color:var(--text-muted); font-size:0.85rem;">Sin transacciones manuales el día de hoy.</p>'}
+                </div>
             </div>
-        </div>
-    `;
+        </div>`;
 }
 
 /* ==========================================================================
@@ -378,10 +489,7 @@ function initFinancialChart() {
     const canvas = document.getElementById('financial-chart');
     if (!canvas) return;
 
-    // Destruir instancia previa para evitar fugas de memoria o parpadeos gráficos
-    if (state.chartInstance) {
-        state.chartInstance.destroy();
-    }
+    if (state.chartInstance) state.chartInstance.destroy();
 
     const ctx = canvas.getContext('2d');
     state.chartInstance = new Chart(ctx, {
@@ -389,10 +497,10 @@ function initFinancialChart() {
         data: {
             labels: state.salesHistory.labels,
             datasets: [{
-                label: 'Ventas de Maquillaje ($)',
+                label: 'Ventas ($)',
                 data: state.salesHistory.data,
                 borderColor: '#e0a39a',
-                backgroundColor: 'rgba(224, 163, 154, 0.05)',
+                backgroundColor: 'rgba(224, 163, 154, 0.04)',
                 borderWidth: 3,
                 tension: 0.3,
                 fill: true
@@ -401,43 +509,33 @@ function initFinancialChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true }
-            }
+            scales: { y: { beginAtZero: true } }
         }
     });
 }
 
 function updateReportsUI() {
-    // Actualizar contenedor de métricas (Inyección dinámica sobre tu HTML)
     const metricsContainer = document.getElementById("metrics-container");
     if (metricsContainer) {
         metricsContainer.innerHTML = `
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1rem;">
-                <div class="card"><h5>Ganancia Total</h5><h3>$${state.totalEarnings.toFixed(2)}</h3></div>
-                <div class="card"><h5>Transacciones</h5><h3>${state.totalSalesCount}</h3></div>
-                <div class="card"><h5>Unidades Vendidas</h5><h3>${state.totalItemsCount} pz</h3></div>
-            </div>
-        `;
+            <div class="metrics-grid">
+                <div class="card metric-card"><div class="metric-icon">💰</div><div class="metric-info"><h4>Ganancia Total</h4><p>$${state.totalEarnings.toFixed(2)}</p></div></div>
+                <div class="card metric-card"><div class="metric-icon">🛍️</div><div class="metric-info"><h4>Transacciones</h4><p>${state.totalSalesCount}</p></div></div>
+                <div class="card metric-card"><div class="metric-icon">💄</div><div class="metric-info"><h4>Unidades Vendidas</h4><p>${state.totalItemsCount} pz</p></div></div>
+            </div>`;
     }
 
-    if (state.chartInstance) {
-        state.chartInstance.update();
-    }
-
-    // Listado: Más Vendidos
     const topList = document.getElementById("top-products-list");
     if (topList) {
         topList.innerHTML = "";
         const sorted = [...state.inventory].sort((a,b) => b.sold - a.sold);
         sorted.slice(0, 5).forEach(p => {
             const li = document.createElement("li");
-            li.innerHTML = `<span>💄 ${p.name}</span> — <strong>${p.sold} pz vendidas</strong>`;
+            li.innerHTML = `<span>💄 ${p.name}</span><strong>${p.sold} pz</strong>`;
             topList.appendChild(li);
         });
     }
 
-    // Listado: Stock Crítico
     const lowList = document.getElementById("low-stock-list");
     if (lowList) {
         lowList.innerHTML = "";
@@ -447,7 +545,7 @@ function updateReportsUI() {
         } else {
             lowStock.forEach(p => {
                 const li = document.createElement("li");
-                li.innerHTML = `<span style="color:var(--danger)">⚠️ ${p.name}</span> — <strong>Quedan ${p.stock} pz</strong>`;
+                li.innerHTML = `<span style="color:var(--danger)">⚠️ ${p.name}</span><strong>Quedan ${p.stock} pz</strong>`;
                 lowList.appendChild(li);
             });
         }
@@ -455,8 +553,8 @@ function updateReportsUI() {
 }
 
 /* ==========================================================================
-   👥 MÓDULO GESTIÓN DE PERSONAL (USUARIOS)
-   ========================================================================= */
+   👥 GESTIÓN DE PERSONAL (USUARIOS)
+   ========================================================================== */
 function handleRegisterUser(e) {
     e.preventDefault();
     const name = document.getElementById("new-u-name").value.trim();
