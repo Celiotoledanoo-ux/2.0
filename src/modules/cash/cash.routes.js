@@ -34,4 +34,11 @@ router.post('/close',
   cashController.close
 );
 
+// 🌟 4. OPERACIONES DE FLUJO DIARIO (NUEVA RUTA ANTI-BORRADO)
+// POST /api/v1/cash/transaction -> Registra entradas/salidas en Supabase
+router.post('/transaction',
+  authorizedRoles,
+  cashController.registerTransaction
+);
+
 export default router;

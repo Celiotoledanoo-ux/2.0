@@ -1,13 +1,13 @@
 import { db } from '../../core/database/supabaseClient.js';
 import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
  * 📦 INVENTORY REPOSITORY - SQL DIRECT CONNECTION
  * Gestión de productos y stock con integridad de datos.
  */
 
-// Usamos un alias para que la respuesta sea un objeto limpio: { category: { name: '...' } }
 const PRODUCT_SELECT = 'id, name, sku, price, stock, min_stock, active, category_id, category:categories(name)';
 const TARGET_TABLE = TABLES.INVENTORY || 'inventory';
 
@@ -20,7 +20,7 @@ export const create = async (productData) => {
     .single();
 
   if (error) {
-    console.error(`[REPO_ERROR][create]: 🚨 ${error.message}`);
+    logger.error({ event: 'INVENTORY_REPO_CREATE_ERROR', message: error.message });
     throw new AppError(`Error al crear producto: ${error.message}`, 500);
   }
   return data;
@@ -36,7 +36,10 @@ export const findBySku = async (sku) => {
     .eq('sku', sku.toUpperCase().trim())
     .maybeSingle();
 
-  if (error) throw new AppError('Error al buscar por SKU', 500);
+  if (error) {
+    logger.error({ event: 'INVENTORY_REPO_SKU_ERROR', message: error.message });
+    throw new AppError('Error al buscar por SKU', 500);
+  }
   return data;
 };
 
@@ -48,7 +51,10 @@ export const findById = async (id) => {
     .eq('id', id)
     .maybeSingle();
 
-  if (error) throw new AppError('Error al buscar producto por ID', 500);
+  if (error) {
+    logger.error({ event: 'INVENTORY_REPO_ID_ERROR', message: error.message });
+    throw new AppError('Error al buscar producto por ID', 500);
+  }
   return data;
 };
 
@@ -72,34 +78,28 @@ export const findAll = async (filters = {}) => {
     .order('active', { ascending: false }) 
     .order('name', { ascending: true });
 
-  if (error) throw new AppError('Error al obtener inventario', 500);
+  if (error) {
+    logger.error({ event: 'INVENTORY_REPO_FINDALL_ERROR', message: error.message });
+    throw new AppError('Error al obtener inventario', 500);
+  }
   return data;
 };
 
-// 5. Ajuste de Stock
+// 5. Ajuste de Stock Atómico (Blindaje contra cobros simultáneos)
 export const updateStock = async (productId, quantityDelta) => {
-  // Nota pro: Aquí lo ideal es usar el RPC 'modify_stock' que te daré al final 
-  // para que la suma ocurra dentro de la base de datos (atomicamente).
-  
-  const { data: current } = await db
-    .from(TARGET_TABLE)
-    .select('stock')
-    .eq('id', productId)
-    .single();
-
-  const newStock = (current?.stock || 0) + quantityDelta;
-
+  // Nota pro resuelta: Utilizamos una función remota (RPC) en Supabase para que la base de datos
+  // realice la suma/resta directamente a nivel de celda en Postgres. Evita descuadres financieros.
   const { data, error } = await db
-    .from(TARGET_TABLE)
-    .update({ stock: newStock })
-    .eq('id', productId)
-    .select(PRODUCT_SELECT)
-    .single();
+    .rpc('modify_stock', { 
+      p_id: productId, 
+      delta: quantityDelta 
+    });
 
   if (error) {
-    console.error(`[REPO_ERROR][updateStock]: ${error.message}`);
-    throw new AppError('No se pudo actualizar el stock en la base de datos.', 500);
+    logger.error({ event: 'INVENTORY_REPO_STOCK_UPDATE_ERROR', message: error.message });
+    throw new AppError('No se pudo actualizar el stock de forma atómica en la base de datos.', 500);
   }
 
-  return data;
+  // Jalar el registro actualizado con la estructura de alias limpia
+  return await findById(productId);
 };

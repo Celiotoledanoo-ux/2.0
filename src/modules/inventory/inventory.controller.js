@@ -8,14 +8,17 @@ import AppError from '../../core/errors/AppError.js';
 
 // 1. REGISTRAR PRODUCTO
 export const create = catchAsync(async (req, res, next) => {
-  // Manejamos tanto el body anidado como el directo por si las dudas
   const productData = req.body.body || req.body; 
   
   if (!productData || Object.keys(productData).length === 0) {
     return next(new AppError('No se recibieron datos del producto, fiera.', 400));
   }
 
-  const newProduct = await inventoryService.createProduct(productData);
+  // Acoplamos el creador del producto por seguridad en auditoría si es necesario
+  const newProduct = await inventoryService.createProduct({
+    ...productData,
+    created_by: req.user?.id
+  });
   
   res.status(201).json({
     status: 'success',
@@ -24,9 +27,9 @@ export const create = catchAsync(async (req, res, next) => {
   });
 });
 
-// 2. LISTAR INVENTARIO (Con filtros de búsqueda)
+// 2. LISTAR INVENTARIO (Con filtros de búsqueda reales desde Supabase)
 export const getAll = catchAsync(async (req, res) => {
-  // Los filtros vienen de la URL (query params) como ?name=labial&sku=123
+  // Recibe filtros como ?name=labial o ?sku=LIP01 desde el buscador del POS
   const products = await inventoryService.getProducts(req.query);
 
   res.status(200).json({
@@ -39,7 +42,6 @@ export const getAll = catchAsync(async (req, res) => {
 // 3. AJUSTE DE STOCK (Entradas/Salidas manuales)
 export const updateStock = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  // Extraemos del body anidado si es necesario
   const data = req.body.body || req.body;
   const { quantity, reason } = data;
   

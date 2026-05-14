@@ -8,17 +8,19 @@ import logger from '../../core/logger/logger.js';
 export const getFinancialSummary = async () => {
   const today = new Date().toISOString().split('T')[0];
 
-  // ⚡ Paralelismo: Obtenemos toda la data de un solo golpe
-  const [revenueRes, productsRes, stockRes] = await Promise.allSettled([
+  // ⚡ Paralelismo: Obtenemos toda la data de un solo golpe, incluyendo el historial por horas
+  const [revenueRes, productsRes, stockRes, hourlyRes] = await Promise.allSettled([
     reportsRepo.getDailyRevenue(today),
     reportsRepo.getTopSellingProducts(200),
-    reportsRepo.getLowStockAlerts()
+    reportsRepo.getLowStockAlerts(),
+    reportsRepo.getHourlySalesHistory(today) // 🌟 Nueva consulta real para Chart.js
   ]);
 
   // Manejo de resultados con valores por defecto (Fail-Safe)
   const dailyData = revenueRes.status === 'fulfilled' ? revenueRes.value : { total: 0, transactionCount: 0 };
   const rawProducts = productsRes.status === 'fulfilled' ? productsRes.value : [];
   const lowStock = stockRes.status === 'fulfilled' ? stockRes.value : [];
+  const hourlyData = hourlyRes.status === 'fulfilled' ? hourlyRes.value : { labels: [], data: [] };
 
   // 💄 RANKING DE MAQUILLAJE (Top 5 más vendidos)
   const productMap = {};
@@ -43,6 +45,7 @@ export const getFinancialSummary = async () => {
       total_revenue: Number(dailyData.total.toFixed(2)),
       sales_count: dailyData.transactionCount,
       top_products: topProducts,
+      hourly_chart: hourlyData, // 🌟 Coordenadas reales enviadas directo a la pantalla
       inventory_summary: {
         total_low_stock: lowStock.length,
         items: lowStock.slice(0, 10) // Solo mostramos los 10 más urgentes

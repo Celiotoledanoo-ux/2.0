@@ -1,12 +1,12 @@
 import { db } from '../../core/database/supabaseClient.js';
 import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
  * 💰 CASH REPOSITORY - CONTROL DE FLUJO DE EFECTIVO
  */
 
-// Traemos los datos de la sesión y el nombre de los usuarios involucrados
 const SESSION_SELECT = `
   *,
   opened_by_user:users!cash_sessions_opened_by_fkey (name),
@@ -24,7 +24,7 @@ export const findOpenSession = async () => {
     .maybeSingle();
 
   if (error) {
-    console.error(`[CASH_REPO_ERROR]: ${error.message}`);
+    logger.error({ event: 'CASH_REPO_ERROR', message: error.message });
     throw new AppError('Error al consultar el estado de la caja.', 500);
   }
   return data;
@@ -39,7 +39,7 @@ export const createSession = async (sessionData) => {
     .single();
 
   if (error) {
-    console.error(`[CASH_REPO_ERROR]: ${error.message}`);
+    logger.error({ event: 'CASH_REPO_ERROR', message: error.message });
     throw new AppError('No se pudo registrar la apertura de caja.', 500);
   }
   return data;
@@ -55,8 +55,23 @@ export const updateSession = async (id, updateData) => {
     .single();
 
   if (error) {
-    console.error(`[CASH_REPO_ERROR]: ${error.message}`);
+    logger.error({ event: 'CASH_REPO_ERROR', message: error.message });
     throw new AppError('Error crítico al intentar cerrar la caja.', 500);
+  }
+  return data;
+};
+
+// 🌟 4. INSERTAR MOVIMIENTO MANUAL DE CAJA CHICA (NUEVO MÉTODO ANTI-BORRADO)
+export const insertTransaction = async (transactionData) => {
+  const { data, error } = await db
+    .from('cash_transactions') // Apunta a tu tabla física en Supabase
+    .insert([transactionData])
+    .select()
+    .single();
+
+  if (error) {
+    logger.error({ event: 'CASH_TRANSACTION_REPO_ERROR', message: error.message });
+    throw new AppError('Error de persistencia: No se pudo guardar el movimiento de efectivo en Supabase.', 500);
   }
   return data;
 };

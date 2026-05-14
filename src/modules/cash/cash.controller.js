@@ -26,7 +26,6 @@ export const close = catchAsync(async (req, res) => {
 
   const session = await cashService.closeSession(Number(actual_amount), req.user.id);
 
-  // Mensaje dinámico según el resultado del arqueo
   const diff = session.difference;
   const emoji = diff === 0 ? '✅' : diff > 0 ? '💰' : '⚠️';
   const balanceMsg = diff === 0 
@@ -50,5 +49,20 @@ export const getStatus = catchAsync(async (req, res) => {
       isOpen: session?.status === 'OPEN',
       session 
     }
+  });
+});
+
+// 🌟 4. REGISTRAR ENTRADA O SALIDA DE EFECTIVO (NUEVO ENDPOINT ANTI-BORRADO)
+export const registerTransaction = catchAsync(async (req, res) => {
+  const data = req.body.body || req.body;
+  const { type, amount, concept } = data; // Recibe 'IN'/'OUT', el monto y el motivo
+
+  // Delegamos el flujo financiero y auditoría al archivo de servicios
+  const transaction = await cashService.processFlow(type, Number(amount), concept);
+
+  res.status(200).json({
+    status: 'success',
+    message: `💵 ${type === 'IN' ? 'Entrada' : 'Salida'} de efectivo registrada correctamente.`,
+    data: { transaction }
   });
 });
