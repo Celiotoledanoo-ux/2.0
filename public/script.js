@@ -386,7 +386,7 @@ async function handleAddProduct(e) {
     const price = parseFloat(document.getElementById("p-price").value);
     const stock = parseInt(document.getElementById("p-stock").value);
 
-    // DIAGNÓSTICO: Extraemos el token por si la ruta del servidor lo requiere
+    // Extraemos el token para autorizar la creación del producto
     const token = localStorage.getItem('pos_token');
 
     try {
@@ -394,12 +394,11 @@ async function handleAddProduct(e) {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // DIAGNÓSTICO: Envía la credencial de sesión
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ name, sku, price, stock })
         });
         
-        // DIAGNÓSTICO: Leemos la respuesta estructurada del backend en vez de asumir error de SKU
         const result = await response.json();
         if (!response.ok || result.status === 'fail') {
             throw new Error(result.message || 'El SKU ya existe o los datos son inválidos.');
@@ -415,8 +414,19 @@ async function handleAddProduct(e) {
 async function renderInventory() {
     const tbody = document.getElementById("inventory-body");
     if (!tbody) return;
+
+    // CORRECCIÓN: Extraemos el token para autorizar también la lectura de la tabla
+    const token = localStorage.getItem('pos_token');
+
     try {
-        const response = await fetch('/api/v1/inventory');
+        // CORRECCIÓN: Se añade el objeto de configuración con las cabeceras de seguridad
+        const response = await fetch('/api/v1/inventory', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
         const result = await response.json();
         tbody.innerHTML = "";
         (result.data?.products || []).forEach(p => {
