@@ -5,14 +5,14 @@ import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// 📡 IMPORTACIONES DE NÚCLEO (Asegurando extensiones .js)
-import { env } from './../core/config/env.js'; 
-import initLoader from './../core/loader/loader.js';
-import logger from './../core/logger/logger.js';
-import httpLogger from './../core/logger/httpLogger.js';
-import AppError from './../core/errors/AppError.js';
-import { globalErrorHandler } from './../core/middlewares/error.middlewares.js';
-import { HTTP_STATUS } from './../shared/constants/httpStatusCodes.js';
+// 📡 IMPORTACIONES DE NÚCLEO (CORREGIDO EN BASE A TU ÁRBOL REAL)
+import { env } from './src/core/config/env.js'; 
+import initLoader from './src/core/loader/loader.js'; // ➔ src/core/loader/loader.js
+import logger from './src/core/logger/logger.js';    // ➔ src/core/logger/logger.js
+import httpLogger from './src/core/logger/httpLogger.js'; // ➔ src/core/logger/httpLogger.js
+import AppError from './src/core/errors/AppError.js'; // ➔ src/core/errors/AppError.js
+import { globalErrorHandler } from './src/core/middlewares/error.middlewares.js'; // ➔ src/core/middlewares/error.middlewares.js
+import { HTTP_STATUS } from './src/shared/constants/httpStatusCodes.js'; // ➔ src/shared/constants/httpStatusCodes.js
 
 // 🛠️ CONFIGURACIÓN DE RUTAS PARA ES MODULES
 const __filename = fileURLToPath(import.meta.url);
@@ -65,7 +65,6 @@ app.use('/vendor', express.static(path.join(__dirname, 'node_modules')));
 app.use('/api/v1', initLoader());
 
 // --- 8. MANEJO DE RUTAS API MUERTAS REALES (404 JSON BLINDADO) ---
-// CORRECCIÓN: Se cambia el '--' de SQL por el '//' nativo de JavaScript para evitar el quiebre sintáctico
 app.all('/api/*', (req, _res, next) => {
   next(new AppError(`La ruta de la API solicitada [${req.originalUrl}] no existe en Glow POS 🧐`, HTTP_STATUS.NOT_FOUND || 404));
 });
@@ -79,7 +78,6 @@ app.get('*', (req, res, next) => {
 });
 
 // --- 10. GESTOR DE ERRORES GLOBAL (El Último Muro) ---
-// Siempre al final de todo el hilo de Express para capturar excepciones de Zod, Supabase y AppError
 app.use(globalErrorHandler);
 
 // Reportamos al log de Render que el motor de Express está sellado
