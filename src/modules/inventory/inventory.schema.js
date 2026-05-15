@@ -1,44 +1,42 @@
 import { z } from 'zod';
 
 /**
- * 📦 PRODUCT SCHEMA - MAQUILLAJE POS
- * Valida la creación de productos con la estructura anidada del frontend.
+ * 📦 PRODUCT SCHEMA - MAQUILLAJE POS CORREGIDO
+ * Valida la creación de productos alineado a la petición directa del frontend.
  */
 export const productSchema = z.object({
-  body: z.object({
-    body: z.object({ 
-      name: z
-        .string({ required_error: 'El nombre es obligatorio' })
-        .trim()
-        .min(3, 'Nombre demasiado corto, métele más estilo'),
-      
-      sku: z
-        .string({ required_error: 'El SKU/Código es vital' })
-        .trim()
-        .toUpperCase()
-        .min(4, 'El SKU debe tener mínimo 4 caracteres'),
-      
-      price: z.coerce
-        .number({ invalid_type_error: 'El precio debe ser un número' })
-        .positive('¿Gratis? El precio debe ser mayor a 0'),
-      
-      stock: z.coerce
-        .number()
-        .int()
-        .nonnegative('No podemos empezar con deuda de stock'),
-      
-      min_stock: z.coerce
-        .number()
-        .int()
-        .nonnegative()
-        .default(5),
-      
-      category_id: z.string().uuid('Selecciona una categoría válida').optional().nullable(),
-      
-      // Campos extra para el "maquillaje"
-      brand: z.string().trim().max(30).optional(),
-      description: z.string().trim().max(200).optional()
-    })
+  body: z.object({ // 1. Recibe la petición del req.body estándar de Express
+    name: z
+      .string({ required_error: 'El nombre es obligatorio' })
+      .trim()
+      .min(3, 'Nombre demasiado corto, métele más estilo'),
+    
+    sku: z
+      .string({ required_error: 'El SKU/Código es vital' })
+      .trim()
+      .toUpperCase()
+      .min(4, 'El SKU debe tener mínimo 4 caracteres'),
+    
+    price: z.coerce
+      .number({ invalid_type_error: 'El precio debe ser un número' })
+      .positive('¿Gratis? El precio debe ser mayor a 0'),
+    
+    stock: z.coerce
+      .number()
+      .int()
+      .nonnegative('No podemos empezar con deuda de stock'),
+    
+    min_stock: z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .default(5),
+    
+    category_id: z.string().uuid('Selecciona una categoría válida').optional().nullable(),
+    
+    // Campos extra para el "maquillaje"
+    brand: z.string().trim().max(30).optional(),
+    description: z.string().trim().max(200).optional()
   })
 });
 
