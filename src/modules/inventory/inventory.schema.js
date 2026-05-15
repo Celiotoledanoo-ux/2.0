@@ -2,29 +2,41 @@ import { z } from 'zod';
 
 /**
  * 📦 PRODUCT SCHEMA - MAQUILLAJE POS CORREGIDO
- * Valida la creación de productos alineado a la petición directa del frontend.
+ * Sincronizado milimétricamente con el formulario dinámico del frontend.
  */
 export const productSchema = z.object({
-  body: z.object({ // 1. Recibe la petición del req.body estándar de Express
+  body: z.object({ 
     name: z
-      .string({ required_error: 'El nombre es obligatorio' })
+      .string({ required_error: 'El nombre es obligatorio, fiera.' })
       .trim()
-      .min(3, 'Nombre demasiado corto, métele más estilo'),
+      .min(3, 'Nombre demasiado corto, métele más estilo.'),
+    
+    brand: z
+      .string({ required_error: 'La marca del cosmético es obligatoria.' })
+      .trim()
+      .min(2, 'La marca debe tener al menos 2 caracteres (ej. NYX, MAC).')
+      .max(30, 'El nombre de la marca es demasiado largo.'),
+
+    tone: z
+      .string({ required_error: 'El tono o variante de color es vital para el maquillaje.' })
+      .trim()
+      .min(1, 'Especifica un tono (ej. "Matte 220" o "Universal").')
+      .max(50, 'El nombre del tono es demasiado largo.'),
     
     sku: z
-      .string({ required_error: 'El SKU/Código es vital' })
+      .string({ required_error: 'El SKU/Código es vital.' })
       .trim()
       .toUpperCase()
-      .min(4, 'El SKU debe tener mínimo 4 caracteres'),
+      .min(4, 'El SKU debe tener mínimo 4 caracteres.'),
     
     price: z.coerce
-      .number({ invalid_type_error: 'El precio debe ser un número' })
-      .positive('¿Gratis? El precio debe ser mayor a 0'),
+      .number({ invalid_type_error: 'El precio debe ser un número.' })
+      .positive('¿Gratis? El precio debe ser mayor a 0.'),
     
     stock: z.coerce
-      .number()
+      .number({ invalid_type_error: 'El stock inicial debe ser un número.' })
       .int()
-      .nonnegative('No podemos empezar con deuda de stock'),
+      .nonnegative('No podemos empezar con deuda de stock.'),
     
     min_stock: z.coerce
       .number()
@@ -32,10 +44,7 @@ export const productSchema = z.object({
       .nonnegative()
       .default(5),
     
-    category_id: z.string().uuid('Selecciona una categoría válida').optional().nullable(),
-    
-    // Campos extra para el "maquillaje"
-    brand: z.string().trim().max(30).optional(),
+    category_id: z.string().uuid('Selecciona una categoría válida.').optional().nullable(),
     description: z.string().trim().max(200).optional()
   })
 });
@@ -46,21 +55,19 @@ export const productSchema = z.object({
  */
 export const stockAdjustmentSchema = z.object({
   body: z.object({
-    // Aquí NO anidamos body.body porque el ajuste suele ser un envío directo
-    // Pero si tu script también lo anida aquí, le agregamos el nivel extra
     quantity: z.coerce
       .number({ required_error: '¿Cuánto vamos a ajustar?' })
       .int()
-      .refine(n => n !== 0, 'La cantidad no puede ser cero, bro'),
+      .refine(n => n !== 0, 'La cantidad no puede ser cero, bro.'),
     
     reason: z
       .string()
       .trim()
-      .min(3, 'El motivo es muy corto')
+      .min(3, 'El motivo es muy corto.')
       .max(100)
       .default('AJUSTE MANUAL')
   }),
   params: z.object({
-    id: z.string().uuid('El ID del producto no es un UUID válido')
+    id: z.string().uuid('El ID del producto no es un UUID válido.')
   })
 });

@@ -1,39 +1,25 @@
-import logger from '../logger/logger.js';
-import globalRouter from '../../routes/index.js'; 
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import systemLoader from './src/core/loader/loader.js'; // Tu Loader optimizado
+import { globalErrorHandler } from './src/core/middlewares/error.middlewares.js';
 
-/**
- * 🏗️ SYSTEM LOADER - EL CORAZÓN DEL POS
- * Responsabilidad Única: Orquestar la carga de rutas y verificar la integridad del sistema.
- */
-export default () => { 
-  try {
-    logger.info('🚀 Iniciando secuencia de ignición del POS...');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-    // 1. Validación de Integridad
-    if (!globalRouter) {
-      throw new Error('Fallo crítico: El mapa de rutas global (Router) es inaccesible.');
-    }
+const app = express();
 
-    // 2. Inventario de Módulos (Capa Informativa para Logs)
-    const activeModules = [
-      'Auth', 'Users', 'Inventory', 'Sales', 
-      'Returns', 'Payments', 'Cash', 'Reports'
-    ];
-    
-    logger.info(`📦 Módulos sincronizados y listos: [${activeModules.join(' | ')}]`);
-    logger.info('✅ Sistema de enrutamiento cargado exitosamente.');
+app.use(cors({ origin: '*' }));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-    // 3. Entrega de la infraestructura al Servidor (app.js)
-    return globalRouter; 
-    
-  } catch (error) {
-    logger.error({
-      event: 'LOADER_CRITICAL_FAILURE',
-      message: error.message,
-      recommendation: 'Verifica las exportaciones en src/routes/index.js'
-    });
-    
-    // Detenemos el proceso: mejor apagar el motor que correr con fallos de rutas
-    process.exit(1);
-  }
-};
+// 🚀 IGNICIÓN ATÓMICA: Invocamos tu Loader para montar la infraestructura de rutas de un solo golpe
+const apiRouter = systemLoader();
+app.use('/api/v1', apiRouter);
+
+// Captura de rutas inexistentes y Middleware Global de Errores
+app.use(globalErrorHandler);
+
+export default app;

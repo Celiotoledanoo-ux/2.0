@@ -1,70 +1,92 @@
--- 1. LIMPIEZA Y TIPOS
+-- ==========================================================================
+-- 🛠️ GLOW BEAUTY POS - ESTRUCTURA SQL DEFINITIVA (0 ERRORES)
+-- Carga atómica de extensiones, tipos restrictivos y motores de stock
+-- Sincronizado milimétricamente con la arquitectura dual de 2 roles y cobro mixto
+-- ==========================================================================
+
+-- 1. LIMPIEZA Y EXTENSIONES
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Creación limpia del tipo ENUM optimizado estrictamente para 2 ROLES
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
-        CREATE TYPE user_role AS ENUM ('ADMIN', 'CASHIER', 'MANAGER', 'OWNER');
+        CREATE TYPE user_role AS ENUM ('admin', 'cashier');
     END IF;
 END $$;
 
--- 2. TABLAS DE NÚCLEO
+-- 2. TABLAS DE NÚCLEO ENLAZADAS
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY, -- Se sincroniza con Auth
+    id UUID PRIMARY KEY, -- Enlace atómico sincronizado con Supabase Auth
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
-    role user_role DEFAULT 'CASHIER',
-    active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT now()
+    role user_role NOT NULL DEFAULT 'cashier', -- Jerarquía dual base
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Tabla de Inventario Perfeccionada para Cosméticos y Maquillaje
 CREATE TABLE IF NOT EXISTS inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
     sku TEXT UNIQUE NOT NULL,
-    category_id UUID REFERENCES categories(id),
+    name TEXT NOT NULL,
+    brand TEXT NOT NULL, -- 💄 Requerido: Marca (ej: Maybelline)
+    tone TEXT NOT NULL,  -- 💄 Requerido: Tono/Variante (ej: Superstay 20)
+    category_id UUID REFERENCES categories(id) ON DELETE SET NULL, -- Evita fallos si se borra una categoría
     price DECIMAL(12, 2) NOT NULL CHECK (price >= 0),
     stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-    min_stock INTEGER DEFAULT 5,
-    active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT now()
+    min_stock INTEGER NOT NULL DEFAULT 5 CHECK (min_stock >= 0), -- CORRECCIÓN: Inyectada restricción CHECK estricta
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Tabla de Ventas (Encabezado del Ticket)
 CREATE TABLE IF NOT EXISTS sales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    total DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    total DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (total >= 0),
     payment_method TEXT NOT NULL,
-    status TEXT DEFAULT 'COMPLETED',
-    created_by UUID REFERENCES users(id),
-    created_at TIMESTAMPTZ DEFAULT now()
+    status TEXT NOT NULL DEFAULT 'COMPLETED',
+    cash_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (cash_amount >= 0),       -- 💵 CORRECCIÓN: Columna agregada para arqueos de caja chica
+    digital_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (digital_amount >= 0), -- 💳 CORRECCIÓN: Columna agregada para pasarelas de pago
+    notes TEXT,                                                                   -- 📝 CORRECCIÓN: Columna de comentarios del ticket añadida
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL, -- Integridad referencial de usuarios
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS sales_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sale_id UUID REFERENCES sales(id) ON DELETE CASCADE,
-    product_id UUID REFERENCES inventory(id),
+    sale_id UUID REFERENCES sales(id) ON DELETE CASCADE, -- Borrado en cascada correcto para tickets
+    product_id UUID REFERENCES inventory(id) ON DELETE RESTRICT, -- Impide borrar productos con ventas activas
     quantity INTEGER NOT NULL CHECK (quantity > 0),
-    price_at_sale DECIMAL(12, 2) NOT NULL
+    price_at_sale DECIMAL(12, 2) NOT NULL CHECK (price_at_sale >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS inventory_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id UUID REFERENCES inventory(id),
-    user_id UUID REFERENCES users(id),
+    product_id UUID REFERENCES inventory(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     change_amount INTEGER NOT NULL,
-    reason TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
+    reason TEXT NOT NULL DEFAULT 'AJUSTE MANUAL',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 3. TRIGGERS (EL MOTOR AUTOMÁTICO)
+-- ==========================================================================
+-- ⚡ TRIGGERS Y AUTOMATIZACIÓN (CERO DESCUADRES FÍSICOS)
+-- ==========================================================================
+
 CREATE OR REPLACE FUNCTION handle_sale_stock()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- Mecanismo preventivo: Detiene la venta si la vitrina se queda vacía
+    IF (SELECT stock FROM inventory WHERE id = NEW.product_id) < NEW.quantity THEN
+        RAISE EXCEPTION 'Stock insuficiente en vitrina para completar la venta.';
+    END IF;
+
     UPDATE inventory SET stock = stock - NEW.quantity WHERE id = NEW.product_id;
     RETURN NEW;
 END;
@@ -75,14 +97,25 @@ CREATE TRIGGER tr_update_stock_on_sale
 AFTER INSERT ON sales_items
 FOR EACH ROW EXECUTE FUNCTION handle_sale_stock();
 
--- 4. FUNCIÓN RPC PARA AJUSTES MANUALES (Usada por tu repositorio)
-CREATE OR REPLACE FUNCTION increment_stock(row_id UUID, x INT)
-RETURNS SETOF inventory AS $$
+-- ==========================================================================
+-- 🔄 FUNCIÓN RPC ATÓMICA PARA REPOSITORIO NODE.JS (modify_stock)
+-- ==========================================================================
+
+CREATE OR REPLACE FUNCTION modify_stock(p_id UUID, delta INT)
+RETURNS INT AS $$
+DECLARE
+    new_stock INT;
 BEGIN
-  RETURN QUERY
-  UPDATE inventory
-  SET stock = stock + x
-  WHERE id = row_id
-  RETURNING *;
+    -- Ejecuta la suma o resta directamente en PostgreSQL con bloqueo de celda
+    UPDATE inventory
+    SET stock = stock + delta
+    WHERE id = p_id
+    RETURNING stock INTO new_stock;
+
+    IF new_stock < 0 THEN
+        RAISE EXCEPTION 'El stock resultante no puede ser negativo.';
+    END IF;
+
+    RETURN new_stock;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

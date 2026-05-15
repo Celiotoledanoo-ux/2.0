@@ -1,371 +1,6 @@
-@import "/vendor/@fontsource/poppins/index.css";
-
 /* ==========================================================================
-   VARIABLES Y CONFIGURACIÓN PREMIUM DE GLOW BEAUTY
+   🛒 CARRITO DE COMPRAS Y TOTALES
    ========================================================================== */
-:root {
-    --bg-dark: #0f0e11;
-    --bg-card: #16151a;
-    --bg-input: #1e1d24;
-    --accent-rose: #e0a39a;
-    --accent-gold: #d4af37;
-    --text-main: #f3f3f5;
-    --text-muted: #a09fa6;
-    --border-color: #26252c;
-    --success: #2ec4b6;
-    --danger: #e63946;
-    --radius-lg: 16px;
-    --radius-md: 10px;
-    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Inter', sans-serif;
-}
-
-body {
-    background-color: var(--bg-dark);
-    color: var(--text-main);
-    overflow-x: hidden;
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* Transición fluida para la inyección de módulos dinámicos */
-@keyframes fadeInModule {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade {
-    animation: fadeInModule 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/* ==========================================================================
-   🔐 INTERFAZ DE INGRESO (LOGIN CARD)
-   ========================================================================== */
-.login-container {
-    position: relative;
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at center, #241c21 0%, var(--bg-dark) 100%);
-}
-
-.login-card {
-    background: var(--bg-card);
-    padding: 2.5rem;
-    border-radius: var(--radius-lg);
-    width: 100%;
-    max-width: 400px;
-    border: 1px solid var(--border-color);
-    text-align: center;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-}
-
-.brand-logo {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    display: inline-block;
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-}
-
-.login-card h2 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    margin-bottom: 0.25rem;
-}
-
-.login-subtitle {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-bottom: 2rem;
-}
-
-/* ==========================================================================
-   FORMULARIOS E INPUTS MODERNOS
-   ========================================================================== */
-.input-group {
-    position: relative;
-    margin-bottom: 1.25rem;
-}
-
-.input-group i {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    font-size: 1.1rem;
-}
-
-.input-group input, .input-group select, form input, form select, .search-input-wrapper input {
-    width: 100%;
-    padding: 0.85rem 1rem 0.85rem 2.8rem;
-    background: var(--bg-input);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    color: var(--text-main);
-    font-size: 0.95rem;
-    transition: var(--transition);
-}
-
-form input, form select {
-    padding-left: 1rem !important;
-    margin-bottom: 1rem;
-}
-
-.input-group input:focus, form input:focus, form select:focus, .search-input-wrapper input:focus {
-    border-color: var(--accent-rose);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(224, 163, 154, 0.15);
-}
-
-.btn-primary, .btn-success, .btn-submit {
-    width: 100%;
-    padding: 0.85rem;
-    background: linear-gradient(135deg, var(--accent-rose), #c28880);
-    border: none;
-    border-radius: var(--radius-md);
-    color: #121115;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: var(--transition);
-}
-
-.btn-primary:hover, .btn-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(224, 163, 154, 0.3);
-}
-
-/* ==========================================================================
-   🚀 PANEL DE NAVEGACIÓN SUPERIOR (TOPBAR)
-   ========================================================================== */
-.topbar {
-    height: 70px;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1.5rem;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
-}
-
-.header-left, .header-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.hamburger {
-    background: none;
-    border: none;
-    color: var(--text-main);
-    font-size: 1.3rem;
-    cursor: pointer;
-}
-
-.title-area h1 {
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-.title-area .subtitle {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.user-badge {
-    background: rgba(224, 163, 154, 0.1);
-    color: var(--accent-rose);
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.btn-logout {
-    background: none;
-    border: 1px solid var(--border-color);
-    color: var(--danger);
-    width: 38px;
-    height: 38px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-}
-
-.btn-logout:hover {
-    background: rgba(230, 57, 70, 0.1);
-}
-
-/* ==========================================================================
-   LAYOUT DEL PANEL (SIDEBAR + CONTENT)
-   ========================================================================== */
-.container {
-    display: flex;
-    margin-top: 70px;
-    min-height: calc(100vh - 70px);
-}
-
-.sidebar {
-    width: 240px;
-    background: var(--bg-card);
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 1.5rem 0;
-}
-
-.sidebar-logo {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0 1.5rem 1.5rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    padding: 1.5rem 0.75rem;
-    flex-grow: 1;
-}
-
-.sidebar-menu button {
-    width: 100%;
-    padding: 0.85rem 1rem;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    font-size: 0.95rem;
-    font-weight: 500;
-    text-align: left;
-    transition: var(--transition);
-}
-
-.sidebar-menu button:hover, .sidebar-menu button.active {
-    color: var(--accent-rose);
-    background: rgba(224, 163, 154, 0.06);
-}
-
-.sidebar-footer {
-    padding: 0 1.5rem;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.status-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    background: var(--success);
-    border-radius: 50%;
-    margin-right: 0.4rem;
-}
-
-.content {
-    flex-grow: 1;
-    padding: 2rem;
-    background: var(--bg-dark);
-    max-width: calc(100vw - 240px);
-}
-
-/* ==========================================================================
-   COMPONENTES CORE: TARJETAS (CARDS)
-   ========================================================================== */
-.card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.module-header {
-    margin-bottom: 1.5rem;
-}
-
-.module-header h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.module-header p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-
-/* ==========================================================================
-   🛒 PUNTO DE VENTA (POS SPLIT PANEL)
-   ========================================================================== */
-.pos-grid {
-    display: grid;
-    grid-template-columns: 1.5fr 1.1fr;
-    gap: 1.5rem;
-}
-
-.search-input-wrapper {
-    position: relative;
-    margin-top: 1rem;
-}
-
-.search-input-wrapper i {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--accent-rose);
-}
-
-.products-grid {
-    margin-top: 1rem;
-    min-height: 200px;
-    border: 2px dashed var(--border-color);
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.placeholder-text {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-
 .cart-list {
     min-height: 180px;
     max-height: 280px;
@@ -407,12 +42,17 @@ form input, form select {
 }
 
 /* ==========================================================================
-   📦 TABLAS E INVENTARIO RESPONSIVO
+   📦 TABLAS E INVENTARIO RESPONSIVO (0 ERRORES)
    ========================================================================== */
 .inventory-layout, .users-layout {
     display: grid;
     grid-template-columns: 1fr 1.8fr;
     gap: 1.5rem;
+}
+
+/* MEJORA RESPONSIVA: Adaptación atómica si el rol del usuario oculta el formulario */
+.inventory-layout[style*="grid-template-columns: 1fr"] {
+    grid-template-columns: 1fr !important;
 }
 
 .table-responsive {
@@ -446,7 +86,7 @@ code {
 }
 
 /* ==========================================================================
-   📊 INDICADORES Y REPORTES
+   📊 INDICADORES Y REPORTES FINANCIALES
    ========================================================================== */
 .metrics-grid {
     display: grid;
@@ -486,6 +126,13 @@ code {
     gap: 1.5rem;
 }
 
+/* Adaptación responsiva para teléfonos en la grid de reportes */
+@media (max-width: 768px) {
+    .inventory-layout, .users-layout, .reports-tables-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
 .report-list {
     list-style: none;
     margin-top: 1rem;
@@ -494,14 +141,29 @@ code {
 .report-list li {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 0.75rem 0;
     border-bottom: 1px solid var(--border-color);
     font-size: 0.9rem;
+    gap: 1rem;
+}
+
+/* MEJORA VISUAL: Trunca textos largos de cosméticos (marca/nombre/tono) de forma elegante */
+.report-list li span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 75%;
 }
 
 /* ==========================================================================
-   🛑 INTERFAZ DE ACCESO DENEGADO (ROLES)
+   🛑 INTERFAZ DE ACCESO DENEGADO Y CONTROL DE FLUJOS (SPA)
    ========================================================================== */
+/* CORRECCIÓN CRÍTICA: Clase obligatoria para la orquestación de pantallas de index.html */
+.hidden {
+    display: none !important;
+}
+
 .restricted-box {
     background: rgba(230, 57, 70, 0.03);
     border: 1px dashed var(--danger);

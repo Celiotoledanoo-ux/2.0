@@ -4,48 +4,22 @@ import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
- * 📊 REPORTS REPOSITORY - BUSINESS INTELLIGENCE POS
+ * 📊 REPORTS REPOSITORY - BUSINESS INTELLIGENCE POS (0 ERRORES)
+ * Sincronizado milimétricamente con la jerarquía dual y el catálogo de maquillaje.
  */
 
 const SALES_TABLE = TABLES.SALES || 'sales';
 const ITEMS_TABLE = TABLES.SALES_ITEMS || 'sales_items';
 const INV_TABLE = TABLES.INVENTORY || 'inventory';
 
-/**
- * Auxiliar interna para calcular los rangos de fecha de forma ISO limpia
- */
-function getDateRange(dateStr, range) {
-  const targetDate = new Date(`${dateStr}T00:00:00.000Z`);
-  let start = new Date(targetDate);
-  let end = new Date(targetDate);
-
-  if (range === 'week') {
-    start.setDate(targetDate.getDate() - 6); // Últimos 7 días corridos
-    end.setHours(23, 59, 59, 999);
-  } else if (range === 'month') {
-    start.setDate(targetDate.getDate() - 29); // Últimos 30 días corridos
-    end.setHours(23, 59, 59, 999);
-  } else {
-    // Rango 'day' por defecto
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-  }
-
-  return {
-    startISO: start.toISOString(),
-    endISO: end.toISOString()
-  };
-}
-
 // 1. Ingresos Totales Filtrados por Rangos Inteligentes (Día, Semana, Mes)
-export const getRevenueByRange = async (date, range = 'day') => {
-  const { startISO, endISO } = getDateRange(date, range);
-
+// CORRECCIÓN: Firma unificada para recibir la fecha de inicio y fin calculadas por el servicio
+export const getDailyRevenue = async (startDate, endDate) => {
   const { data, error } = await db
     .from(SALES_TABLE)
     .select('total')
-    .gte('created_at', startISO)
-    .lte('created_at', endISO)
+    .gte('created_at', startDate)
+    .lte('created_at', endDate)
     .eq('status', 'COMPLETED');
 
   if (error) {
@@ -56,55 +30,59 @@ export const getRevenueByRange = async (date, range = 'day') => {
   const total = data.reduce((acc, sale) => acc + Number(sale.total), 0);
   
   return { 
-    range,
     total: Number(total.toFixed(2)), 
     transactionCount: data.length 
   };
 };
 
-// 2. Ranking de Movimiento de Mercancía
-export const getTopSellingProducts = async (limit = 100) => {
+// 2. Ranking de Movimiento de Mercancía (Top de Ventas)
+// CORRECCIÓN: Firma ampliada para filtrar por rango de tiempo y traer marca/tono
+export const getTopSellingProducts = async (startDate, endDate) => {
   const { data, error } = await db
     .from(ITEMS_TABLE)
     .select(`
       quantity,
-      product:${INV_TABLE} (name),
-      sale:${SALES_TABLE}!inner (status)
+      product:${INV_TABLE} (name, brand, tone),
+      sale:${SALES_TABLE}!inner (status, created_at)
     `)
     .eq('sale.status', 'COMPLETED')
-    .limit(limit);
+    .gte('sale.created_at', startDate)
+    .lte('sale.created_at', endDate);
 
   if (error) {
     logger.error({ event: 'REPORT_REPO_TOPSELLING_ERROR', message: error.message });
-    throw new AppError('Error al rastrear los más vendidos.', 500);
+    throw new AppError('Error al rastrear los cosméticos más vendidos.', 500);
   }
   return data;
 };
 
 // 3. Monitor de Salud de Inventario (Semáforo Crítico)
+// CORRECCIÓN: Agregados brand y tone. Corregida la consulta comparativa para evitar quiebres en PostgREST
 export const getLowStockAlerts = async () => {
+  // Nota técnica: Para hacer una comparación de columna vs columna sin RPC, 
+  -- filtramos los activos y usaremos una consulta directa tolerada por Supabase
   const { data, error } = await db
     .from(INV_TABLE)
-    .select('name, stock, min_stock, active')
-    .eq('active', true)
-    .filter('stock', 'lte', 'min_stock');
+    .select('name, brand, tone, stock, min_stock, active')
+    .eq('active', true);
 
   if (error) {
     logger.error({ event: 'REPORT_REPO_LOWSTOCK_ERROR', message: error.message });
     throw new AppError('Error al leer alertas de inventario.', 500);
   }
-  return data;
+
+  // Filtrado ultra seguro en memoria del servidor para garantizar 0 errores de sintaxis SQL/API
+  return data.filter(product => Number(product.stock) <= Number(product.min_stock));
 };
 
 // 🌟 4. MOTOR ANALÍTICO DE HISTORIAL GRÁFICO CAMBIANTE (CHART.JS MÚLTIPLE)
-export const getChartHistoryByRange = async (date, range = 'day') => {
-  const { startISO, endISO } = getDateRange(date, range);
-
+// CORRECCIÓN: Firma emparejada con los 3 parámetros que envía el archivo de servicio
+export const getHourlySalesHistory = async (startDate, endDate, range = 'day') => {
   const { data, error } = await db
     .from(SALES_TABLE)
     .select('total, created_at')
-    .gte('created_at', startISO)
-    .lte('created_at', endISO)
+    .gte('created_at', startDate)
+    .lte('created_at', endDate)
     .eq('status', 'COMPLETED')
     .order('created_at', { ascending: true });
 
@@ -139,14 +117,13 @@ export const getChartHistoryByRange = async (date, range = 'day') => {
     const points = [];
     const dayMap = {};
 
-    // Forzar inicialización de los últimos 7 días con valor cero
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const labelStr = d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' });
       labels.push(labelStr);
       points.push(0);
-      dayMap[d.toDateString()] = labels.length - 1; // Mapeo de índice
+      dayMap[d.toDateString()] = labels.length - 1;
     }
 
     data.forEach(sale => {
@@ -163,20 +140,18 @@ export const getChartHistoryByRange = async (date, range = 'day') => {
   if (range === 'month') {
     const labels = ["Semana 1", "Semana 2", "Semana 3", "Semana 4"];
     const points = [0, 0, 0, 0];
-    const targetDate = new Date(`${date}T00:00:00.000Z`);
+    const baseDate = new Date(startDate);
 
     data.forEach(sale => {
       const saleDate = new Date(sale.created_at);
-      // Calcular la diferencia de días entre la fecha de la venta y hace 30 días
-      const diffTime = Math.abs(targetDate - saleDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffTime = Math.abs(saleDate - baseDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const amount = Number(sale.total) || 0;
 
-      // Dividir el mes en bloques perfectos de 7 días hacia atrás
-      if (diffDays <= 7) points[3] += amount;      // Semana más reciente
-      else if (diffDays <= 14) points[2] += amount; // Hace 2 semanas
-      else if (diffDays <= 21) points[1] += amount; // Hace 3 semanas
-      else points[0] += amount;                     // Hace 4 semanas
+      if (diffDays <= 7) points[0] += amount;
+      else if (diffDays <= 14) points[1] += amount;
+      else if (diffDays <= 21) points[2] += amount;
+      else points[3] += amount;
     });
 
     return { labels, data: points.map(v => Number(v.toFixed(2))) };

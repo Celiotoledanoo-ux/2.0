@@ -70,18 +70,20 @@ const modulesHTML = {
                 <div class="card">
                     <h3>Nuevo Producto</h3>
                     <form id="product-form" autocomplete="off">
-                        <input id="p-name" placeholder="Nombre" required>
-                        <input id="p-sku" placeholder="SKU" required>
-                        <input id="p-price" type="number" step="0.01" placeholder="Precio" required>
-                        <input id="p-stock" type="number" placeholder="Stock" required>
-                        <button type="submit" class="btn-submit">Guardar</button>
+                        <input id="p-name" name="name" placeholder="Nombre (ej. Labial Matte)" required>
+                        <input id="p-brand" name="brand" placeholder="Marca (ej. Maybelline)" required>
+                        <input id="p-tone" name="tone" placeholder="Tono/Color (ej. Superstay 20)" required>
+                        <input id="p-sku" name="sku" placeholder="SKU o Código de Barras" required>
+                        <input id="p-price" name="price" type="number" step="0.01" placeholder="Precio $" required>
+                        <input id="p-stock" name="stock" type="number" placeholder="Cantidad en Stock" required>
+                        <button type="submit" class="btn-submit">Guardar Producto</button>
                     </form>
                 </div>`}
                 <div class="card table-card">
                     <h3>Existencias en Vitrina</h3>
                     <div class="table-responsive">
                         <table>
-                            <thead><tr><th>SKU</th><th>Nombre</th><th>Precio</th><th>Stock</th></tr></thead>
+                            <thead><tr><th>SKU</th><th>Nombre / Tono</th><th>Precio</th><th>Stock</th></tr></thead>
                             <tbody id="inventory-body"></tbody>
                         </table>
                     </div>
@@ -148,9 +150,9 @@ const modulesHTML = {
                         <input type="text" id="new-u-name" placeholder="Nombre Completo" required style="margin-bottom:1rem;">
                         <input type="email" id="new-u-email" placeholder="Correo Electrónico" required style="margin-bottom:1rem;">
                         <select id="new-u-role" style="margin-bottom:1rem;">
-                            <option value="CASHIER">Cajero(a)</option>
-                            <option value="MANAGER">Gerente</option>
-                            <option value="ADMIN">Administrador</option>
+                            <option value="seller">Cajero(a)</option>
+                            <option value="manager">Gerente</option>
+                            <option value="admin">Administrador</option>
                         </select>
                         <button type="submit" class="btn-submit">Registrar Personal</button>
                     </form>
@@ -183,7 +185,6 @@ async function handleLogin(e) {
             submitBtn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> Validando...`;
         }
 
-        // CORRECCIÓN: Se envía 'identifier' en lugar de 'email' para que el backend lo valide con éxito
         const response = await fetch('/api/v1/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -193,11 +194,17 @@ async function handleLogin(e) {
         const result = await response.json();
         if (!response.ok || result.status === 'fail') throw new Error(result.message || 'Credenciales inválidas.');
 
-        state.currentUser = result.data.user.name;
-        state.currentRole = result.data.user.role;
-        localStorage.setItem('pos_token', result.data.token);
+        const user = result.data.user;
+        const session = result.data.session;
 
-        document.getElementById("user-display").innerText = `✨ ${state.currentUser} (${state.currentRole})`;
+        state.currentUser = user.name;
+        state.currentRole = user.role?.toLowerCase();
+        
+        localStorage.setItem('pos_token', session.accessToken);
+        localStorage.setItem('pos_user_name', user.name);
+        localStorage.setItem('pos_user_role', state.currentRole);
+
+        document.getElementById("user-display").innerText = `✨ ${state.currentUser} (${state.currentRole.toUpperCase()})`;
         document.getElementById("auth-screen").classList.add("hidden");
         document.getElementById("main-system").classList.remove("hidden");
 
@@ -212,6 +219,23 @@ async function handleLogin(e) {
     }
 }
 
+function checkActiveSession() {
+    const savedToken = localStorage.getItem('pos_token');
+    const savedName = localStorage.getItem('pos_user_name');
+    const savedRole = localStorage.getItem('pos_user_role');
+
+    if (savedToken && savedName && savedRole) {
+        state.currentUser = savedName;
+        state.currentRole = savedRole;
+
+        const userDisplay = document.getElementById("user-display");
+        if (userDisplay) userDisplay.innerText = `✨ ${savedName} (${savedRole.toUpperCase()})`;
+        
+        document.getElementById("auth-screen").classList.add("hidden");
+        document.getElementById("main-system").classList.remove("hidden");
+    }
+}
+
 /* ==========================================================================
    ⚙️ SISTEMA DE NAVEGACIÓN Y CARGADOR DINÁMICO COMPLETOS
    ========================================================================== */
@@ -220,7 +244,7 @@ function setupNavigation() {
         button.addEventListener("click", () => {
             const targetModule = button.getAttribute("data-module");
             if (!checkModulePermission(targetModule)) {
-                alert(`⛔ Acceso Denegado: Tu rol de ${state.currentRole} no tiene autorización.`);
+                alert(`⛔ Acceso Denegado: Tu rol de ${state.currentRole.toUpperCase()} no tiene autorización.`);
                 return;
             }
             document.querySelectorAll(".sidebar-menu button").forEach(b => b.classList.remove("active"));
@@ -232,9 +256,9 @@ function setupNavigation() {
 
 function checkModulePermission(moduleName) {
     const role = state.currentRole;
-    if (role === "OWNER" || role === "ADMIN") return true;
-    if (role === "MANAGER") return moduleName !== "users";
-    if (role === "CASHIER") return moduleName === "pos" || moduleName === "inventory" || moduleName === "cash";
+    if (role === "owner" || role === "admin") return true;
+    if (role === "manager") return moduleName !== "users";
+    if (role === "seller" || role === "cashier") return moduleName === "pos" || moduleName === "inventory" || moduleName === "cash";
     return false;
 }
 
@@ -242,7 +266,7 @@ function renderModule(moduleName) {
     const root = document.getElementById("content-root");
     if (!root) return;
 
-    const isCashier = (state.currentRole === "CASHIER");
+    const isCashier = (state.currentRole === "seller" || state.currentRole === "cashier");
     root.innerHTML = modulesHTML[moduleName](isCashier);
 
     if (moduleName === "pos") {
@@ -293,13 +317,20 @@ async function handlePosSearch(query) {
     if (!cleanQuery) return;
 
     try {
-        const response = await fetch(`/api/v1/inventory?sku=${cleanQuery}&name=${cleanQuery}`);
+        const token = localStorage.getItem('pos_token');
+        const response = await fetch(`/api/v1/inventory?sku=${cleanQuery}&name=${cleanQuery}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
         const result = await response.json();
-        const products = result.data?.products || [];
-        const product = products[0];
+        const products = result.data?.products || result.data || [];
+        const product = Array.isArray(products) ? products[0] : products;
 
         const resultArea = document.getElementById("products-result");
-        if (product) {
+        if (product && product.sku) {
             if (product.stock <= 0) {
                 resultArea.innerHTML = `<span style="color:var(--danger)">⚠️ Sin stock: ${product.name}</span>`;
                 return;
@@ -311,7 +342,7 @@ async function handlePosSearch(query) {
             resultArea.innerHTML = `<span style="color:var(--danger)">❌ Cosmético no encontrado</span>`;
         }
     } catch (err) {
-        console.error(err);
+        console.error("[POS_SEARCH_ERROR]:", err);
     }
 }
 
@@ -339,7 +370,7 @@ function updateCartUI() {
         total += subtotal;
         const div = document.createElement("div");
         div.style.cssText = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;";
-        div.innerHTML = `<span>💄 ${item.name} (x${item.quantity})</span><strong>$${subtotal.toFixed(2)}</strong>`;
+        div.innerHTML = `<span>💄 ${item.name} ${item.tone ? `(${item.tone})` : ''} (x${item.quantity})</span><strong>$${subtotal.toFixed(2)}</strong>`;
         list.appendChild(div);
     });
     document.getElementById("total-amount").innerText = `$${total.toFixed(2)}`;
@@ -349,30 +380,34 @@ async function processSale() {
     const total = state.cart.reduce((s, i) => s + (i.price * i.quantity), 0);
     if (total === 0) return alert("El carrito está vacío.");
 
+    const token = localStorage.getItem('pos_token');
     const method = document.getElementById("payment-method").value;
-    let payload = { payment_method: method, total, items: state.cart };
+    let payload = { paymentMethod: method, total, items: state.cart };
 
     if (method === "MIXED") {
         const cash = parseFloat(document.getElementById("mixed-cash").value) || 0;
         const digital = parseFloat(document.getElementById("mixed-digital").value) || 0;
         if (Math.abs((cash + digital) - total) > 0.01) return alert("La suma combinada no cuadra.");
-        payload.cash_amount = cash;
-        payload.digital_amount = digital;
+        payload.cashAmount = cash;
+        payload.digitalAmount = digital;
     }
 
     try {
         const response = await fetch('/api/v1/sales', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify(payload)
         });
-        if (!response.ok) throw new Error('Error al procesar la venta.');
+        if (!response.ok) throw new Error('Error al procesar la venta en el servidor.');
         alert(`✨ Venta completada de forma exitosa ($${total.toFixed(2)}).`);
         state.cart = [];
         updateCartUI();
         document.getElementById("products-result").innerText = "";
     } catch (err) {
-        alert(err.message);
+        alert(`❌ Error: ${err.message}`);
     }
 }
 
@@ -381,13 +416,18 @@ async function processSale() {
    ========================================================================== */
 async function handleAddProduct(e) {
     e.preventDefault();
-    const name = document.getElementById("p-name").value.trim();
-    const sku = document.getElementById("p-sku").value.trim().toUpperCase();
-    const price = parseFloat(document.getElementById("p-price").value);
-    const stock = parseInt(document.getElementById("p-stock").value);
-
-    // Extraemos el token para autorizar la creación del producto
+    const form = e.target;
+    const formData = new FormData(form);
     const token = localStorage.getItem('pos_token');
+
+    const productData = {
+        name: formData.get('name').trim(),
+        brand: formData.get('brand').trim(),
+        tone: formData.get('tone').trim(), 
+        sku: formData.get('sku').trim().toUpperCase(),
+        price: parseFloat(formData.get('price')),
+        stock: parseInt(formData.get('stock'), 10)
+    };
 
     try {
         const response = await fetch('/api/v1/inventory', {
@@ -396,18 +436,19 @@ async function handleAddProduct(e) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ name, sku, price, stock })
+            body: JSON.stringify(productData)
         });
         
         const result = await response.json();
-        if (!response.ok || result.status === 'fail') {
+        if (!response.ok || result.status === 'fail' || result.status === 'error') {
             throw new Error(result.message || 'El SKU ya existe o los datos son inválidos.');
         }
 
-        document.getElementById("product-form").reset();
+        form.reset();
         await renderInventory();
+        alert('✅ Cosmético agregado con éxito al catálogo.');
     } catch (err) {
-        alert(err.message);
+        alert(`❌ Error al guardar: ${err.message}`);
     }
 }
 
@@ -415,11 +456,9 @@ async function renderInventory() {
     const tbody = document.getElementById("inventory-body");
     if (!tbody) return;
 
-    // CORRECCIÓN: Extraemos el token para autorizar también la lectura de la tabla
     const token = localStorage.getItem('pos_token');
 
     try {
-        // CORRECCIÓN: Se añade el objeto de configuración con las cabeceras de seguridad
         const response = await fetch('/api/v1/inventory', {
             method: 'GET',
             headers: {
@@ -429,13 +468,19 @@ async function renderInventory() {
         });
         const result = await response.json();
         tbody.innerHTML = "";
-        (result.data?.products || []).forEach(p => {
+        
+        const productsList = result.data?.products || result.data || [];
+        productsList.forEach(p => {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td><code>${p.sku}</code></td><td>${p.name}</td><td>$${p.price.toFixed(2)}</td><td>${p.stock} pz</td>`;
+            tr.innerHTML = `
+                <td><code>${p.sku}</code></td>
+                <td><strong>${p.brand || ''}</strong> - ${p.name} <small style="color:var(--accent-rose)">(${p.tone || 'N/A'})</small></td>
+                <td>$${Number(p.price).toFixed(2)}</td>
+                <td>${p.stock} pz</td>`;
             tbody.appendChild(tr);
         });
     } catch (err) {
-        console.error(err);
+        console.error("[RENDER_INVENTORY_ERROR]:", err);
     }
 }
 
@@ -447,20 +492,25 @@ async function handleCashFlow(type) {
     const conceptInput = document.getElementById("cash-flow-concept");
     const amount = parseFloat(amountInput.value);
     const concept = conceptInput.value.trim();
+    const token = localStorage.getItem('pos_token');
 
     if (isNaN(amount) || amount <= 0 || !concept) return alert("Introduce datos válidos.");
 
     try {
         const response = await fetch('/api/v1/cash/transaction', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ type, amount, concept })
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'Error en flujo.');
-        amountInput.value = ""; conceptInput.value = "";
+        if (!response.ok) throw new Error(result.message || 'Error en flujo de caja.');
+        amountInput.value = ""; 
+        conceptInput.value = "";
         await updateCashUI();
-        alert(result.message);
+        alert(result.message || "Movimiento registrado.");
     } catch (err) {
         alert(`❌ ${err.message}`);
     }
@@ -469,8 +519,14 @@ async function handleCashFlow(type) {
 async function updateCashUI() {
     const container = document.getElementById("cash-status-card");
     if (!container) return;
+    
+    const token = localStorage.getItem('pos_token');
+
     try {
-        const response = await fetch('/api/v1/cash/status');
+        const response = await fetch('/api/v1/cash/status', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const result = await response.json();
         const session = result.data?.session;
         state.cashBalance = Number(session?.actual_amount || session?.initial_amount || 2500.00);
@@ -524,9 +580,13 @@ async function updateReportsUI(range = 'day') {
     const metricsContainer = document.getElementById("metrics-container");
     const topList = document.getElementById("top-products-list");
     const lowList = document.getElementById("low-stock-list");
+    const token = localStorage.getItem('pos_token');
 
     try {
-        const response = await fetch(`/api/v1/reports/summary?range=${range}`);
+        const response = await fetch(`/api/v1/reports/summary?range=${range}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const result = await response.json();
         const reportData = result.data;
 
@@ -570,7 +630,7 @@ async function updateReportsUI(range = 'day') {
             });
         }
     } catch (err) {
-        console.error(err);
+        console.error("[REPORTS_UI_ERROR]:", err);
     }
 }
 
@@ -582,45 +642,61 @@ async function handleRegisterUser(e) {
     const name = document.getElementById("new-u-name").value.trim();
     const email = document.getElementById("new-u-email").value.trim();
     const role = document.getElementById("new-u-role").value;
+    const token = localStorage.getItem('pos_token');
 
     try {
         const response = await fetch('/api/v1/users', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ name, email, role })
         });
-        if (!response.ok) throw new Error('Error al registrar personal.');
+        if (!response.ok) throw new Error('Error al registrar personal en el servidor.');
         document.getElementById("add-user-form").reset();
         await renderUsersTable();
+        alert('👥 Empleado registrado correctamente.');
     } catch (err) {
-        alert(err.message);
+        alert(`❌ Error: ${err.message}`);
     }
 }
 
 async function renderUsersTable() {
     const tbody = document.getElementById("users-body");
     if (!tbody) return;
+    const token = localStorage.getItem('pos_token');
+    
     try {
-        const response = await fetch('/api/v1/users');
+        const response = await fetch('/api/v1/users', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const result = await response.json();
         tbody.innerHTML = "";
         (result.data || []).forEach(u => {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${u.name}</td><td>${u.email}</td><td><strong style="color:var(--accent-rose)">${u.role}</strong></td>`;
+            tr.innerHTML = `<td>${u.name}</td><td>${u.email}</td><td><strong style="color:var(--accent-rose)">${u.role?.toUpperCase()}</strong></td>`;
             tbody.appendChild(tr);
         });
     } catch (err) {
-        console.error(err);
+        console.error("[RENDER_USERS_ERROR]:", err);
     }
 }
 
 /* ==========================================================================
-   INICIALIZADOR DE EVENTOS (IGNICIÓN FINAL DEL ARCHIVO)
+   INICIALIZADOR DE EVENTOS
    ========================================================================== */
 document.addEventListener("DOMContentLoaded", () => {
     setupNavigation();
+    checkActiveSession();
+    
     const loginForm = document.getElementById("login-form");
     if (loginForm) loginForm.addEventListener("submit", handleLogin);
+    
     const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+    if (logoutBtn) logoutBtn.addEventListener("click", () => {
+        localStorage.clear();
+        window.location.reload();
+    });
 });

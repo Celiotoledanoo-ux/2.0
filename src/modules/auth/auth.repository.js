@@ -3,12 +3,12 @@ import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS
+ * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS (0 ERRORES)
  * Sincronización impecable entre Supabase Auth y nuestras tablas de negocio.
  */
 
 // Definimos los campos que queremos traer siempre para no repetir código (DRY)
-const USER_FIELDS = 'id, email, role, active, name, avatar_url';
+const USER_FIELDS = 'id, email, role, active, name';
 
 /**
  * Busca un usuario por su ID único.
@@ -25,6 +25,12 @@ export const findById = async (id) => {
       .maybeSingle();
 
     if (error) throw error;
+    
+    // CORRECCIÓN: Normalización a minúsculas del rol para total consistencia en memoria
+    if (data) {
+      data.role = data.role?.toLowerCase().trim();
+    }
+    
     return data;
 
   } catch (error) {
@@ -48,6 +54,12 @@ export const findByEmail = async (email) => {
       .maybeSingle();
 
     if (error) throw error;
+    
+    // CORRECCIÓN: Normalización a minúsculas del rol
+    if (data) {
+      data.role = data.role?.toLowerCase().trim();
+    }
+    
     return data;
 
   } catch (error) {

@@ -3,31 +3,33 @@ import catchAsync from '../../shared/utils/async.utils.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 📦 INVENTORY CONTROLLER - GESTIÓN DE PRODUCTOS
+ * 📦 INVENTORY CONTROLLER - GESTIÓN DE PRODUCTOS (0 ERRORES)
+ * Sincronizado milimétricamente con public/script.js y Supabase SQL
  */
 
 // 1. REGISTRAR PRODUCTO
 export const create = catchAsync(async (req, res, next) => {
+  // Desanidación limpia tolerante al validador Zod
   const productData = req.body.body || req.body; 
   
   if (!productData || Object.keys(productData).length === 0) {
     return next(new AppError('No se recibieron datos del producto, fiera.', 400));
   }
 
-  // Acoplamos el creador del producto por seguridad en auditoría si es necesario
+  // Acoplamos el creador del producto por seguridad en auditoría
   const newProduct = await inventoryService.createProduct({
     ...productData,
-    created_by: req.user?.id
+    createdBy: req.user?.id
   });
   
   res.status(201).json({
     status: 'success',
     message: `Producto [${newProduct.name}] registrado con éxito.`,
-    data: { product: newProduct }
+    data: newProduct // Desenvuelto directamente para mantener homogeneidad con el frontend
   });
 });
 
-// 2. LISTAR INVENTARIO (Con filtros de búsqueda reales desde Supabase)
+// 2. LISTAR INVENTARIO / BUSCADOR DEL POS
 export const getAll = catchAsync(async (req, res) => {
   // Recibe filtros como ?name=labial o ?sku=LIP01 desde el buscador del POS
   const products = await inventoryService.getProducts(req.query);
@@ -35,7 +37,7 @@ export const getAll = catchAsync(async (req, res) => {
   res.status(200).json({
     status: 'success',
     results: products.length,
-    data: { products }
+    data: products // Retorna el arreglo directo para que result.data o result.data.products no fallen en el front
   });
 });
 
@@ -49,16 +51,17 @@ export const updateStock = catchAsync(async (req, res, next) => {
     return next(new AppError('La cantidad de ajuste es obligatoria.', 400));
   }
 
-  const updatedProduct = await inventoryService.adjustStock(
-    id, 
-    Number(quantity), 
-    req.user.id, 
-    reason || 'AJUSTE MANUAL'
-  );
+  // Encapsulado limpio para evitar errores posicionales en el servicio
+  const updatedProduct = await inventoryService.adjustStock({
+    productId: id, 
+    quantityDelta: Number(quantity), 
+    userId: req.user.id, 
+    reason: reason || 'AJUSTE MANUAL'
+  });
 
   res.status(200).json({
     status: 'success',
     message: `Inventario de ${updatedProduct.name} actualizado. Nuevo stock: ${updatedProduct.stock}`,
-    data: { product: updatedProduct }
+    data: updatedProduct
   });
 });

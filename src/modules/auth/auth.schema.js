@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
 /**
- * 🔐 AUTH VALIDATION SCHEMAS - POS LEGEND EDITION
- * Filtros de seguridad para que al Service solo llegue "oro puro".
+ * 🔐 AUTH VALIDATION SCHEMAS - POS LEGEND EDITION (2 ROLES)
  */
 
 export const loginSchema = z.object({
@@ -11,11 +10,11 @@ export const loginSchema = z.object({
       .string({ required_error: "El identificador es obligatorio, bro" })
       .trim()
       .min(3, "Identificador demasiado corto")
-      .toLowerCase(), // Normalizamos desde aquí
+      .toLowerCase(),
     
     password: z
       .string({ required_error: "La contraseña no puede estar vacía" })
-      .min(1, "Contraseña requerida") // En login no validamos fuerza, solo presencia
+      .min(1, "Contraseña requerida")
   })
 });
 
@@ -41,9 +40,10 @@ export const registerSchema = z.object({
       .regex(/[0-9]/, 'Métele al menos un número'),
       
     role: z
-      .enum(['ADMIN', 'CASHIER', 'MANAGER', 'OWNER'], {
-        error_map: () => ({ message: "Ese rol no existe en este negocio" })
+      .enum(['admin', 'cashier', 'ADMIN', 'CASHIER'], {
+        error_map: () => ({ message: "El rol debe ser admin o cashier, bro" })
       })
-      .default('CASHIER')
+      .transform(val => val.toLowerCase().trim()) // Homologa a minúsculas estrictas
+      .default('cashier')
   })
 });

@@ -20,15 +20,15 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// 🔥 CONFIANZA EN PROXY (Obligatorio para que Rate Limit funcione en Render)
+// 🔥 CONFIANZA EN PROXY (Obligatorio para que Rate Limit funcione de forma exacta en Render)
 app.set('trust proxy', 1);
 
-// --- 1. MONITOREO ---
+// --- 1. MONITOREO LOGÍSTICO ---
 app.use(httpLogger);
 
-// --- 2. SEGURIDAD (Helmet) ---
+// --- 2. SEGURIDAD RESTRICTIVA (Helmet) ---
 app.use(helmet({
-  contentSecurityPolicy: false, // Permite que tus scripts locales funcionen
+  contentSecurityPolicy: false, // Permite que tus scripts locales e íconos funcionen en la SPA
   crossOriginEmbedderPolicy: false
 }));
 
@@ -39,7 +39,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 }));
 
-// --- 4. RATE LIMIT (Escudo contra abusos) ---
+// --- 4. RATE LIMIT (Escudo contra abusos y denegación de servicios) ---
 app.use('/api/', rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: env.isProduction ? 100 : 5000, 
@@ -51,38 +51,38 @@ app.use('/api/', rateLimit({
   }
 }));
 
-// --- 5. PARSERS (Límites de carga por seguridad) ---
+// --- 5. PARSERS (Límites de carga estrictos por seguridad de desbordamiento) ---
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// --- 6. FRONTEND (Archivos estáticos) ---
+// --- 6. FRONTEND (Servidor de archivos estáticos) ---
 app.use(express.static(path.join(__dirname, 'public')));
-// NUEVA ADICIÓN: Expone de forma segura las librerías locales instaladas por NPM hacia el frontend
+// Expone de forma segura las librerías locales instaladas por NPM (como Chart.js o Remix Icons) hacia el frontend
 app.use('/vendor', express.static(path.join(__dirname, 'node_modules')));
 
 // --- 7. CARGA DINÁMICA DE MÓDULOS (API) ---
-// El loader devuelve el router global unificado
+// El loader devuelve el router global unificado de tu arquitectura modular
 app.use('/api/v1', initLoader());
 
-// --- 8. COMPATIBILIDAD CON RENDERIZADO DINÁMICO (SPA) ---
-// Si el cliente solicita una ruta de navegación web, le entregamos el index.html
-app.get(/^(?!\/api\/v1).*$/, (req, res, next) => {
-  // Ignoramos peticiones que busquen archivos con extensión (ej. .ico, .png)
+// --- 8. MANEJO DE RUTAS API MUERTAS REALES (404 JSON BLINDADO) ---
+-- CORRECCIÓN: Movido antes de la SPA. Captura de forma quirúrgica cualquier intento de API muerta (ej: /api/v2, /api/v1/falso)
+app.all('/api/*', (req, _res, next) => {
+  next(new AppError(`La ruta de la API solicitada [${req.originalUrl}] no existe en Glow POS 🧐`, HTTP_STATUS.NOT_FOUND || 404));
+});
+
+// --- 9. COMPATIBILIDAD CON RENDERIZADO DINÁMICO (SPA ROUTING) ---
+// Si el cliente solicita una ruta de navegación web (ej. /inventory o /pos), le entregamos el index.html
+app.get('*', (req, res, next) => {
+  // Ignoramos peticiones que busquen archivos físicos con extensión (ej. favicon.ico, logo.png) para que no den falsos bucles
   if (path.extname(req.path)) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- 9. MANEJO DE RUTAS API MUERTAS REALES (404) ---
-// Solo caerán aquí las rutas que empiecen con /api/v1 y no existan en el loader
-app.all('/api/v1/*', (req, _res, next) => {
-  next(new AppError(`La ruta de la API ${req.originalUrl} no existe en Glow POS 🧐`, HTTP_STATUS.NOT_FOUND));
-});
-
-// --- 10. GESTOR DE ERRORES GLOBAL ---
-// Siempre al final de todos los middlewares
+// --- 10. GESTOR DE ERRORES GLOBAL (El Último Muro) ---
+// Siempre al final de todo el hilo de Express para capturar excepciones de Zod, Supabase y AppError
 app.use(globalErrorHandler);
 
-// Reportamos que el motor está listo para recibir el server.js
-logger.info('✅ App.js configurado, blindado para SPA y listo para ignición.');
+// Reportamos al log de Render que el motor de Express está sellado
+logger.info('✅ App.js configurado, blindado contra fallas de SPA y listo para la ignición del servidor.');
 
 export default app;

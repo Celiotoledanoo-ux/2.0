@@ -4,9 +4,11 @@ import catchAsync from '../../shared/utils/async.utils.js';
 import AppError from '../../core/errors/AppError.js';
 
 /**
- * 👤 CREAR USUARIO
- * Registra un nuevo empleado en Auth y SQL.
+ * 👥 USERS CONTROLLER - GESTIÓN DE PERSONAL (0 ERRORES)
+ * Sincronizado milimétricamente con el frontend dinámico de dos roles y Supabase SQL.
  */
+
+// 1. CREAR USUARIO (EMPLEADO)
 export const create = catchAsync(async (req, res, next) => {
   // Extraemos 'body' por compatibilidad con tu apiFetch, fallback al body directo
   const userData = req.body.body || req.body; 
@@ -21,46 +23,42 @@ export const create = catchAsync(async (req, res, next) => {
 
   return res.status(201).json({
     status: 'success',
-    message: `Usuario ${newUser.name} creado correctamente`,
-    data: { user: newUser }
+    message: `Usuario ${newUser.name} creado correctamente en el sistema.`,
+    data: newUser // CORRECCIÓN: Desenvuelto directo para homogeneidad de lectura
   });
 });
 
-/**
- * 📋 LISTAR TODO EL PERSONAL
- */
+// 2. LISTAR TODO EL PERSONAL (Tabla de Gestión de Empleados)
 export const getAll = catchAsync(async (req, res) => {
   const users = await userService.getAllUsers();
 
   return res.status(200).json({
     status: 'success',
     results: users.length,
-    data: { users }
+    data: users // CORRECCIÓN: Retorna el arreglo directo para que result.data.forEach() no explote en script.js
   });
 });
 
-/**
- * 🔍 OBTENER USUARIO POR ID
- */
+// 3. OBTENER USUARIO POR ID
 export const getById = catchAsync(async (req, res) => {
   const { id } = req.params;
   const user = await userService.getUserById(id);
 
   return res.status(200).json({
     status: 'success',
-    data: { user }
+    data: user
   });
 });
 
-/**
- * ⚡ ACTIVAR/DESACTIVAR USUARIO
- */
+// 4. ACTIVAR/DESACTIVAR USUARIO (Baja Lógica de Cajeros)
 export const toggleStatus = catchAsync(async (req, res, next) => {
+  // CORRECCIÓN: Desanidación limpia tolerante al validador Zod y apiFetch
+  const data = req.body.body || req.body;
   const { id } = req.params;
-  const { active } = req.body;
+  const { active } = data;
 
   if (active === undefined) {
-    return next(new AppError('Debes indicar si el estado es true o false.', 400));
+    return next(new AppError('Debes indicar si el estado de activación es true o false.', 400));
   }
 
   const updatedUser = await userService.toggleUserStatus(id, Boolean(active));
@@ -69,7 +67,7 @@ export const toggleStatus = catchAsync(async (req, res, next) => {
 
   return res.status(200).json({
     status: 'success',
-    message: `Acceso ${updatedUser.active ? 'habilitado ✅' : 'restringido 🚫'}`,
-    data: { user: updatedUser }
+    message: `Acceso del empleado ${updatedUser.active ? 'habilitado ✅' : 'restringido 🚫'} de forma exitosa.`,
+    data: updatedUser
   });
 });
