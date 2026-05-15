@@ -65,7 +65,7 @@ app.use('/vendor', express.static(path.join(__dirname, 'node_modules')));
 app.use('/api/v1', initLoader());
 
 // --- 8. MANEJO DE RUTAS API MUERTAS REALES (404 JSON BLINDADO) ---
--- CORRECCIÓN: Movido antes de la SPA. Captura de forma quirúrgica cualquier intento de API muerta (ej: /api/v2, /api/v1/falso)
+// CORRECCIÓN: Se cambia el '--' de SQL por el '//' nativo de JavaScript para evitar el quiebre sintáctico
 app.all('/api/*', (req, _res, next) => {
   next(new AppError(`La ruta de la API solicitada [${req.originalUrl}] no existe en Glow POS 🧐`, HTTP_STATUS.NOT_FOUND || 404));
 });
