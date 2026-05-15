@@ -8,17 +8,18 @@
     <!-- ESTILOS LOCALES -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- REMIX ICONS (ENLACE CDN OFICIAL CON DIRECCIÓN COMPLETA) -->
-    <link href="jsdelivr.net" rel="stylesheet">
+    <!-- REMIX ICONS CORREGIDO -->
+    <link href="https://jsdelivr.net" rel="stylesheet">
 
-    <!-- GOOGLE FONTS (ENLACES DE INTEGRIDAD INTEGRAL PARA POPPINS) -->
-    <link rel="preconnect" href="googleapis.com">
-    <link rel="preconnect" href="gstatic.com" crossorigin>
-    <link href="googleapis.com" rel="stylesheet">
+    <!-- GOOGLE FONTS CORREGIDO -->
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- CHART.JS FOR FINANCIAL GRAPHICS (ENLACE CDN OFICIAL CON DIRECCIÓN COMPLETA) -->
-    <script src="jsdelivr.net"></script>
+    <!-- CHART.JS CORREGIDO -->
+    <script src="https://jsdelivr.net"></script>
 </head>
+
 <body>
 
 <div id="app">
