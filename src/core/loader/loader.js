@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import systemLoader from './src/core/loader/loader.js'; // Tu Loader optimizado
-import { globalErrorHandler } from './src/core/middlewares/error.middlewares.js';
+import systemLoader from './../core/loader/loader.js'; 
+import { globalErrorHandler } from './../core/middlewares/error.middlewares.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

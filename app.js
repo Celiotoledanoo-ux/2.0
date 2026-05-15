@@ -6,13 +6,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // 📡 IMPORTACIONES DE NÚCLEO (Asegurando extensiones .js)
-import { env } from './src/core/config/env.js'; 
-import initLoader from './src/core/loader/loader.js';
-import logger from './src/core/logger/logger.js';
-import httpLogger from './src/core/logger/httpLogger.js';
-import AppError from './src/core/errors/AppError.js';
-import { globalErrorHandler } from './src/core/middlewares/error.middlewares.js';
-import { HTTP_STATUS } from './src/shared/constants/httpStatusCodes.js';
+import { env } from './../core/config/env.js'; 
+import initLoader from './../core/loader/loader.js';
+import logger from './../core/logger/logger.js';
+import httpLogger from './../core/logger/httpLogger.js';
+import AppError from './../core/errors/AppError.js';
+import { globalErrorHandler } from './../core/middlewares/error.middlewares.js';
+import { HTTP_STATUS } from './../shared/constants/httpStatusCodes.js';
 
 // 🛠️ CONFIGURACIÓN DE RUTAS PARA ES MODULES
 const __filename = fileURLToPath(import.meta.url);
