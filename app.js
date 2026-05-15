@@ -57,6 +57,8 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // --- 6. FRONTEND (Archivos estáticos) ---
 app.use(express.static(path.join(__dirname, 'public')));
+// NUEVA ADICIÓN: Expone de forma segura las librerías locales instaladas por NPM hacia el frontend
+app.use('/vendor', express.static(path.join(__dirname, 'node_modules')));
 
 // --- 7. CARGA DINÁMICA DE MÓDULOS (API) ---
 // El loader devuelve el router global unificado
