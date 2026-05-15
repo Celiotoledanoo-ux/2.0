@@ -183,10 +183,11 @@ async function handleLogin(e) {
             submitBtn.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> Validando...`;
         }
 
+        // CORRECCIÓN: Se envía 'identifier' en lugar de 'email' para que el backend lo valide con éxito
         const response = await fetch('/api/v1/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ identifier: email, password }) 
         });
 
         const result = await response.json();
@@ -209,17 +210,6 @@ async function handleLogin(e) {
             submitBtn.innerHTML = `<i class="ri-login-circle-line"></i> Entrar al Sistema`;
         }
     }
-}
-
-function handleLogout() {
-    state.currentUser = null;
-    state.currentRole = null;
-    state.cart = [];
-    localStorage.removeItem('pos_token');
-    document.getElementById("main-system").classList.add("hidden");
-    document.getElementById("auth-screen").classList.remove("hidden");
-    document.getElementById("login-form").reset();
-    document.getElementById("content-root").innerHTML = "";
 }
 
 /* ==========================================================================
