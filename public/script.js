@@ -386,13 +386,25 @@ async function handleAddProduct(e) {
     const price = parseFloat(document.getElementById("p-price").value);
     const stock = parseInt(document.getElementById("p-stock").value);
 
+    // DIAGNÓSTICO: Extraemos el token por si la ruta del servidor lo requiere
+    const token = localStorage.getItem('pos_token');
+
     try {
         const response = await fetch('/api/v1/inventory', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // DIAGNÓSTICO: Envía la credencial de sesión
+            },
             body: JSON.stringify({ name, sku, price, stock })
         });
-        if (!response.ok) throw new Error('El SKU ya existe o los datos son inválidos.');
+        
+        // DIAGNÓSTICO: Leemos la respuesta estructurada del backend en vez de asumir error de SKU
+        const result = await response.json();
+        if (!response.ok || result.status === 'fail') {
+            throw new Error(result.message || 'El SKU ya existe o los datos son inválidos.');
+        }
+
         document.getElementById("product-form").reset();
         await renderInventory();
     } catch (err) {
