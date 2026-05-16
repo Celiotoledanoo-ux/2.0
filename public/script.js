@@ -393,39 +393,35 @@ document.addEventListener("DOMContentLoaded", () => {
         loginBtn.innerHTML = 'Cargando...';
       }
 
-      try {
-        const response = await fetch("/api/v1/auth/login", { // Ruta oficial de tu backend
+            try {
+        const response = await fetch("/api/v1/auth/login", { 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password })
         });
 
+        const respuestaServidor = await response.json();
+
         if (!response.ok) {
-          throw new Error("Credenciales inválidas");
+          throw new Error(respuestaServidor.message || "Credenciales inválidas");
         }
 
-        const data = await response.json();
+        // CORRECCIÓN CRÍTICA: Tu backend guarda todo dentro de la propiedad .data
+        const tokenReal = respuestaServidor.data.token;
+        const usuarioReal = respuestaServidor.data.user;
 
-        // Guardar sesión de forma atómica en el navegador
-        localStorage.setItem("pos_token", data.token);
-        localStorage.setItem("pos_user", JSON.stringify(data.user));
+        if (!tokenReal || !usuarioReal) {
+          throw new Error("El servidor no devolvió una estructura de sesión válida.");
+        }
 
-        showToast("¡Inicio de sesión correcto!");
+        // Guardar sesión de forma limpia y permanente en el navegador
+        localStorage.setItem("pos_token", tokenReal);
+        localStorage.setItem("pos_user", JSON.stringify(usuarioReal));
+
+        showToast(respuestaServidor.message || "¡Inicio de sesión correcto!");
         
-        // Activar la interfaz de ventas de inmediato
+        // Cambiar capas visuales SPA y jalar vitrinas de Supabase
         checkAuth();
-        cargarDatosDesdeServidor();
+        await cargarDatosDesdeServidor();
 
-      } catch (error) {
-        console.error(error);
-        showToast("Error: Usuario o contraseña incorrectos");
-        
-        // Restaurar el botón original si falla
-        if (loginBtn) {
-          loginBtn.disabled = false;
-          loginBtn.innerHTML = 'Ingresar';
-        }
       }
-    });
-  }
-
