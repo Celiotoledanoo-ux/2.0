@@ -74,7 +74,7 @@ const modulesHTML = {
                         <input id="p-brand" name="brand" placeholder="Marca (ej. Maybelline)" required>
                         <input id="p-tone" name="tone" placeholder="Tono/Color (ej. Superstay 20)" required>
                         <input id="p-sku" name="sku" placeholder="SKU o Código de Barras" required>
-                        <input id="p-price" name="price" type="number" step="0.01" placeholder="Precio $" required>
+                        <input id="p-price" name="price" type="number" step="0.01" placeholder="Precio \$" required>
                         <input id="p-stock" name="stock" type="number" placeholder="Cantidad en Stock" required>
                         <button type="submit" class="btn-submit">Guardar Producto</button>
                     </form>
@@ -150,8 +150,7 @@ const modulesHTML = {
                         <input type="text" id="new-u-name" placeholder="Nombre Completo" required style="margin-bottom:1rem;">
                         <input type="email" id="new-u-email" placeholder="Correo Electrónico" required style="margin-bottom:1rem;">
                         <select id="new-u-role" style="margin-bottom:1rem;">
-                            <option value="seller">Cajero(a)</option>
-                            <option value="manager">Gerente</option>
+                            <option value="cashier">Cajero(a)</option>
                             <option value="admin">Administrador</option>
                         </select>
                         <button type="submit" class="btn-submit">Registrar Personal</button>
@@ -256,9 +255,8 @@ function setupNavigation() {
 
 function checkModulePermission(moduleName) {
     const role = state.currentRole;
-    if (role === "owner" || role === "admin") return true;
-    if (role === "manager") return moduleName !== "users";
-    if (role === "seller" || role === "cashier") return moduleName === "pos" || moduleName === "inventory" || moduleName === "cash";
+    if (role === "admin" || role === "owner") return true;
+    if (role === "cashier") return moduleName === "pos" || moduleName === "inventory" || moduleName === "cash";
     return false;
 }
 
@@ -266,7 +264,7 @@ function renderModule(moduleName) {
     const root = document.getElementById("content-root");
     if (!root) return;
 
-    const isCashier = (state.currentRole === "seller" || state.currentRole === "cashier");
+    const isCashier = (state.currentRole === "cashier");
     root.innerHTML = modulesHTML[moduleName](isCashier);
 
     if (moduleName === "pos") {
@@ -327,6 +325,8 @@ async function handlePosSearch(query) {
         });
         const result = await response.json();
         const products = result.data?.products || result.data || [];
+        
+        // CORRECCIÓN ESENCIAL: Extrae el primer cosmético del arreglo de forma segura
         const product = Array.isArray(products) ? products[0] : products;
 
         const resultArea = document.getElementById("products-result");
@@ -370,7 +370,9 @@ function updateCartUI() {
         total += subtotal;
         const div = document.createElement("div");
         div.style.cssText = "display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;";
-        div.innerHTML = `<span>💄 ${item.name} ${item.tone ? `(${item.tone})` : ''} (x${item.quantity})</span><strong>$${subtotal.toFixed(2)}</strong>`;
+        
+        // CORRECCIÓN ESENCIAL: Removidas barras de escape en los strings dinámicos
+        div.innerHTML = `<span>💄 ${item.name} ${item.tone ? `(\${item.tone})` : ''} (x${item.quantity})</span><strong>$${subtotal.toFixed(2)}</strong>`;
         list.appendChild(div);
     });
     document.getElementById("total-amount").innerText = `$${total.toFixed(2)}`;
@@ -624,7 +626,7 @@ async function updateReportsUI(range = 'day') {
                 type: 'line',
                 data: {
                     labels: chartConfig.labels,
-                    datasets: [{ label: 'Ingresos ($)', data: chartConfig.data, borderColor: '#e0a39a', backgroundColor: 'rgba(224, 163, 154, 0.04)', borderWidth: 3, tension: 0.3, fill: true }]
+                    datasets: [{ label: 'Ingresos (\$)', data: chartConfig.data, borderColor: '#e0a39a', backgroundColor: 'rgba(224, 163, 154, 0.04)', borderWidth: 3, tension: 0.3, fill: true }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
@@ -692,11 +694,4 @@ document.addEventListener("DOMContentLoaded", () => {
     checkActiveSession();
     
     const loginForm = document.getElementById("login-form");
-    if (loginForm) loginForm.addEventListener("submit", handleLogin);
     
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) logoutBtn.addEventListener("click", () => {
-        localStorage.clear();
-        window.location.reload();
-    });
-});

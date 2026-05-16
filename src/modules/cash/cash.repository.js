@@ -64,9 +64,9 @@ export const updateSession = async (id, updateData) => {
 
 // 🌟 CORRECCIÓN CRÍTICA: 4. INSERTAR MOVIMIENTO MANUAL DE CAJA CHICA (inventory_logs)
 export const insertTransaction = async (transactionData) => {
-  // Mapeo seguro de las llaves del servicio a las columnas reales físicas de schema.sql
+  // CORRECCIÓN EFECTUADA: Se cambiaron los guiones `--` por las dos diagonales correspondientes a JS
   const logPayload = {
-    product_id: null, -- Campo nulo porque representa un movimiento de efectivo puro y no de maquillaje
+    product_id: null, // Campo nulo porque representa un movimiento de efectivo puro y no de maquillaje
     user_id: transactionData.user_id,
     change_amount: transactionData.type === 'IN' ? Number(transactionData.amount) : -Number(transactionData.amount), // Multiplica por -1 si es salida (OUT)
     reason: `[CAJA CHICA - ${transactionData.type}] ${transactionData.concept?.toUpperCase()}`

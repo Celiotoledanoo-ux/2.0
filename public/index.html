@@ -8,10 +8,10 @@
     <!-- ESTILOS LOCALES -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- REMIX ICONS (AHORA DESDE TU SERVIDOR DE RENDER) -->
+    <!-- REMIX ICONS (Servido de forma local por Express) -->
     <link href="/vendor/remixicon/fonts/remixicon.css" rel="stylesheet">
 
-    <!-- CHART.JS (AHORA DESDE TU SERVIDOR DE RENDER) -->
+    <!-- CHART.JS (Servido de forma local por Express) -->
     <script src="/vendor/chart.js/dist/chart.umd.js"></script>
 </head>
 <body>
@@ -28,19 +28,15 @@
             <h2>Glow Beauty</h2>
             <p class="login-subtitle">Sistema profesional POS</p>
 
-            <!-- CORRECCIÓN: ID capturado de forma lineal por el event listener del DOMContentLoaded de script.js -->
             <form id="login-form" autocomplete="off">
                 <div class="input-group">
                     <i class="ri-user-3-line"></i>
-                    <!-- Capturado por document.getElementById("email") en handleLogin -->
                     <input type="email" id="email" placeholder="Correo Electrónico" required>
                 </div>
                 <div class="input-group">
                     <i class="ri-lock-2-line"></i>
-                    <!-- Capturado por document.getElementById("password") en handleLogin -->
                     <input type="password" id="password" placeholder="Contraseña" required>
                 </div>
-                <!-- CORRECCIÓN: Botón configurado estrictamente con type="submit" para inyección de la animación ri-loader-4-line -->
                 <button type="submit" class="btn-primary">
                     <i class="ri-login-circle-line"></i> Entrar al Sistema
                 </button>
@@ -63,9 +59,7 @@
                 </div>
             </div>
             <div class="header-right">
-                <!-- CORRECCIÓN: ID donde script.js renderiza de forma atómica: ✨ Nombre (ROL) -->
                 <span id="user-display" class="user-badge"></span>
-                <!-- CORRECCIÓN: ID para el event listener de limpieza de localStorage -->
                 <button id="logoutBtn" class="btn-logout" title="Cerrar Sesión">
                     <i class="ri-logout-box-r-line"></i>
                 </button>
@@ -82,7 +76,7 @@
                         <h2>Beauty POS</h2>
                     </div>
                 </div>
-                <!-- MENU DE NAVEGACIÓN DINÁMICA DE DOS ROLES (Mapeados via data-module) -->
+                <!-- MENÚ DE NAVEGACIÓN DINÁMICA (Mapeado via data-module en script.js) -->
                 <nav class="sidebar-menu">
                     <button id="nav-pos" data-module="pos" class="active"><i class="ri-shopping-bag-3-line"></i> <span>Ventas</span></button>
                     <button id="nav-inventory" data-module="inventory"><i class="ri-store-2-line"></i> <span>Inventario</span></button>
@@ -97,16 +91,16 @@
                 </div>
             </aside>
 
-            <!-- 🎯 CONTENEDOR MAESTRO DE RENDERIZADO DINÁMICO (0 ERRORES) -->
+            <!-- 🎯 CONTENEDOR MAESTRO DE RENDERIZADO DINÁMICO -->
             <main id="content-root" class="content">
-                <!-- JavaScript inyectará aquí las plantillas HTML de los submódulos bajo demanda de forma atómica -->
+                <!-- El archivo script.js inyectará aquí las plantillas HTML de forma automática -->
             </main>
 
         </div>
     </div>
 </div>
 
-<!-- LÓGICA CENTRAL DEL PUNTO DE VENTA (Configurado con type="module" para soporte ESM nativo en Render) -->
+<!-- LÓGICA CENTRAL DEL PUNTO DE VENTA (Configurado con soporte ESM nativo) -->
 <script src="script.js" type="module"></script>
 </body>
 </html>

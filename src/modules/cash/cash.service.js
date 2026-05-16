@@ -5,11 +5,11 @@ import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
- * 💰 CASH SESSIONS SERVICE - EL CORAZÓN FINANCIERO (0 ERRORES)
+ * 💰 CASH SESSIONS SERVICE
  * Sincronizado milimétricamente con flujos mixtos, dos roles y el frontend.
  */
 
-// --- 1. APERTURA DE TURNO ---
+// 1. APERTURA DE TURNO ---
 export const openSession = async (userId, initialAmount) => {
   const activeSession = await cashRepo.findOpenSession();
   if (activeSession) {
@@ -26,8 +26,7 @@ export const openSession = async (userId, initialAmount) => {
   return session;
 };
 
-// --- 2. CORTE DE CAJA (CIERRE CON INTEGRACIÓN DE PAGOS MIXTOS) ---
--- CORRECCIÓN: Firma unificada a objeto estructurado para empatar con el controlador
+// 2. CORTE DE CAJA (CIERRE CON INTEGRACIÓN DE PAGOS MIXTOS) 
 export const closeSession = async ({ actualAmount, userId, notes }) => {
   const session = await cashRepo.findOpenSession();
   if (!session) throw new AppError('No hay ninguna caja abierta para cerrar, bro.', 404);
@@ -101,12 +100,12 @@ export const closeSession = async ({ actualAmount, userId, notes }) => {
   };
 };
 
-// --- 3. CONSULTAR ESTADO (Sincronizador integral de la UI) ---
+// 3. CONSULTAR ESTADO (Sincronizador integral de la UI) 
 export const getCurrentStatus = async () => {
   const session = await cashRepo.findOpenSession();
   if (!session) return { session: null, transactions: [] };
 
-  // CORRECCIÓN: Extrae los flujos manuales vigentes para alimentar la tabla del frontend
+  // EXTRAE LOS FLUJOS MANUALES VIGENTES PARA ALIMENTAR LA TABLA DEL FRONTEND
   const transactions = await cashRepo.findTransactionsSince(session.opened_at);
 
   return {
@@ -115,8 +114,8 @@ export const getCurrentStatus = async () => {
   };
 };
 
-// --- 4. PROCESAR ENTRADAS Y SALIDAS MANUALES (Flujos de Caja Chica) ---
--- CORRECCIÓN: Firma unificada a objeto estructurado
+// 4. PROCESAR ENTRADAS Y SALIDAS MANUALES (Flujos de Caja Chica)
+// CORRECCIÓN EFECTUADA: Se eliminaron los guiones `--` y se configuró como comentario nativo JS
 export const processFlow = async ({ type, amount, concept, userId }) => {
   const session = await cashRepo.findOpenSession();
   if (!session) {
@@ -161,7 +160,7 @@ export const processFlow = async ({ type, amount, concept, userId }) => {
     concept,
     balance: newBalance,
     user_id: userId,
-    product_id: null // Indicamos campo nulo en logs de inventario porque es un flujo puro de dinero
+    product_id: null 
   });
 
   logger.info({ event: 'CASH_FLOW_REGISTERED', type, amount, concept, user: userId });

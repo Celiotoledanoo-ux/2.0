@@ -63,8 +63,7 @@ export const registerUser = async (userData) => {
       id: authData.user.id,
       email: finalEmail,
       name: name.trim(),
-      role: cleanRole, -- CORRECCIÓN: Rol en minúsculas compatible con el ENUM de schema.sql
-      active: true
+      role: cleanRole,
     });
 
     return {

@@ -1,24 +1,25 @@
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { globalErrorHandler } from './../core/middlewares/error.middlewares.js';
+import { db } from '../database/supabaseClient.js';
+import logger from '../logger/logger.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+/**
+ * 🚀 SISTEMA DE CARGA CENTRALIZADO (LOADER)
+ * Inicializa los servicios del núcleo antes de que Express escuche peticiones.
+ */
+const initLoader = async (app) => {
+  try {
+    logger.info('⚙️ Iniciando cargador de módulos del sistema...');
 
-const app = express();
+    if (!db || !db.auth) {
+      throw new Error('El cliente de Supabase no se inicializó correctamente en database/supabaseClient.js');
+    }
+    logger.info('✅ Conexión con Supabase verificada con éxito.');
 
-app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+    logger.info('🎉 Inicialización logística completada.');
+    return true;
+  } catch (error) {
+    logger.error(`❌ Fallo crítico en el Loader: ${error.message}`);
+    throw error; 
+  }
+};
 
-// 🚀 IGNICIÓN ATÓMICA: Invocamos tu Loader para montar la infraestructura de rutas de un solo golpe
-const apiRouter = systemLoader();
-app.use('/api/v1', apiRouter);
-
-// Captura de rutas inexistentes y Middleware Global de Errores
-app.use(globalErrorHandler);
-
-export default app;
+export default initLoader;

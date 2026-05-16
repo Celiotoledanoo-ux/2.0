@@ -59,8 +59,8 @@ export const getTopSellingProducts = async (startDate, endDate) => {
 // 3. Monitor de Salud de Inventario (Semáforo Crítico)
 // CORRECCIÓN: Agregados brand y tone. Corregida la consulta comparativa para evitar quiebres en PostgREST
 export const getLowStockAlerts = async () => {
-  // Nota técnica: Para hacer una comparación de columna vs columna sin RPC, 
-  -- filtramos los activos y usaremos una consulta directa tolerada por Supabase
+  // Nota técnica: Para hacer una comparison de columna vs columna sin RPC, 
+  // CORRECCIÓN EFECTUADA: Se cambiaron los guiones `--` por las dos diagonales reglamentarias de JS
   const { data, error } = await db
     .from(INV_TABLE)
     .select('name, brand, tone, stock, min_stock, active')

@@ -3,26 +3,22 @@ import logger from '../../core/logger/logger.js';
 import catchAsync from '../../shared/utils/async.utils.js';
 
 /**
- * 🔐 LOGIN DE USUARIOS
+ * 🔐 CONTROLADOR DE AUTENTICACIÓN
  * El puente entre la validación (Schema) y la lógica (Service).
  */
-export const login = catchAsync(async (req, res) => {
-  // 1. Extracción limpia desde el body (pre-validado por Zod)
-  const { identifier, password } = req.body;
 
-  // 2. Llamada al servicio
+export const login = catchAsync(async (req, res) => {
+  const { identifier, password } = req.body;
   const result = await authService.login(identifier, password);
 
-  // 3. Auditoría de seguridad (Fundamental para un POS)
   logger.info({
     event: 'AUTH_LOGIN_SUCCESS',
-    user: result.user.email, // Usamos el email real del resultado, más preciso que el identifier
+    user: result.user.email,
     role: result.user.role,
     ip: req.ip,
-    userAgent: req.headers['user-agent'] // Agregamos esto para saber desde dónde entran
+    userAgent: req.headers['user-agent']
   });
 
-  // 4. Respuesta estructurada
   res.status(200).json({
     status: 'success',
     message: `¡Qué onda, ${result.user.name.split(' ')[0]}! Ya puedes operar.`,
@@ -30,12 +26,7 @@ export const login = catchAsync(async (req, res) => {
   });
 });
 
-/**
- * 🚪 LOGOUT
- * Notifica al servidor y prepara al cliente para la limpieza.
- */
 export const logout = catchAsync(async (req, res) => {
-  // Ejecutamos la lógica de cierre en el servicio (Supabase signOut)
   await authService.logout();
 
   logger.info({
@@ -47,5 +38,23 @@ export const logout = catchAsync(async (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'Sesión terminada. ¡Nos vemos en el próximo turno!'
+  });
+});
+
+export const register = catchAsync(async (req, res) => {
+  const newUser = await authService.register(req.body);
+
+  logger.info({
+    event: 'AUTH_USER_REGISTERED',
+    adminId: req.user?.id || 'SYSTEM',
+    newUserId: newUser.id,
+    newUserEmail: newUser.email,
+    newUserRole: newUser.role
+  });
+
+  res.status(201).json({
+    status: 'success',
+    message: 'Empleado registrado con éxito en el sistema.',
+    data: { user: newUser }
   });
 });

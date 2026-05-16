@@ -7,7 +7,6 @@ import AppError from '../../core/errors/AppError.js';
  * Perfección, limpieza y control total de sesiones.
  */
 
-// --- 1. LOGIN (Ya optimizado) ---
 export const login = async (identifier, password) => {
   const cleanEmail = identifier?.trim().toLowerCase();
   if (!cleanEmail || !password) throw new AppError('Email y contraseña requeridos.', 400);
@@ -35,32 +34,64 @@ export const login = async (identifier, password) => {
   };
 };
 
-// --- 2. REGISTER (Creación con Doble Validación) ---
 export const register = async (userData) => {
-  const { email, password, name, role = 'seller' } = userData;
+  const { email, name, role } = userData;
 
-  // Validación de seguridad
-  const existing = await authRepo.findByEmail(email);
-  if (existing) throw new AppError('Este correo ya está registrado.', 400);
+  // Sincronización estricta con el ENUM de Postgres
+  const cleanRole = role ? role.trim().toLowerCase() : 'cashier';
+  const cleanEmail = email?.trim().toLowerCase();
 
-  // Registro en Supabase Auth
+  const existing = await authRepo.findByEmail(cleanEmail);
+  if (existing) throw new AppError('Este correo ya está registrado en el Punto de Venta.', 400);
+
+  // Generación de contraseña por defecto ya que el admin registra desde su panel
+  const temporaryPassword = `GlowPos${new Date().getFullYear()}*`;
+
   const { data, error: signUpError } = await db.auth.signUp({
-    email: email.trim().toLowerCase(),
-    password,
-    options: { data: { full_name: name, role: role } }
+    email: cleanEmail,
+    password: temporaryPassword,
+    options: { 
+      data: { 
+        full_name: name.trim(), 
+        role: cleanRole 
+      } 
+    }
   });
 
   if (signUpError) throw new AppError(signUpError.message, 400);
+  const authUser = data?.user;
 
-  // Nota: El perfil en la tabla SQL 'users' se debería crear vía Database Trigger 
-  // en Supabase para asegurar la integridad atómica.
+  if (!authUser) throw new AppError('No se pudo recuperar el ID de autenticación generado.', 500);
+
+  // Inserción explícita en cascada hacia la tabla pública SQL 'users'
+  const { error: profileError } = await db
+    .from('users')
+    .insert([
+      {
+        id: authUser.id,
+        name: name.trim(),
+        email: cleanEmail,
+        role: cleanRole,
+        active: true
+      }
+    ]);
+
+  if (profileError) {
+    console.error('[PROFILE_CREATION_WARNING]:', profileError.message);
+    if (profileError.code !== '23505') {
+      throw new AppError(`Cuenta creada en Auth, pero falló el perfil en base de datos: ${profileError.message}`, 500);
+    }
+  }
+
   return {
-    message: 'Usuario creado exitosamente. Revisa tu correo si la confirmación está activa.',
-    userId: data.user?.id
+    id: authUser.id,
+    email: authUser.email,
+    role: cleanRole,
+    temporaryKey: temporaryPassword,
+    message: 'Empleado dado de alta de forma exitosa en la boutique.'
   };
 };
 
-// --- 3. REFRESH TOKEN (Para que la sesión no muera) ---
 export const refreshSession = async (refreshToken) => {
   if (!refreshToken) throw new AppError('No hay token de refresco disponible.', 400);
 
@@ -78,7 +109,6 @@ export const refreshSession = async (refreshToken) => {
   };
 };
 
-// --- 4. LOGOUT (Cierre Limpio) ---
 export const logout = async () => {
   const { error } = await db.auth.signOut();
   if (error) {

@@ -27,10 +27,11 @@ export const create = async (returnData) => {
 // 2. Crear detalle de items devueltos (Reintegración de stock en el almacén)
 // CORRECCIÓN: Remapeado de 'return_items' a 'inventory_logs' en estricta conformidad con schema.sql
 export const createReturnItem = async (itemData) => {
+  // CORRECCIÓN EFECTUADA: Se cambiaron los guiones `--` por las dos diagonales reglamentarias de JS
   const logPayload = {
     product_id: itemData.product_id,
     user_id: itemData.user_id || null, // Permite asociar qué cajero auditó la devolución
-    change_amount: Math.abs(itemData.quantity), -- El reingreso de stock siempre es positivo
+    change_amount: Math.abs(itemData.quantity), // El reingreso de stock siempre es positivo
     reason: `DEVOLUCIÓN REF TICKET: ${itemData.return_id ? itemData.return_id.split('-')[0].toUpperCase() : 'MANUAL'}`
   };
 
