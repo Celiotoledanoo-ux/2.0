@@ -319,3 +319,115 @@ tr:last-child {
 ::-webkit-scrollbar-thumb:hover {
   background: #a3a3a3;
 }
+
+/* ==========================================================================
+   💄 MAQUILLAJE VISUAL PARA EL LOGIN PREMIUM (CANVA BOUTIQUE STYLE)
+   ========================================================================== */
+
+/* Contenedor que centra todo en la pantalla */
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%); /* Fondo oscuro elegante */
+  z-index: 9999; /* Se superpone a todo si no hay sesión */
+  padding: 1.5rem;
+}
+
+/* La tarjeta blanca boutique */
+.login-card {
+  background: #ffffff;
+  padding: 3rem 2.5rem;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px; /* Tamaño perfecto para escritorio y móvil */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+/* El título con tipografía serif elegante */
+.login-card h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.03em;
+}
+
+/* Subtítulo atenuado */
+.login-card p.text-dim {
+  font-family: 'DM Sans', sans-serif;
+  color: #737373;
+  font-size: 0.95rem;
+  margin-bottom: 2.5rem;
+}
+
+/* Envoltura de los campos */
+.form-group {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+/* Etiquetas sutiles arriba de los inputs */
+.form-group label {
+  display: block;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  tracking: 0.05em;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+/* Inputs estilizados */
+.login-card .input-field {
+  width: 100%;
+  background: #f9f9f9;
+  border: 1px solid #e5e5e5;
+  color: #1a1a1a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+/* Efecto cuando el cajero hace clic en el input */
+.login-card .input-field:focus {
+  border-color: #1a1a1a;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(26, 26, 26, 0.05);
+}
+
+/* Botón de ingreso elegante */
+.btn-submit {
+  width: 100%;
+  background: #1a1a1a;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efecto hover del botón */
+.btn-submit:hover {
+  background: #404040;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-submit:active {
+  transform: translateY(0);
+}
