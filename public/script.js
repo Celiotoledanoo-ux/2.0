@@ -1,4 +1,4 @@
-/// ==========================================
+// ==========================================
 // ESTADO GLOBAL DE LA APLICACIÓN
 // ==========================================
 let allData = [];
@@ -12,7 +12,7 @@ const fmt = (n) =>
     maximumFractionDigits: 2,
   });
 
-// Sistema de Notificaciones Toast (Canva Premium Layout)
+// Sistema de Notificaciones Toast
 function showToast(msg) {
   const toast = document.getElementById("toast");
   if (!toast) return alert(msg);
@@ -22,7 +22,7 @@ function showToast(msg) {
 }
 
 // ==========================================
-// CONTROL DE SESIÓN EN UNA SOLA PÁGINA (CORREGIDO)
+// CONTROL DE SESIÓN EN PANTALLA ÚNICA
 // ==========================================
 function checkAuth() {
   const token = localStorage.getItem("pos_token");
@@ -31,7 +31,6 @@ function checkAuth() {
   const mainApp = document.getElementById("content-root");
 
   if (!token || !userData) {
-    // Si no hay sesión, muestra el login y oculta la app principal
     if (authScreen) authScreen.classList.remove("hidden");
     if (mainApp) mainApp.classList.add("hidden");
     return false;
@@ -39,37 +38,33 @@ function checkAuth() {
 
   currentUser = JSON.parse(userData);
   
-  // Ocultar login y liberar interfaz principal
   if (authScreen) authScreen.classList.add("hidden");
   if (mainApp) mainApp.classList.remove("hidden");
 
-  // Inyectar credenciales del empleado en el header
+  // Inyectar nombre y rol del empleado (admin / cashier según tu ENUM)
   const userDisplay = document.getElementById("user-display");
   if (userDisplay) {
+    const rolFormateado = currentUser.role === 'admin' ? 'Administrador' : 'Cajero';
     userDisplay.innerHTML = `
       <span class="font-bold">${currentUser.name || 'Empleado'}</span>
-      <span class="text-xs block text-gray-400">${currentUser.role || 'Cajero'}</span>
+      <span class="text-xs block text-gray-400">${rolFormateado}</span>
     `;
   }
   return true;
 }
 
 // ==========================================
-// ENRUTADOR POR MÓDULOS (CORREGIDO: data-module)
+// ENRUTADOR POR MÓDULOS (data-module)
 // ==========================================
 document.querySelectorAll(".sidebar-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    // Animación estética de botones activos
     document.querySelectorAll(".sidebar-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
 
-    // Ocultar todas las vistas de la interfaz
     document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
     
-    // Mapeo adaptado a los data-module de tu index.html
     const targetModule = btn.dataset.module;
     const targetView = document.getElementById("view-" + targetModule);
-    
     if (targetView) {
       targetView.classList.add("active");
       initModuleData(targetModule);
@@ -95,7 +90,7 @@ function initModuleData(moduleName) {
 }
 
 // ==========================================
-// ESCANER DE CÓDIGO DE BARRAS (#barcode-input)
+// CORRECCIÓN: ESCANER ADAPTADO A TU COLUMNA 'sku'
 // ==========================================
 const barcodeInput = document.getElementById("barcode-input");
 if (barcodeInput) {
@@ -105,14 +100,14 @@ if (barcodeInput) {
       const code = this.value.trim();
       if (!code) return;
 
-      // Buscar usando identificadores de base de datos e inyectar nombre real
-      const product = allData.find(p => p.barcode === code || p.__backendId === code);
+      // CORRECCIÓN: Buscamos por 'sku' e 'id' tal como definiste en tu SQL
+      const product = allData.find(p => p.sku === code || p.id === code);
 
       if (product) {
         agregarAlCarritoPorObjeto(product, 1);
         showToast(`Agregado: ${product.name}`);
       } else {
-        showToast("Producto no registrado o sin inventario");
+        showToast("Producto no registrado o sin inventario en vitrina");
       }
       this.value = "";
     }
@@ -133,7 +128,7 @@ updateClock();
 setInterval(updateClock, 30000);
 
 // ==========================================
-// SELECTOR MANUAL (CORREGIDO: FORMATO SUPABASE name/stock)
+// CORRECCIÓN: SELECTOR CON LAS COLUMNAS REALES DE TU SQL
 // ==========================================
 function refreshProductSelect() {
   const select = document.getElementById("cart-product-select");
@@ -143,11 +138,14 @@ function refreshProductSelect() {
   select.innerHTML = `<option value="">Seleccionar manualmente...</option>`;
 
   allData
-    .filter((p) => p.type === "product" && p.stock > 0) // Uso de .stock
+    .filter((p) => p.stock > 0) // Usamos 'stock' de tu schema
     .forEach((p) => {
       const option = document.createElement("option");
-      option.value = p.__backendId;
-      option.textContent = `${p.name} — ${fmt(p.price)} (${p.stock} disp.)`; // Uso de .name y .stock
+      option.value = p.id; // CORRECCIÓN: 'p.id' en lugar de backendId
+      
+      // Inyectamos marca y tono para que luzca premium como pide tu negocio Glow Beauty
+      const marcaTono = (p.brand && p.tone) ? ` [${p.brand} - ${p.tone}]` : '';
+      option.textContent = `${p.name}${marcaTono} — ${fmt(p.price)} (${p.stock} disp.)`;
       select.appendChild(option);
     });
 
@@ -166,23 +164,23 @@ function addToCart() {
 
   if (!productId) return showToast("Selecciona un producto");
 
-  const product = allData.find((r) => r.__backendId === productId);
+  const product = allData.find((r) => r.id === productId);
   if (!product) return;
 
   agregarAlCarritoPorObjeto(product, qty);
 }
 
 function agregarAlCarritoPorObjeto(product, qty) {
-  const existing = cart.find((c) => c.id === product.__backendId);
+  const existing = cart.find((c) => c.id === product.id); // Sincronizado con 'id'
 
   if (existing) {
-    if (existing.qty + qty > product.stock) return showToast("Stock insuficiente"); // .stock
+    if (existing.qty + qty > product.stock) return showToast("Stock insuficiente en vitrina");
     existing.qty += qty;
   } else {
-    if (qty > product.stock) return showToast("Stock insuficiente"); // .stock
+    if (qty > product.stock) return showToast("Stock insuficiente en vitrina");
     cart.push({
-      id: product.__backendId,
-      name: product.name, // .name
+      id: product.id,
+      name: product.name,
       price: product.price,
       qty,
     });
@@ -246,17 +244,17 @@ function renderCart() {
 }
 
 // ==========================================
-// CONEXIÓN REAL CON NODE.JS (CORREGIDO: /api/v1/inventory)
+// CONEXIÓN REAL CON TU BACKEND (API /v1/inventory)
 // ==========================================
 async function cargarDatosDesdeServidor() {
   try {
-    const response = await fetch("/api/v1/inventory", { // Endpoint oficial alineado
+    const response = await fetch("/api/v1/inventory", {
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("pos_token")}`
       }
     });
 
-    if (!response.ok) { // .ok de JS nativo
+    if (!response.ok) {
       if (response.status === 401) {
         checkAuth();
         return;
@@ -272,12 +270,12 @@ async function cargarDatosDesdeServidor() {
     
   } catch (error) {
     console.error("Error conectando con la base de datos:", error);
-    showToast("Modo desconectado: Cargando catálogo local de contingencia");
+    showToast("Modo contingencia: Cargando catálogo local");
     
-    // Fallback mapeado correctamente con el formato del Schema de PostgreSQL
+    // Semillas adaptadas milimétricamente a tu tabla 'inventory' de Glow Beauty POS
     allData = [
-      { __backendId: "1", type: "product", name: "Coca Cola 600ml", price: 18.50, stock: 25, barcode: "7501055300075" },
-      { __backendId: "2", type: "product", name: "Papas Sabritas Sal 50g", price: 17.00, stock: 12, barcode: "7501011111111" }
+      { id: "1", name: "Labial Superstay 20", brand: "Maybelline", tone: "Pioneer", price: 199.00, stock: 15, sku: "7501055300075" },
+      { id: "2", name: "Base Fit Me Mousse", brand: "Maybelline", tone: "120 Classic Ivory", price: 245.00, stock: 8, sku: "7501011111111" }
     ];
     refreshProductSelect();
     renderCart();
@@ -285,7 +283,7 @@ async function cargarDatosDesdeServidor() {
 }
 
 // ==========================================
-// PROCESAMIENTO DE PAGOS MIXTOS (/api/v1/sales)
+// CORRECCIÓN: COBROS MIXTOS ENLAZADOS CON TU TABLA 'sales'
 // ==========================================
 async function procesarPagoMixto() {
   if (cart.length === 0) return showToast("El carrito está vacío");
@@ -303,26 +301,30 @@ async function procesarPagoMixto() {
     return showToast(`Monto insuficiente. Falta: ${fmt(totalVenta - totalPagado)}`);
   }
 
+  // Definir el método de pago para tu columna 'payment_method'
+  let metodoPago = "MIXTO";
+  if (cashAmount > 0 && digitalAmount === 0) metodoPago = "EFECTIVO";
+  if (digitalAmount > 0 && cashAmount === 0) metodoPago = "DIGITAL";
+
   const btnCobrar = document.getElementById("checkout-btn");
   if (btnCobrar) btnCobrar.disabled = true;
 
   try {
+    // Estructura limpia lista para ser recibida por tus módulos de Node e insertada en tu SQL
     const saleData = {
-      items: cart.map(item => ({
-        product_id: item.id,
-        qty: item.qty,
-        price: item.price
-      })),
       total: totalVenta,
-      payment_method: {
-        cash: cashAmount,
-        digital: digitalAmount
-      },
-      change: totalPagado - totalVenta,
-      timestamp: new Date().toISOString()
+      payment_method: metodoPago,
+      cash_amount: cashAmount,       // Columna cash_amount de tu SQL
+      digital_amount: digitalAmount, // Columna digital_amount de tu SQL
+      notes: "Venta realizada desde el panel de cobro rápido",
+      items: cart.map(item => ({
+        product_id: item.id,       // Llave foránea product_id para sales_items
+        quantity: item.qty,        // Columna quantity para sales_items
+        price_at_sale: item.price  // Columna price_at_sale para sales_items
+      }))
     };
 
-    const response = await fetch("/api/v1/sales", { // Endpoint oficial de facturación
+    const response = await fetch("/api/v1/sales", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -331,35 +333,33 @@ async function procesarPagoMixto() {
       body: JSON.stringify(saleData)
     });
 
-    if (!response.ok) throw new Error("Fallo al registrar venta");
+    if (!response.ok) throw new Error("Fallo al registrar la venta en PostgreSQL");
 
-    showToast(`¡Venta Exitosa! Cambio: ${fmt(totalPagado - totalVenta)}`);
+    showToast(`¡Venta procesada con éxito! Cambio: ${fmt(totalPagado - totalVenta)}`);
     
-    // Resetear entorno de cobro
+    // Resetear estados e inputs
     cart = [];
     if (cashInput) cashInput.value = "";
     if (digitalInput) digitalInput.value = "";
     renderCart();
-    await cargarDatosDesdeServidor(); // Arqueo e inventario local actualizado
+    await cargarDatosDesdeServidor(); // Sincroniza el stock descontado por el trigger SQL
     
   } catch (error) {
     console.error(error);
-    showToast("Error crítico al procesar el cobro en el servidor");
+    showToast("Error crítico: El trigger de stock o el servidor rechazaron la venta");
   } finally {
     if (btnCobrar) btnCobrar.disabled = false;
   }
 }
 
 // ==========================================
-// INICIALIZACIÓN AUTOMÁTICA AL CARGAR
+// INICIALIZACIÓN DE LA APLICACIÓN AL CARGAR
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-  // Validar sesión activa en la SPA antes de pintar datos
   if (checkAuth()) {
     cargarDatosDesdeServidor();
   }
   
-  // Enlaces de disparadores manuales
   const addBtn = document.getElementById("add-to-cart-btn");
   if (addBtn) addBtn.addEventListener("click", addToCart);
 
