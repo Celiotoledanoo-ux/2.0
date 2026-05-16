@@ -229,20 +229,18 @@
   <!-- ==========================================================================
        📡 CARGA ORDENADA DE SCRIPT E ICONOS
        ========================================================================== -->
-  
-  <!-- 1. Librería CDN oficial de Lucide Icons (Apunta directamente al archivo JS) -->
-  <script src="https://unpkg.com"></script>
+  <!-- 1. Carga Lucide directamente desde tus node_modules locales gracias a app.use('/vendor') -->
+<script src="/vendor/lucide/dist/umd/lucide.min.js"></script>
 
-  <!-- 2. Tu motor lógico interactivo global unificado -->
-  <script src="script.js"></script>
+<!-- 2. Tu lógica global -->
+<script src="script.js"></script>
 
-  <!-- 3. Disparador seguro post-renderizado para inyectar vectores gráficos -->
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-      }
-    });
-  </script>
+<!-- 3. Renderizador -->
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+</script>
+
 </body>
 </html>

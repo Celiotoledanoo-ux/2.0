@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 // 📡 IMPORTACIONES DE NÚCLEO
 import { env } from './src/core/config/env.js'; 
-import apiRouter from './src/routes/index.js'; // ➔ CORREGIDO: Importamos tu enrutador maestro real
+import apiRouter from './src/routes/index.js'; 
 import logger from './src/core/logger/logger.js';    
 import httpLogger from './src/core/logger/httpLogger.js'; 
 import AppError from './src/core/errors/AppError.js'; 
@@ -56,11 +56,14 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // --- 6. FRONTEND (Servidor de archivos estáticos) ---
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/vendor', express.static(path.join(__dirname, 'node_modules')));
+// CORREGIDO: Aseguramos rutas absolutas limpias para evitar fallos de ubicación en despliegue
+const publicPath = path.resolve(__dirname, 'public');
+const nodeModulesPath = path.resolve(__dirname, 'node_modules');
+
+app.use(express.static(publicPath));
+app.use('/vendor', express.static(nodeModulesPath));
 
 // --- 7. MONTAJE DE RUTAS DE LA API ---
-// CORREGIDO: Pasamos directamente tu enrutador maestro sin invocar funciones erróneas
 app.use('/api/v1', apiRouter);
 
 // --- 8. MANEJO DE RUTAS API MUERTAS REALES (404 JSON BLINDADO) ---
@@ -71,7 +74,7 @@ app.all('/api/*', (req, _res, next) => {
 // --- 9. COMPATIBILIDAD CON RENDERIZADO DINÁMICO (SPA ROUTING) ---
 app.get('*', (req, res, next) => {
   if (path.extname(req.path)) return next();
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // --- 10. GESTOR DE ERRORES GLOBAL (El Último Muro) ---
