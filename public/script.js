@@ -41,10 +41,11 @@ function checkAuth() {
   if (authScreen) authScreen.classList.add("hidden");
   if (mainApp) mainApp.classList.remove("hidden");
 
-  // Inyectar nombre y rol del empleado (admin / cashier según tu ENUM)
+  // INYECCIÓN DINÁMICA: Acepta cualquier rol que venga de tu base de datos (3 o 4 roles)
   const userDisplay = document.getElementById("user-display");
-  if (userDisplay) {
-    const rolFormateado = currentUser.role === 'admin' ? 'Administrador' : 'Cajero';
+  if (userDisplay && currentUser.role) {
+    // Convierte el rol a mayúsculas para mantener la estética premium (ej: GERENTE, CAJERO)
+    const rolFormateado = currentUser.role.toUpperCase();
     userDisplay.innerHTML = `
       <span class="font-bold">${currentUser.name || 'Empleado'}</span>
       <span class="text-xs block text-gray-400">${rolFormateado}</span>
