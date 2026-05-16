@@ -368,3 +368,63 @@ document.addEventListener("DOMContentLoaded", () => {
   
   if (window.lucide) lucide.createIcons();
 });
+
+  // ==========================================
+  // DISPARADOR PARA PROCESAR EL INICIO DE SESIÓN
+  // ==========================================
+  const loginForm = document.getElementById("login-form");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault(); // Evita que la página se recargue
+
+      const emailInput = document.getElementById("login-email");
+      const passwordInput = document.getElementById("login-password");
+      const loginBtn = document.getElementById("login-submit-btn");
+
+      if (!emailInput || !passwordInput) return;
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      // Animación estética de Canva en el botón
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = 'Cargando...';
+      }
+
+      try {
+        const response = await fetch("/api/v1/auth/login", { // Ruta oficial de tu backend
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+          throw new Error("Credenciales inválidas");
+        }
+
+        const data = await response.json();
+
+        // Guardar sesión de forma atómica en el navegador
+        localStorage.setItem("pos_token", data.token);
+        localStorage.setItem("pos_user", JSON.stringify(data.user));
+
+        showToast("¡Inicio de sesión correcto!");
+        
+        // Activar la interfaz de ventas de inmediato
+        checkAuth();
+        cargarDatosDesdeServidor();
+
+      } catch (error) {
+        console.error(error);
+        showToast("Error: Usuario o contraseña incorrectos");
+        
+        // Restaurar el botón original si falla
+        if (loginBtn) {
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = 'Ingresar';
+        }
+      }
+    });
+  }
+
