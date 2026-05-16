@@ -1,20 +1,22 @@
 import { z } from 'zod';
 
 /**
- * 🔐 AUTH VALIDATION SCHEMAS - POS LEGEND EDITION (2 ROLES)
+ * 🔐 AUTH VALIDATION SCHEMAS - GLOW BEAUTY POS (4 ROLES)
+ * Sincronizado milimétricamente con el frontend y tu base de datos Supabase
  */
 
 export const loginSchema = z.object({
   body: z.object({
-    identifier: z
-      .string({ required_error: "El identificador es obligatorio, bro" })
-      .trim()
-      .min(3, "Identificador demasiado corto")
-      .toLowerCase(),
+    // MEJORA: Acepta tanto 'email' como 'identifier' de forma flexible
+    email: z.string().trim().email("Eso no parece un correo real, fiera").toLowerCase().optional(),
+    identifier: z.string().trim().min(3, "Identificador demasiado corto").toLowerCase().optional(),
     
     password: z
       .string({ required_error: "La contraseña no puede estar vacía" })
       .min(1, "Contraseña requerida")
+  }).refine(data => data.email || data.identifier, {
+    message: "El correo o identificador es obligatorio, bro",
+    path: ["email"]
   })
 });
 
@@ -39,11 +41,12 @@ export const registerSchema = z.object({
       .regex(/[A-Z]/, 'Métele al menos una mayúscula')
       .regex(/[0-9]/, 'Métele al menos un número'),
       
+    // CORRECCIÓN: Ampliado el ENUM para dar soporte total a tus 4 roles comerciales
     role: z
-      .enum(['admin', 'cashier', 'ADMIN', 'CASHIER'], {
-        error_map: () => ({ message: "El rol debe ser admin o cashier, bro" })
+      .enum(['admin', 'cashier', 'gerente', 'supervisor', 'ADMIN', 'CASHIER', 'GERENTE', 'SUPERVISOR'], {
+        error_map: () => ({ message: "Rol inválido. Elige entre admin, cashier, gerente o supervisor." })
       })
-      .transform(val => val.toLowerCase().trim()) // Homologa a minúsculas estrictas
+      .transform(val => val.toLowerCase().trim()) 
       .default('cashier')
   })
 });

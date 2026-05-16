@@ -3,13 +3,17 @@ import logger from '../../core/logger/logger.js';
 import catchAsync from '../../shared/utils/async.utils.js';
 
 /**
- * 🔐 CONTROLADOR DE AUTENTICACIÓN
- * El puente entre la validación (Schema) y la lógica (Service).
+ * 🔐 CONTROLADOR DE AUTENTICACIÓN - GLOW BEAUTY POS
+ * El puente inteligente entre la validación (Schema) y la lógica (Service).
  */
 
 export const login = catchAsync(async (req, res) => {
-  const { identifier, password } = req.body;
-  const result = await authService.login(identifier, password);
+  // MEJORA: Extrae de forma flexible el campo 'email' o 'identifier' que mande el script de Canva
+  const { email, identifier, password } = req.body;
+  const loginUser = identifier || email;
+
+  // Ejecutamos el servicio con el identificador resuelto
+  const result = await authService.login(loginUser, password);
 
   logger.info({
     event: 'AUTH_LOGIN_SUCCESS',
@@ -19,9 +23,12 @@ export const login = catchAsync(async (req, res) => {
     userAgent: req.headers['user-agent']
   });
 
+  // Mantenemos el formato de respuesta limpia sincronizado con tu script.js
   res.status(200).json({
     status: 'success',
     message: `¡Qué onda, ${result.user.name.split(' ')[0]}! Ya puedes operar.`,
+    token: result.token, // Clonamos los punteros principales a la raíz de la respuesta
+    user: result.user,   // Esto evita romper el localStorage del script.js
     data: result
   });
 });
