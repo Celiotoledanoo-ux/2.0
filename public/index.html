@@ -1,106 +1,140 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glow Beauty POS | Sistema Integral</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glow Beauty POS | Sistema Premium</title>
 
-    <!-- ESTILOS LOCALES -->
-    <link rel="stylesheet" href="style.css">
+  <!-- 🎨 CONFIGURACIÓN ESTÉTICA: TAILWIND & GOOGLE FONTS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
+  
+  <!-- ESTILOS LOCALES EXCLUSIVOS DE LA BOUTIQUE -->
+  <link rel="stylesheet" href="style.css" />
 
-    <!-- REMIX ICONS (Servido de forma local por Express) -->
-    <link href="/vendor/remixicon/fonts/remixicon.css" rel="stylesheet">
-
-    <!-- CHART.JS (Servido de forma local por Express) -->
-    <script src="/vendor/chart.js/dist/chart.umd.js"></script>
+  <!-- 📊 CHART.JS (Servido localmente desde Express para tus reportes dinámicos) -->
+  <script src="/vendor/chart.js/dist/chart.umd.js"></script>
 </head>
-<body>
+<body class="w-full bg-neutral-50 text-neutral-800 font-sans antialiased">
 
-<div id="app">
+  <div id="app">
 
-    <!-- 🔐 PANTALLA DE CONTROL DE ACCESO (LOGIN) -->
-    <section id="auth-screen" class="login-container">
-        <div class="login-overlay"></div>
-        <div class="login-card">
-            <div class="brand-logo">
-                <span role="img" aria-label="lipstick">💄</span>
-            </div>
-            <h2>Glow Beauty</h2>
-            <p class="login-subtitle">Sistema profesional POS</p>
-
-            <form id="login-form" autocomplete="off">
-                <div class="input-group">
-                    <i class="ri-user-3-line"></i>
-                    <input type="email" id="email" placeholder="Correo Electrónico" required>
-                </div>
-                <div class="input-group">
-                    <i class="ri-lock-2-line"></i>
-                    <input type="password" id="password" placeholder="Contraseña" required>
-                </div>
-                <button type="submit" class="btn-primary">
-                    <i class="ri-login-circle-line"></i> Entrar al Sistema
-                </button>
-            </form>
+    <!-- 🔐 1. PANTALLA DE CONTROL DE ACCESO (LOGIN BLINDADO) -->
+    <section id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 backdrop-blur-md login-container">
+      <div class="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl border border-neutral-100 transition-all duration-300 transform login-card">
+        <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-rose-50 text-rose-400 rounded-full text-2xl brand-logo">
+          <span role="img" aria-label="lipstick">💄</span>
         </div>
+        <h2 class="font-display text-3xl font-semibold text-center text-neutral-900 tracking-wide">Glow Beauty</h2>
+        <p class="text-xs text-center text-neutral-400 uppercase tracking-widest mt-1 mb-8 login-subtitle">Sistema Profesional POS</p>
+
+        <form id="login-form" autocomplete="off" class="space-y-5">
+          <div class="relative flex items-center input-group">
+            <i class="absolute left-4 text-neutral-400 text-sm" data-lucide="mail"></i>
+            <input type="email" id="email" class="w-full pl-11 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-400 transition" placeholder="Correo Electrónico" required />
+          </div>
+          <div class="relative flex items-center input-group">
+            <i class="absolute left-4 text-neutral-400 text-sm" data-lucide="lock"></i>
+            <input type="password" id="password" class="w-full pl-11 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-400 transition" placeholder="Contraseña" required />
+          </div>
+          <button type="submit" class="w-full py-3.5 bg-neutral-900 hover:bg-neutral-800 text-white font-medium rounded-xl text-sm shadow-md flex items-center justify-center gap-2 transition btn-primary">
+            <i data-lucide="log-in" class="w-4 h-4"></i> Entrar al Sistema
+          </button>
+        </form>
+      </div>
     </section>
 
-    <!-- 🚀 ENTORNO DEL SISTEMA PRINCIPAL -->
-    <div id="main-system" class="hidden">
-
-        <!-- BARRA SUPERIOR DE INFORMACIÓN -->
-        <header class="topbar">
-            <div class="header-left">
-                <button id="toggleBtn" class="hamburger" aria-label="Menú">
-                    <i class="ri-menu-line"></i>
-                </button>
-                <div class="title-area">
-                    <h1>Glow Beauty POS</h1>
-                    <span class="subtitle">Boutique Management System</span>
-                </div>
-            </div>
-            <div class="header-right">
-                <span id="user-display" class="user-badge"></span>
-                <button id="logoutBtn" class="btn-logout" title="Cerrar Sesión">
-                    <i class="ri-logout-box-r-line"></i>
-                </button>
-            </div>
-        </header>
-
-        <div class="container">
-
-            <!-- PANEL DE NAVEGACIÓN LATERAL -->
-            <aside id="sidebar" class="sidebar">
-                <div class="sidebar-top">
-                    <div class="sidebar-logo">
-                        <span role="img" aria-label="lips">💋</span>
-                        <h2>Beauty POS</h2>
-                    </div>
-                </div>
-                <!-- MENÚ DE NAVEGACIÓN DINÁMICA (Mapeado via data-module en script.js) -->
-                <nav class="sidebar-menu">
-                    <button id="nav-pos" data-module="pos" class="active"><i class="ri-shopping-bag-3-line"></i> <span>Ventas</span></button>
-                    <button id="nav-inventory" data-module="inventory"><i class="ri-store-2-line"></i> <span>Inventario</span></button>
-                    <button id="nav-cash" data-module="cash"><i class="ri-safe-2-line"></i> <span>Caja</span></button>
-                    <button id="nav-reports" data-module="reports"><i class="ri-bar-chart-box-line"></i> <span>Reportes</span></button>
-                    <button id="nav-users" data-module="users"><i class="ri-team-line"></i> <span>Usuarios</span></button>
-                </nav>
-                <div class="sidebar-footer">
-                    <div class="store-status">
-                        <span class="status-dot"></span> Sistema Operativo
-                    </div>
-                </div>
-            </aside>
-
-            <!-- 🎯 CONTENEDOR MAESTRO DE RENDERIZADO DINÁMICO -->
-            <main id="content-root" class="content">
-                <!-- El archivo script.js inyectará aquí las plantillas HTML de forma automática -->
-            </main>
-
+    <!-- 🚀 2. ENTORNO DEL SISTEMA PRINCIPAL (SPA) -->
+    <div id="main-system" class="flex flex-col w-full h-screen hidden">
+      
+      <!-- BARRA SUPERIOR PREMIUM (TOPBAR) -->
+      <header class="flex items-center justify-between px-8 py-4 bg-white border-b border-neutral-100 topbar shrink-0">
+        <div class="flex items-center gap-4 header-left">
+          <button id="toggleBtn" class="p-2 hover:bg-neutral-50 rounded-lg text-neutral-500 hamburger" aria-label="Menú">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div class="title-area">
+            <h1 class="font-display text-xl font-medium tracking-wide text-neutral-900">Glow Beauty POS</h1>
+            <span class="text-xs text-neutral-400 uppercase tracking-widest block font-medium subtitle">Boutique Management System</span>
+          </div>
         </div>
-    </div>
-</div>
+        <div class="flex items-center gap-4 header-right">
+          <!-- Sincronizado atómicamente con el middleware de inyección de caja chica -->
+          <span id="user-display" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold tracking-wider uppercase user-badge"></span>
+          <button id="logoutBtn" class="p-2 bg-neutral-50 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-800 rounded-xl transition btn-logout" title="Cerrar Sesión">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </header>
 
-<!-- LÓGICA CENTRAL DEL PUNTO DE VENTA (Configurado con soporte ESM nativo) -->
-<script src="script.js" type="module"></script>
+      <!-- CUERPO DE TRABAJO -->
+      <div class="flex flex-1 w-full overflow-hidden container">
+
+        <!-- PANEL DE NAVEGACIÓN LATERAL (SIDEBAR DE DOS ROLES) -->
+        <nav class="flex flex-col w-64 shrink-0 bg-white border-r border-neutral-100 sidebar canva-sidebar h-full">
+          <div class="p-6 border-b border-neutral-100 sidebar-header hidden md:block">
+            <h2 class="font-display text-2xl font-bold tracking-wide text-neutral-900 brand-title">shopper beauty</h2>
+            <p class="text-xs font-medium text-neutral-400 uppercase tracking-widest mt-1 brand-subtitle">Punto de Venta</p>
+          </div>
+
+          <!-- MENÚ ADAPTATIVO: Conectado a la función de permisos de tu script.js mediante data-module -->
+          <div class="flex-1 py-4 flex flex-col gap-1 px-3 sidebar-menu">
+            <button id="nav-pos" data-module="pos" class="active flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-600 hover:bg-neutral-50 rounded-xl transition w-full text-left sidebar-btn">
+              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+              <span>Ventas</span>
+              <span id="cart-badge" class="badge ml-auto bg-neutral-900 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hidden">0</span>
+            </button>
+
+            <button id="nav-inventory" data-module="inventory" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-600 hover:bg-neutral-50 rounded-xl transition w-full text-left sidebar-btn">
+              <i data-lucide="package" class="w-4 h-4"></i>
+              <span>Inventario</span>
+            </button>
+
+            <button id="nav-cash" data-module="cash" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-600 hover:bg-neutral-50 rounded-xl transition w-full text-left sidebar-btn">
+              <i data-lucide="safe" class="w-4 h-4"></i>
+              <span>Caja Chica</span>
+            </button>
+
+            <button id="nav-reports" data-module="reports" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-600 hover:bg-neutral-50 rounded-xl transition w-full text-left sidebar-btn">
+              <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+              <span>Reportes</span>
+            </button>
+
+            <button id="nav-users" data-module="users" class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-600 hover:bg-neutral-50 rounded-xl transition w-full text-left sidebar-btn">
+              <i data-lucide="users" class="w-4 h-4"></i>
+              <span>Usuarios</span>
+            </button>
+          </div>
+
+          <div class="p-4 border-t border-neutral-100 bg-neutral-50/50 text-[11px] text-neutral-400 font-medium flex items-center justify-between footer-clock">
+            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Sistema En Línea</span>
+            <span id="datetime-display"></span>
+          </div>
+        </nav>
+
+        <!-- 🎯 CONTENEDOR MAESTRO DE RENDERIZADO DINÁMICO (0 ERRORES) -->
+        <!-- Tu script.js inyectará quirúrgicamente aquí el HTML fino de Canva bajo demanda -->
+        <main id="content-root" class="flex-1 overflow-y-auto p-8 main-content bg-neutral-50/50">
+          <div class="flex items-center justify-center h-full text-neutral-400 text-sm gap-2">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Inicializando vitrinas de cosméticos...
+          </div>
+        </main>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor flotante para notificaciones del cajero -->
+  <div id="toast" class="toast fixed bottom-5 right-5 z-50"></div>
+
+  <!-- 📡 CONEXIÓN MODULAR CON SOPORTE ESM NATIVO -->
+  <!-- Inicializa los iconos Lucide tras el renderizado de Express -->
+  <script type="module">
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  </script>
+  <script src="script.js" type="module"></script>
 </body>
 </html>

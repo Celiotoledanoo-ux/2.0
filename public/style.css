@@ -1,192 +1,320 @@
 /* ==========================================================================
-   🛒 CARRITO DE COMPRAS Y TOTALES
+   🎨 VARIABLES DE ESTILO PREMIUM (ESTÉTICA MINIMALISTA BOUTIQUE)
    ========================================================================== */
-.cart-list {
-    min-height: 180px;
-    max-height: 280px;
-    overflow-y: auto;
-    margin: 1rem 0;
-    border-bottom: 1px solid var(--border-color);
+:root {
+  /* Paleta de alto contraste de Canva (Inversión elegante) */
+  --gold: #1a1a1a;        /* Negro absoluto para elementos primarios */
+  --gold-light: #f5f5f5;  /* Blanco grisáceo para efectos hover */
+  --dark: #ffffff;        /* Fondo blanco puro premium */
+  --dark2: #f9f9f9;       /* Fondo suave para tarjetas y secciones */
+  --dark3: #eef2f3;       /* Gris claro para entradas y campos de texto */
+  --dark4: #e5e5e5;       /* Color de bordes sutiles lineales */
+  --text: #1a1a1a;        /* Texto principal de alta legibilidad */
+  --text-dim: #737373;    /* Texto secundario atenuado */
+  
+  /* Semáforo Logístico (Inyectado para alertas de stock y caja) */
+  --success: #10b981;     /* Verde esmeralda para ventas e ingresos */
+  --danger: #ef4444;      /* Rojo vibrante para faltantes y stock crítico */
+  --accent-rose: #fda4af; /* Rosa satinado para insignias cosméticas */
+  
+  --vh-unit: min(var(--vh, 1vh), 1vh);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --radius-md: 12px;
 }
 
-.cart-totals {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+/* ==========================================================================
+   🏛️ REGLAS GENERALES Y TIPOGRAFÍA DE BOUTIQUE
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-.total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--dark);
+  color: var(--text);
+  min-height: calc(100 * var(--vh-unit));
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-.total-row h3 {
-    font-size: 1.8rem;
-    color: var(--accent-rose);
+.font-display {
+  font-family: 'Playfair Display', serif;
 }
 
-.payment-area {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+.app-container {
+  min-height: calc(100 * var(--vh-unit));
 }
 
+.hidden {
+  display: none !important;
+}
+
+/* ==========================================================================
+   🛡️ CONTENEDORES MAESTROS (LOGIN Y CAPAS SPA)
+   ========================================================================== */
+.login-container {
+  background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
+}
+
+.login-card {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+}
+
+/* Barra superior de información unificada */
+.topbar {
+  background: var(--dark);
+  border-bottom: 1px solid var(--dark4);
+}
+
+.user-badge {
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+/* ==========================================================================
+   🗂️ PANEL LATERAL DE NAVEGACIÓN (SIDEBAR)
+   ========================================================================== */
+.sidebar {
+  border-color: var(--dark4);
+  background: var(--dark2);
+}
+
+.sidebar-header {
+  border-color: var(--dark4);
+}
+
+.brand-title {
+  color: var(--text);
+  letter-spacing: -0.05em;
+}
+
+.sidebar-btn {
+  transition: var(--transition);
+  border-left: 3px solid transparent;
+  color: var(--text-dim);
+}
+
+.sidebar-btn.active {
+  border-left-color: var(--gold);
+  background: var(--dark3);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.sidebar-btn:hover {
+  background: var(--dark3);
+  color: var(--text);
+}
+
+/* ==========================================================================
+   ⚡ ESTRUCTURA DE BOTONES Y COMPONENTES OPERATIVOS
+   ========================================================================== */
+.gold-btn, .btn-submit {
+  background: var(--gold);
+  color: var(--dark);
+  font-weight: 600;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.gold-btn:hover, .btn-submit:hover {
+  background: #333333;
+  transform: translateY(-1px);
+}
+
+/* Botón de éxito quirúrgico para el Punto de Venta */
 .btn-success {
-    background: linear-gradient(135deg, var(--success), #22998e);
-    color: #0f0e11;
+  background: var(--success);
+  color: var(--dark);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
 }
 
 .btn-success:hover {
-    box-shadow: 0 5px 15px rgba(46, 196, 182, 0.3);
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
 /* ==========================================================================
-   📦 TABLAS E INVENTARIO RESPONSIVO (0 ERRORES)
+   📦 ELEMENTOS DE DATOS (CARDS, TARJETAS, TABLAS E INPUTS)
    ========================================================================== */
-.inventory-layout, .users-layout {
-    display: grid;
-    grid-template-columns: 1fr 1.8fr;
-    gap: 1.5rem;
+.card {
+  background: var(--dark);
+  border: 1px solid var(--dark4);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
 }
 
-/* MEJORA RESPONSIVA: Adaptación atómica si el rol del usuario oculta el formulario */
-.inventory-layout[style*="grid-template-columns: 1fr"] {
-    grid-template-columns: 1fr !important;
+.input-field {
+  background: var(--dark2);
+  border: 1px solid var(--dark4);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  outline: none;
+  transition: var(--transition);
 }
 
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
+.input-field:focus {
+  border-color: var(--gold);
+  background: var(--dark);
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-    margin-top: 1rem;
+/* Tablas de existencias en vitrinas */
+.table-card {
+  overflow: hidden;
 }
 
-th, td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
+.table-head {
+  background: var(--dark2);
+  border-bottom: 1px solid var(--dark4);
 }
 
-th {
-    color: var(--text-muted);
-    font-weight: 600;
+.table-head th {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 11px;
+  tracking: 0.05em;
 }
 
-code {
-    background: var(--bg-input);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    color: var(--accent-rose);
+tr {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+tr:last-child {
+  border-bottom: none;
 }
 
 /* ==========================================================================
-   📊 INDICADORES Y REPORTES FINANCIALES
+   📊 INTEGRACIÓN DE MÓDULOS ESPECÍFICOS (REPORTES, CAJA Y TOASTS)
    ========================================================================== */
 .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .metric-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    border-left: 4px solid var(--accent-rose);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
 }
 
 .metric-icon {
-    font-size: 1.8rem;
-    background: rgba(224, 163, 154, 0.08);
-    padding: 0.5rem;
-    border-radius: var(--radius-md);
-}
-
-.metric-info h4 {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-}
-
-.metric-info p {
-    font-size: 1.3rem;
-    font-weight: 700;
-}
-
-.reports-tables-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-}
-
-/* Adaptación responsiva para teléfonos en la grid de reportes */
-@media (max-width: 768px) {
-    .inventory-layout, .users-layout, .reports-tables-grid {
-        grid-template-columns: 1fr !important;
-    }
+  font-size: 1.75rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dark2);
+  border-radius: 12px;
 }
 
 .report-list {
-    list-style: none;
-    margin-top: 1rem;
+  list-style: none;
+  display: flex;
+  flex-col: column;
+  gap: 0.75rem;
 }
 
 .report-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
-    gap: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--dark4);
+  font-size: 0.9rem;
 }
 
-/* MEJORA VISUAL: Trunca textos largos de cosméticos (marca/nombre/tono) de forma elegante */
-.report-list li span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 75%;
+.report-list li:last-child {
+  border-bottom: none;
+}
+
+/* Filtros dinámicos de rango comercial */
+.filter-group button.active {
+  background: var(--dark);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Notificaciones flotantes (Toasts) */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 14px 24px;
+  border-radius: 10px;
+  background: var(--text);
+  border: 1px solid var(--dark4);
+  color: var(--dark);
+  font-weight: 500;
+  font-size: 0.9rem;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s transform 0.3s;
+  transform: translateY(10px);
+  pointer-events: none;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ==========================================================================
-   🛑 INTERFAZ DE ACCESO DENEGADO Y CONTROL DE FLUJOS (SPA)
+   ✨ EFECTOS VISUALES Y ANIMACIONES DE INMERSIÓN SPA
    ========================================================================== */
-/* CORRECCIÓN CRÍTICA: Clase obligatoria para la orquestación de pantallas de index.html */
-.hidden {
-    display: none !important;
+.animate-fade {
+  animation: fadeIn 0.25s ease-out forwards;
 }
 
-.restricted-box {
-    background: rgba(230, 57, 70, 0.03);
-    border: 1px dashed var(--danger);
-    border-radius: var(--radius-lg);
-    padding: 2.5rem;
-    text-align: center;
-    max-width: 450px;
-    margin: 2rem auto;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.restricted-box i {
-    font-size: 3rem;
-    color: var(--danger);
-    margin-bottom: 0.75rem;
-    display: block;
+.badge {
+  background: var(--gold);
+  color: var(--dark);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 50%;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.restricted-box h3 {
-    font-size: 1.2rem;
-    margin-bottom: 0.25rem;
+/* Barras de desplazamiento finas invisibles */
+::-webkit-scrollbar {
+  width: 5px;
 }
 
-.restricted-box p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+::-webkit-scrollbar-track {
+  background: var(--dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
 }
