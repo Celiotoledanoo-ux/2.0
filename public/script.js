@@ -1,4 +1,4 @@
-// ==========================================
+/// ==========================================
 // ESTADO GLOBAL DE LA APLICACIÓN
 // ==========================================
 let allData = [];
@@ -12,7 +12,7 @@ const fmt = (n) =>
     maximumFractionDigits: 2,
   });
 
-// Sistema de Notificaciones Toast
+// Sistema de Notificaciones Toast (Canva Premium Layout)
 function showToast(msg) {
   const toast = document.getElementById("toast");
   if (!toast) return alert(msg);
@@ -22,75 +22,81 @@ function showToast(msg) {
 }
 
 // ==========================================
-// SOLUCIÓN 4: CONTROL DE SESIÓN Y SEGURIDAD
+// CONTROL DE SESIÓN EN UNA SOLA PÁGINA (CORREGIDO)
 // ==========================================
 function checkAuth() {
   const token = localStorage.getItem("pos_token");
   const userData = localStorage.getItem("pos_user");
+  const authScreen = document.getElementById("auth-screen");
+  const mainApp = document.getElementById("content-root");
 
   if (!token || !userData) {
-    // Si no hay sesión, redirige al login o bloquea la pantalla
-    showToast("Sesión expirada. Por favor inicie sesión.");
-    setTimeout(() => { window.location.href = "login.html"; }, 1500);
+    // Si no hay sesión, muestra el login y oculta la app principal
+    if (authScreen) authScreen.classList.remove("hidden");
+    if (mainApp) mainApp.classList.add("hidden");
     return false;
   }
 
   currentUser = JSON.parse(userData);
   
-  // Inyectar nombre/rol del empleado en el frontend (Canva Premium Layout)
+  // Ocultar login y liberar interfaz principal
+  if (authScreen) authScreen.classList.add("hidden");
+  if (mainApp) mainApp.classList.remove("hidden");
+
+  // Inyectar credenciales del empleado en el header
   const userDisplay = document.getElementById("user-display");
   if (userDisplay) {
     userDisplay.innerHTML = `
-      <span class="font-bold">${currentUser.name}</span>
-      <span class="text-xs block text-gray-400">${currentUser.role}</span>
+      <span class="font-bold">${currentUser.name || 'Empleado'}</span>
+      <span class="text-xs block text-gray-400">${currentUser.role || 'Cajero'}</span>
     `;
   }
   return true;
 }
 
 // ==========================================
-// SOLUCIÓN 3: CONTROLADOR DE VISTAS CRÍTICAS
+// ENRUTADOR POR MÓDULOS (CORREGIDO: data-module)
 // ==========================================
 document.querySelectorAll(".sidebar-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    // Desactivar botones previos
+    // Animación estética de botones activos
     document.querySelectorAll(".sidebar-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
 
-    // Ocultar todas las vistas (.view)
+    // Ocultar todas las vistas de la interfaz
     document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
     
-    // Mostrar la vista seleccionada dinámicamente
-    const targetView = document.getElementById("view-" + btn.dataset.view);
+    // Mapeo adaptado a los data-module de tu index.html
+    const targetModule = btn.dataset.module;
+    const targetView = document.getElementById("view-" + targetModule);
+    
     if (targetView) {
       targetView.classList.add("active");
-      // Disparar carga de datos específica según la pestaña activa
-      initViewData(btn.dataset.view);
+      initModuleData(targetModule);
     }
   });
 });
 
-// Carga dinámica para Inventario, Reportes, Usuarios, etc.
-function initViewData(viewName) {
-  switch(viewName) {
-    case 'inventario':
-      renderInventarioTabla();
+function initModuleData(moduleName) {
+  switch(moduleName) {
+    case 'inventory':
+      if (typeof renderInventarioTabla === 'function') renderInventarioTabla();
       break;
-    case 'reportes':
-      if (window.Chart) cargarGraficasReportes(); // Inicializa Chart.js si existe
+    case 'reports':
+      if (window.Chart && typeof cargarGraficasReportes === 'function') cargarGraficasReportes();
       break;
-    case 'usuarios':
-      cargarListaUsuarios();
+    case 'users':
+      if (typeof cargarListaUsuarios === 'function') cargarListaUsuarios();
       break;
-    case 'caja':
-      cargarFlujoCaja();
+    case 'cash':
+      if (typeof cargarFlujoCaja === 'function') cargarFlujoCaja();
       break;
   }
 }
 
-/* ==========================================
-   SOLUCIÓN 2: ESCANER DE CÓDIGO DE BARRAS (#barcode-input)
-========================================== */
+// ==========================================
+// ESCANER DE CÓDIGO DE BARRAS (#barcode-input)
+// ==========================================
 const barcodeInput = document.getElementById("barcode-input");
 if (barcodeInput) {
   barcodeInput.addEventListener("keypress", function(e) {
@@ -99,16 +105,16 @@ if (barcodeInput) {
       const code = this.value.trim();
       if (!code) return;
 
-      // Buscar el producto por código de barras en los datos locales
+      // Buscar usando identificadores de base de datos e inyectar nombre real
       const product = allData.find(p => p.barcode === code || p.__backendId === code);
 
       if (product) {
         agregarAlCarritoPorObjeto(product, 1);
-        showToast(`Agregado: ${product.product_name}`);
+        showToast(`Agregado: ${product.name}`);
       } else {
         showToast("Producto no registrado o sin inventario");
       }
-      this.value = ""; // Limpiar el input para el siguiente escaneo
+      this.value = "";
     }
   });
 }
@@ -126,7 +132,9 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 30000);
 
-// Selector manual de productos
+// ==========================================
+// SELECTOR MANUAL (CORREGIDO: FORMATO SUPABASE name/stock)
+// ==========================================
 function refreshProductSelect() {
   const select = document.getElementById("cart-product-select");
   if (!select) return;
@@ -135,11 +143,11 @@ function refreshProductSelect() {
   select.innerHTML = `<option value="">Seleccionar manualmente...</option>`;
 
   allData
-    .filter((p) => p.type === "product" && p.quantity > 0)
+    .filter((p) => p.type === "product" && p.stock > 0) // Uso de .stock
     .forEach((p) => {
       const option = document.createElement("option");
       option.value = p.__backendId;
-      option.textContent = `${p.product_name} — ${fmt(p.price)} (${p.quantity} disp.)`;
+      option.textContent = `${p.name} — ${fmt(p.price)} (${p.stock} disp.)`; // Uso de .name y .stock
       select.appendChild(option);
     });
 
@@ -150,7 +158,9 @@ function refreshProductSelect() {
 // CONTROL DEL CARRITO DE COMPRAS
 // ==========================================
 function addToCart() {
-  const productId = document.getElementById("cart-product-select").value;
+  const select = document.getElementById("cart-product-select");
+  if (!select) return;
+  const productId = select.value;
   const qtyInput = document.getElementById("cart-qty");
   const qty = parseInt(qtyInput ? qtyInput.value : 1) || 1;
 
@@ -166,13 +176,13 @@ function agregarAlCarritoPorObjeto(product, qty) {
   const existing = cart.find((c) => c.id === product.__backendId);
 
   if (existing) {
-    if (existing.qty + qty > product.quantity) return showToast("Stock insuficiente");
+    if (existing.qty + qty > product.stock) return showToast("Stock insuficiente"); // .stock
     existing.qty += qty;
   } else {
-    if (qty > product.quantity) return showToast("Stock insuficiente");
+    if (qty > product.stock) return showToast("Stock insuficiente"); // .stock
     cart.push({
       id: product.__backendId,
-      name: product.product_name,
+      name: product.name, // .name
       price: product.price,
       qty,
     });
@@ -226,7 +236,6 @@ function renderCart() {
     tbody.appendChild(tr);
   });
 
-  // Calcular totales finales si tu HTML tiene el ID total-venta
   const totalDisplay = document.getElementById("total-venta");
   if (totalDisplay) {
     const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
@@ -236,58 +245,126 @@ function renderCart() {
   if (window.lucide) lucide.createIcons();
 }
 
-/* ==========================================
-   SOLUCIÓN 1: CONEXIÓN REAL CON TU BACKEND (API)
-   (Reemplaza el falso window.dataSdk por un Fetch real)
-========================================== */
+// ==========================================
+// CONEXIÓN REAL CON NODE.JS (CORREGIDO: /api/v1/inventory)
+// ==========================================
 async function cargarDatosDesdeServidor() {
   try {
-    // Ruta de tu API local de Node.js o Supabase Edge Function
-    const response = await fetch("http://localhost:3000/api/productos", {
+    const response = await fetch("/api/v1/inventory", { // Endpoint oficial alineado
       headers: {
         "Authorization": `Bearer ${localStorage.getItem("pos_token")}`
       }
     });
 
-    if (!response.isOk && response.status === 401) {
-      return checkAuth();
+    if (!response.ok) { // .ok de JS nativo
+      if (response.status === 401) {
+        checkAuth();
+        return;
+      }
+      throw new Error(`Error de servidor: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Asignamos la información real a nuestra variable global
     allData = data; 
     
-    // Refrescamos los componentes visuales con los datos reales de la BD
     refreshProductSelect();
     renderCart();
     
   } catch (error) {
     console.error("Error conectando con la base de datos:", error);
-    showToast("Error de red: Trabajando en modo desconectado local");
+    showToast("Modo desconectado: Cargando catálogo local de contingencia");
     
-    // Datos semilla para pruebas locales si tu servidor está apagado
+    // Fallback mapeado correctamente con el formato del Schema de PostgreSQL
     allData = [
-      { __backendId: "1", type: "product", product_name: "Coca Cola 600ml", price: 18.50, quantity: 25, barcode: "7501055300075" },
-      { __backendId: "2", type: "product", product_name: "Papas Sabritas Sal 50g", price: 17.00, quantity: 12, barcode: "7501011111111" }
+      { __backendId: "1", type: "product", name: "Coca Cola 600ml", price: 18.50, stock: 25, barcode: "7501055300075" },
+      { __backendId: "2", type: "product", name: "Papas Sabritas Sal 50g", price: 17.00, stock: 12, barcode: "7501011111111" }
     ];
     refreshProductSelect();
+    renderCart();
   }
 }
 
 // ==========================================
-// INICIALIZACIÓN DE LA APLICACIÓN AL CARGAR
+// PROCESAMIENTO DE PAGOS MIXTOS (/api/v1/sales)
+// ==========================================
+async function procesarPagoMixto() {
+  if (cart.length === 0) return showToast("El carrito está vacío");
+
+  const cashInput = document.getElementById("payment-cash");
+  const digitalInput = document.getElementById("payment-digital");
+  
+  const cashAmount = parseFloat(cashInput ? cashInput.value : 0) || 0;
+  const digitalAmount = parseFloat(digitalInput ? digitalInput.value : 0) || 0;
+  
+  const totalVenta = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const totalPagado = cashAmount + digitalAmount;
+
+  if (totalPagado < totalVenta) {
+    return showToast(`Monto insuficiente. Falta: ${fmt(totalVenta - totalPagado)}`);
+  }
+
+  const btnCobrar = document.getElementById("checkout-btn");
+  if (btnCobrar) btnCobrar.disabled = true;
+
+  try {
+    const saleData = {
+      items: cart.map(item => ({
+        product_id: item.id,
+        qty: item.qty,
+        price: item.price
+      })),
+      total: totalVenta,
+      payment_method: {
+        cash: cashAmount,
+        digital: digitalAmount
+      },
+      change: totalPagado - totalVenta,
+      timestamp: new Date().toISOString()
+    };
+
+    const response = await fetch("/api/v1/sales", { // Endpoint oficial de facturación
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("pos_token")}`
+      },
+      body: JSON.stringify(saleData)
+    });
+
+    if (!response.ok) throw new Error("Fallo al registrar venta");
+
+    showToast(`¡Venta Exitosa! Cambio: ${fmt(totalPagado - totalVenta)}`);
+    
+    // Resetear entorno de cobro
+    cart = [];
+    if (cashInput) cashInput.value = "";
+    if (digitalInput) digitalInput.value = "";
+    renderCart();
+    await cargarDatosDesdeServidor(); // Arqueo e inventario local actualizado
+    
+  } catch (error) {
+    console.error(error);
+    showToast("Error crítico al procesar el cobro en el servidor");
+  } finally {
+    if (btnCobrar) btnCobrar.disabled = false;
+  }
+}
+
+// ==========================================
+// INICIALIZACIÓN AUTOMÁTICA AL CARGAR
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Validar que el empleado esté logueado
+  // Validar sesión activa en la SPA antes de pintar datos
   if (checkAuth()) {
-    // 2. Traer los productos reales de la base de datos
     cargarDatosDesdeServidor();
   }
   
-  // Vincular el botón manual de agregar si existe
+  // Enlaces de disparadores manuales
   const addBtn = document.getElementById("add-to-cart-btn");
   if (addBtn) addBtn.addEventListener("click", addToCart);
+
+  const checkoutBtn = document.getElementById("checkout-btn");
+  if (checkoutBtn) checkoutBtn.addEventListener("click", procesarPagoMixto);
   
   if (window.lucide) lucide.createIcons();
 });
