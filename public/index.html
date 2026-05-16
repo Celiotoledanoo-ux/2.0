@@ -190,52 +190,53 @@
           </div>
         </section>
 
-        <!-- ==========================================
-             VISTA 2: INVENTARIO (ID: view-inventory)
-             ========================================== -->
-        <section id="view-inventory" class="view animate-fade">
-          <div class="card p-6">
-            <h2 class="font-display mb-2">Control de Vitrinas y Almacén</h2>
-            <p class="text-dim mb-4">Monitoreo de existencias, marcas, tonos y alertas de stock mínimo.</p>
-            <div id="inventory-table-root">
-              <!-- Tu tabla de inventario dinámica o estática de Canva aquí -->
-            </div>
+        <!-- ==========================================================================
+           📦 CAPAS DE PERFILES SPA (CORREGIDO: CLASE hidden INYECTADA NATIVAMENTE)
+           ========================================================================== -->
+
+      <!-- VISTA 2: INVENTARIO (ID: view-inventory) -->
+      <section id="view-inventory" class="view hidden animate-fade">
+        <div class="card p-6">
+          <h2 class="font-display mb-2">Control de Vitrinas y Almacén</h2>
+          <p class="text-dim mb-4">Monitoreo de existencias, marcas, tonos y alertas de stock mínimo.</p>
+          <div id="inventory-table-root">
+            <!-- Tabla de inventario dinámica inyectada por script.js -->
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- ==========================================
-             VISTA 3: REPORTES (ID: view-reports)
-             ========================================== -->
-        <section id="view-reports" class="view animate-fade">
-          <div class="card p-6">
-            <h2 class="font-display mb-4">Métricas Comerciales</h2>
-            <div class="metrics-grid">
-              <!-- Rejilla de métricas lista para Chart.js -->
-            </div>
+      <!-- VISTA 3: REPORTES (ID: view-reports) -->
+      <section id="view-reports" class="view hidden animate-fade">
+        <div class="card p-6">
+          <h2 class="font-display mb-4">Métricas Comerciales</h2>
+          <div class="metrics-grid">
+            <!-- Rejilla de métricas lista para Chart.js -->
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- VISTAS ADICIONALES (Mantenidas seguras bajo la lógica SPA) -->
-        <section id="view-users" class="view animate-fade"></section>
-        <section id="view-cash" class="view animate-fade"></section>
+      <!-- VISTAS ADICIONALES (Mantenidas ocultas de forma segura al inicio) -->
+      <section id="view-users" class="view hidden animate-fade"></section>
+      <section id="view-cash" class="view hidden animate-fade"></section>
 
-      </main>
-    </div>
-  </div>
+    </div> <!-- CORRECCIÓN: Cierre exacto de tu contenedor de vistas web -->
+  </div> <!-- CORRECCIÓN: Cierre exacto de tu main-layout de dos columnas -->
+</div> <!-- CORRECCIÓN: Cierre exacto de tu app-container raíz -->
 
-  <!-- NOTIFICACIÓN TOAST FLOTANTE GLOBAL -->
-  <div id="toast" class="toast"></div>
+<!-- NOTIFICACIÓN TOAST FLOTANTE GLOBAL -->
+<div id="toast" class="toast"></div>
 
-  <!-- ==========================================================================
-       📡 CARGA ORDENADA DE SCRIPT E ICONOS
-       ========================================================================== -->
-  <!-- 1. Carga Lucide directamente desde tus node_modules locales gracias a app.use('/vendor') -->
+<!-- ==========================================================================
+     📡 CARGA ORDENADA DE SCRIPT E ICONOS (ARQUITECTURA DE RENDIMIENTO EXTRA)
+     ========================================================================== -->
+
+<!-- 1. Carga Lucide directamente desde tus node_modules locales gracias a app.use('/vendor') -->
 <script src="/vendor/lucide/dist/umd/lucide.min.js"></script>
 
-<!-- 2. Tu lógica global -->
+<!-- 2. Tu motor lógico interactivo global unificado -->
 <script src="script.js"></script>
 
-<!-- 3. Renderizador -->
+<!-- 3. Renderizador seguro post-despliegue -->
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
