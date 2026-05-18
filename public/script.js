@@ -171,17 +171,16 @@ document.addEventListener('DOMContentLoaded', () => {
     await processCheckoutCart();
   });
 
-  // ⚡ 4. INTERRUPTOR VISUAL: Despertar el modal de Cierre de Caja
+   // ⚡ 4. INTERRUPTOR VISUAL: Despertar el modal de Cierre de Caja (CORREGIDO CON ID REAL)
   document.getElementById('cash-close-trigger-btn')?.addEventListener('click', () => {
-    const overlay = document.querySelector('.modal-overlay');
-    if (overlay) overlay.style.display = 'flex'; // Cambia display a flex en caliente
+    const modal = document.getElementById('cash-close-modal');
+    if (modal) modal.classList.remove('d-none'); // Quita d-none para mostrar el cristal esmerilado
   });
 
   // ⚡ 5. ESCUCHAR EL FORMULARIO DE CIERRE DE CAJA (CORTE FINANCIERO)
   document.getElementById('cash-close-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Capturamos el conteo físico y los comentarios usando los IDs exactos de tu HTML
     const realCash = document.getElementById('cash-real-cash-counted').value;
     const notes = document.getElementById('cash-close-notes').value;
 
@@ -191,21 +190,14 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ realCash: realCash, notes: notes })
       });
 
-      // El backend senior calcula las diferencias y el controlador devuelve el mensaje con emojis
       alert(response.message || 'Corte de caja procesado con éxito. 🏁');
       
-      // Ocultamos el modal de forma limpia tras cerrar el turno
-      const overlay = document.querySelector('.modal-overlay');
-      if (overlay) overlay.style.display = 'none';
+      // Ocultamos el modal de forma limpia usando su ID real
+      document.getElementById('cash-close-modal')?.classList.add('d-none');
 
-      window.location.reload(); // Recarga la UI para volver a bloquear la pantalla
+      localStorage.clear(); // Limpiamos la sesión del cajero para cerrar el turno por completo
+      window.location.reload(); 
     } catch (err) {
       alert(`❌ Error al asentar el corte de caja: ${err.message}`);
     }
   });
-
-  // Si el usuario ya está logueado, sincronizamos la UI de inmediato
-  if (localStorage.getItem('glow_pos_token')) {
-    syncCashRegisterUI();
-  }
-});
