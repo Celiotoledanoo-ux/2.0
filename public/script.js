@@ -24,11 +24,10 @@ async function apiFetch(endpoint, options = {}) {
     const result = await response.json();
 
     if (!response.ok) {
-      // Si la API arroja un error controlado de Zod o AppError, heredamos su mensaje
       throw new Error(result.message || 'Algo tronó en la petición del Punto de Venta.');
     }
 
-    return result; // Retorna el JSON completo estandarizado { status, message, data }
+    return result; 
   } catch (error) {
     console.error(`[API_FETCH_ERROR][${endpoint}]:`, error.message);
     throw error;
@@ -36,10 +35,10 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // ==========================================================================
-// 🛠️ INTERFACES DE CONTROL DE TUS MÓDULOS (EJEMPLOS DE ACOPLAMIENTO 100%)
+// 🛠️ INTERFACES DE CONTROL DE TUS MÓDULOS
 // ==========================================================================
 
-// 1. MÓDULO /AUTH - Formulario de Login de Canva
+// 1. MÓDULO /AUTH - Formulario de Login de la Boutique
 async function handleLogin(emailOrIdentifier, password) {
   try {
     const response = await apiFetch('/auth/login', {
@@ -47,33 +46,53 @@ async function handleLogin(emailOrIdentifier, password) {
       body: JSON.stringify({ identifier: emailOrIdentifier, password })
     });
 
-    // Guardamos las credenciales en el navegador conforme a tus controladores
+    // Guardamos de forma limpia el token y el perfil
     localStorage.setItem('glow_pos_token', response.token);
     localStorage.setItem('glow_pos_user', JSON.stringify(response.user));
 
     alert(`¡Bienvenida de vuelta, ${response.user.name}! 💄`);
-    window.location.reload(); // Actualiza la UI para abrir los tableros autorizados
+    
+    // ⚡ Corrección Senior: En lugar de recargar a ciegas, ejecutamos la sincronización de la UI inmediatamente
+    await syncCashRegisterUI(); 
   } catch (err) {
     alert(`❌ Error de acceso: ${err.message}`);
   }
 }
 
-// 2. MÓDULO /CASH - Sincronizar Arqueo y Estado de la Caja Registradora (CORREGIDO)
+// 2. MÓDULO /CASH - Sincronizar Arqueo y Estado de la Caja Registradora (CORREGIDO CON CLASES REACONDICIONADAS)
 async function syncCashRegisterUI() {
   try {
+    const token = localStorage.getItem('glow_pos_token');
+    
+    // CAPA DE SEGURIDAD 1: Si no hay token, el Login toma el control total y apaga las vitrinas
+    if (!token) {
+      document.getElementById('auth-screen')?.classList.remove('d-none');
+      document.getElementById('cash-lock-screen')?.classList.add('d-none');
+      document.getElementById('pos-main-workspace')?.classList.add('d-none');
+      return;
+    }
+
+    // Si el usuario está logueado, apagamos permanentemente la pantalla de Autenticación
+    document.getElementById('auth-screen')?.classList.add('d-none');
+
+    // Consultamos el estado financiero en la API de Render
     const response = await apiFetch('/cash/status');
     const { isOpen, session, transactions } = response.data;
 
-    // Buscamos los contenedores usando las clases y los IDs reales de tu nuevo HTML
+    // Vinculamos los nodos reales de tu nuevo HTML
     const cashLockScreen = document.getElementById('cash-lock-screen');
+    const mainWorkspace = document.getElementById('pos-main-workspace');
     const vaultDisplay = document.getElementById('vault-cash-display');
     const tbody = document.getElementById('cash-flows-tbody');
 
     if (isOpen) {
-      if (cashLockScreen) cashLockScreen.style.display = 'none'; // Oculta bloqueo si está abierta
+      // CAPA DE SEGURIDAD 2: Si la caja está abierta, desbloqueamos la vitrina digital claro y oro
+      if (cashLockScreen) cashLockScreen.classList.add('d-none');
+      if (mainWorkspace) mainWorkspace.classList.remove('d-none');
+      
       if (vaultDisplay) vaultDisplay.innerText = `Caja Neta: $${Number(session.opening_balance).toFixed(2)}`;
       
-      // Renderizar tabla de flujos manuales si el contenedor existe en el DOM
+      // Renderizar tabla de flujos manuales de caja chica
       if (tbody) {
         tbody.innerHTML = '';
         (transactions || []).forEach(flow => {
@@ -88,29 +107,31 @@ async function syncCashRegisterUI() {
         });
       }
     } else {
-      if (cashLockScreen) cashLockScreen.style.display = 'flex'; // Muestra bloqueo si está cerrada
+      // CAPA DE SEGURIDAD 3: Logueado pero con caja cerrada, se fuerza la sobrecapa de Apertura
+      if (mainWorkspace) mainWorkspace.classList.add('d-none');
+      if (cashLockScreen) cashLockScreen.classList.remove('d-none');
     }
   } catch (err) {
     console.error('No se pudo sincronizar la terminal monetaria:', err.message);
+    localStorage.clear();
+    window.location.reload();
   }
 }
 
-// 3. MÓDULO /SALES - El Momento del Cobro Masivo Atómico (CORREGIDO)
+// 3. MÓDULO /SALES - Carrito de Compras de la Tienda
 async function processCheckoutCart() {
-  // Array global en memoria: cartItems = [ { id: "uuid-producto", quantity: 2 }, ... ]
   if (!window.cartItems || window.cartItems.length === 0) {
     return alert('El carrito está vacío, fiera.');
   }
   
-  // Extraemos datos usando los IDs reales de tu nuevo formulario de liquidación
   const paymentMethod = document.getElementById('payment-method-select').value; 
   const cashAmount = parseFloat(document.getElementById('checkout-cash-amount').value) || 0;
   const digitalAmount = parseFloat(document.getElementById('checkout-digital-amount').value) || 0;
   const discount = parseFloat(document.getElementById('checkout-discount-input').value) || 0;
-  const notes = document.getElementById('cash-close-notes')?.value || ''; // O el textarea correspondiente
+  const notes = document.getElementById('cash-close-notes')?.value || ''; 
 
   const payload = {
-    items: window.cartItems, // El backend mapeará 'id' a 'product_id' mediante Zod
+    items: window.cartItems, 
     paymentMethod,
     cashAmount,
     digitalAmount,
@@ -124,12 +145,12 @@ async function processCheckoutCart() {
       body: JSON.stringify(payload)
     });
 
-    // Desplegamos el ticket e indicamos el cambio exacto calculado por tu controlador senior
     alert(`🎉 ¡Cobro Exitoso!\nCambio / Vuelto a entregar: $${response.data.change}`);
     
-    // Limpiar el carrito de compras y refrescar la UI
     window.cartItems = [];
-    renderCartUI(); // Tu función para redibujar el carrito vacío
+    const cartContainer = document.querySelector('.cart-items-container');
+    if (cartContainer) cartContainer.innerHTML = '';
+    
     syncCashRegisterUI();
   } catch (err) {
     alert(`🚨 Error en cobro: ${err.message}`);
@@ -137,14 +158,16 @@ async function processCheckoutCart() {
 }
 
 // ==========================================================================
-// 🔌 INICIALIZACIÓN Y CAPTURA DE FORMULARIOS DEL HTML (VERSIÓN FINAL BLINDADA)
+// 🔌 INICIALIZACIÓN Y CAPTURA DE FORMULARIOS DEL HTML
 // ==========================================================================
+window.cartItems = []; // Inicialización fail-safe para el mostrador
+
 document.addEventListener('DOMContentLoaded', () => {
   
   // 1. Escuchar el Formulario de Login
   document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const identifier = document.getElementById('login-identifier').value;
+    const identifier = document.getElementById('login-identifier').value.trim();
     const password = document.getElementById('login-password').value;
     await handleLogin(identifier, password);
   });
@@ -171,13 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
     await processCheckoutCart();
   });
 
-   // ⚡ 4. INTERRUPTOR VISUAL: Despertar el modal de Cierre de Caja (CORREGIDO CON ID REAL)
+  // 4. INTERRUPTOR VISUAL: Despertar el modal de Cierre de Caja
   document.getElementById('cash-close-trigger-btn')?.addEventListener('click', () => {
     const modal = document.getElementById('cash-close-modal');
-    if (modal) modal.classList.remove('d-none'); // Quita d-none para mostrar el cristal esmerilado
+    if (modal) modal.classList.remove('d-none'); 
   });
 
-  // ⚡ 5. ESCUCHAR EL FORMULARIO DE CIERRE DE CAJA (CORTE FINANCIERO)
+  // 5. Escuchar el Formulario de Cierre de Caja
   document.getElementById('cash-close-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -191,13 +214,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       alert(response.message || 'Corte de caja procesado con éxito. 🏁');
-      
-      // Ocultamos el modal de forma limpia usando su ID real
       document.getElementById('cash-close-modal')?.classList.add('d-none');
-
-      localStorage.clear(); // Limpiamos la sesión del cajero para cerrar el turno por completo
+      localStorage.clear(); 
       window.location.reload(); 
     } catch (err) {
       alert(`❌ Error al asentar el corte de caja: ${err.message}`);
     }
   });
+
+  // ⚡ Sincronización perimetral de inicio (Determina qué pantalla pintar al arrancar)
+  syncCashRegisterUI();
+}); // ⚡ CORRECCIÓN: Llave y paréntesis del DOMContentLoaded cerrados de forma correcta!
