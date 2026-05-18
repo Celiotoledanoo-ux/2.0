@@ -1,6 +1,6 @@
-/* ========================= */
-/* ROOT VARIABLES */
-/* ========================= */
+/* ==========================================================================
+   🎨 GLOW BEAUTY POS - MASTER PRODUCTION STYLESHEET (REACONDICIONADO)
+   ========================================================================== */
 
 :root {
   --bg-main: #F9F9FB;
@@ -17,11 +17,16 @@
   --transition-fast: 0.25s ease;
 }
 
+/* ==========================================================================
+   🛡️ CONTROL CRÍTICO DE VISIBILIDAD Y CAPAS (0 ERRORES DE ENCIMADO)
+   ========================================================================== */
+.d-none {
+  display: none !important;
+}
 
-/* ========================= */
-/* GLOBAL */
-/* ========================= */
-
+/* ==========================================================================
+   GLOBAL CONFIG
+   ========================================================================== */
 * {
   margin: 0;
   padding: 0;
@@ -37,10 +42,7 @@ body {
   letter-spacing: -0.02em;
 }
 
-button,
-input,
-select,
-textarea {
+button, input, select, textarea {
   font-family: inherit;
   outline: none;
   border: none;
@@ -48,10 +50,7 @@ textarea {
 
 button {
   cursor: pointer;
-  transition:
-    transform var(--transition-fast),
-    opacity var(--transition-fast),
-    background var(--transition-fast);
+  transition: transform var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
 }
 
 button:hover {
@@ -63,9 +62,7 @@ button:active {
   transform: scale(0.98);
 }
 
-input,
-select,
-textarea {
+input, select, textarea {
   width: 100%;
   background: #FAFAFC;
   border: 1px solid var(--border-soft);
@@ -75,9 +72,7 @@ textarea {
   transition: border var(--transition-fast);
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:focus, select:focus, textarea:focus {
   border-color: var(--accent-gold);
 }
 
@@ -86,22 +81,10 @@ textarea {
   resize: vertical;
 }
 
-
-/* ========================= */
-/* GENERIC COMPONENTS */
-/* ========================= */
-
-.screen-layer,
-.overlay-screen {
-  width: 100%;
-  min-height: 100vh;
-}
-
-.glass-card,
-.modal-card,
-.admin-card,
-.product-card,
-.metric-card {
+/* ==========================================================================
+   COMPONENTE BASE DE TARJETAS
+   ========================================================================== */
+.glass-card, .modal-card, .admin-card, .product-card, .metric-card {
   background: var(--card-bg);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-soft);
@@ -125,34 +108,27 @@ textarea {
   gap: 20px;
 }
 
-.section-header,
-.workspace-header,
-.cart-header,
-.admin-header {
+.section-header, .workspace-header, .cart-header, .admin-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
 }
 
-.section-header h3,
-.workspace-header h2,
-.cart-header h2,
-.admin-header h2 {
+.section-header h3, .workspace-header h2, .cart-header h2, .admin-header h2 {
   font-size: 1.3rem;
   font-weight: 700;
 }
 
-
-/* ========================= */
-/* AUTH SCREEN */
-/* ========================= */
-
+/* ==========================================================================
+   🔑 1. AUTH SCREEN / PANTALLA DE LOGUEO
+   ========================================================================== */
 #auth-screen {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
+  min-height: 100vh;
 }
 
 .auth-card {
@@ -184,22 +160,19 @@ textarea {
   font-weight: 600;
 }
 
-
-/* ========================= */
-/* CASH LOCK SCREEN */
-/* ========================= */
-
-#cash-lock-screen {
+/* ==========================================================================
+   🔒 2. MODALES Y SOBRECAPAS (APERTURA Y CIERRE DE CAJA CHICA)
+   ========================================================================== */
+.overlay-screen, .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
-
-  display: flex;
+  z-index: 1300;
+  display: flex; /* Se activa dinámicamente con flex siempre que NO tenga d-none */
   align-items: center;
   justify-content: center;
-
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   padding: 30px;
 }
 
@@ -207,6 +180,7 @@ textarea {
   width: 100%;
   max-width: 480px;
   padding: 36px;
+  border: 1px solid var(--border-soft);
 }
 
 .modal-header {
@@ -230,11 +204,9 @@ textarea {
   font-weight: 600;
 }
 
-
-/* ========================= */
-/* POS WORKSPACE */
-/* ========================= */
-
+/* ==========================================================================
+   🏬 3. MAIN WORKSPACE / MOSTRADOR PRINCIPAL Y VITRINA
+   ========================================================================== */
 #pos-main-workspace {
   display: grid;
   grid-template-columns: 1.6fr 0.9fr;
@@ -246,10 +218,6 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.search-wrapper {
-  width: 100%;
 }
 
 #product-search-input {
@@ -270,19 +238,13 @@ textarea {
   gap: 22px;
 }
 
-
-/* ========================= */
-/* PRODUCT CARD */
-/* ========================= */
-
+/* TARJETAS DE COSMÉTICOS */
 .product-card {
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .product-card:hover {
@@ -290,8 +252,7 @@ textarea {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.07);
 }
 
-.product-card-top,
-.product-footer {
+.product-card-top, .product-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -313,13 +274,7 @@ textarea {
 .product-image-placeholder {
   width: 100%;
   height: 180px;
-  background:
-    linear-gradient(
-      135deg,
-      #f6f6f8,
-      #ececf2
-    );
-
+  background: linear-gradient(135deg, #f6f6f8, #ececf2);
   border-radius: 18px;
 }
 
@@ -334,8 +289,7 @@ textarea {
   font-weight: 700;
 }
 
-.product-variant,
-.product-sku {
+.product-variant, .product-sku {
   color: #777;
   font-size: 0.9rem;
 }
@@ -353,20 +307,14 @@ textarea {
   font-weight: 600;
 }
 
-
-/* ========================= */
-/* SHOPPING CART */
-/* ========================= */
-
+/* CARRITO LATERAL DE VENTAS */
 #shopping-cart-panel {
   background: #fff;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-soft);
-
   display: flex;
   flex-direction: column;
   gap: 28px;
-
   padding: 24px;
   height: fit-content;
 }
@@ -382,7 +330,6 @@ textarea {
   grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 16px;
-
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-soft);
 }
@@ -392,9 +339,14 @@ textarea {
   flex-direction: column;
 }
 
+.cart-item-info h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .cart-item-info span {
   color: #777;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .cart-item-controls {
@@ -429,10 +381,13 @@ textarea {
 
 .panel-section h3 {
   font-size: 1.1rem;
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 6px;
 }
 
 #checkout-submit-btn {
   background: var(--mint-soft);
+  color: #1f7a4f;
   padding: 16px;
   border-radius: 14px;
   font-weight: 700;
@@ -444,10 +399,6 @@ textarea {
   gap: 16px;
 }
 
-.cash-close-actions {
-  margin-top: auto;
-}
-
 #cash-close-trigger-btn {
   width: 100%;
   background: var(--accent-gold);
@@ -457,31 +408,9 @@ textarea {
   font-weight: 700;
 }
 
-
-/* ========================= */
-/* CASH CLOSE MODAL */
-/* ========================= */
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1300;
-
-  display: none;
-  align-items: center;
-  justify-content: center;
-
-  padding: 30px;
-
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(18px);
-}
-
-
-/* ========================= */
-/* ADMIN DASHBOARD */
-/* ========================= */
-
+/* ==========================================================================
+   📈 4. ADMIN DASHBOARD & METRICS / PANEL DE GESTIÓN DE PERSONAL
+   ========================================================================== */
 #admin-dashboard-panel {
   padding: 28px;
   display: flex;
@@ -489,13 +418,16 @@ textarea {
   gap: 28px;
 }
 
+.admin-card {
+  padding: 28px;
+}
+
 .employees-table {
   display: flex;
   flex-direction: column;
 }
 
-.table-head,
-.table-row {
+.table-head, .table-row {
   display: grid;
   grid-template-columns: 1.2fr 1.5fr 1fr auto;
   gap: 18px;
@@ -551,6 +483,9 @@ textarea {
   display: block;
   color: #777;
   margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .metric-card h4 {
@@ -558,41 +493,32 @@ textarea {
   font-weight: 700;
 }
 
+.text-success { color: #1f7a4f !important; font-weight: 600; }
+.text-danger { color: #b91c1c !important; font-weight: 600; }
 
-/* ========================= */
-/* RESPONSIVE */
-/* ========================= */
-
+/* ==========================================================================
+   📱 5. RESPONSIVE / ADAPTACIÓN MÓVIL SÚPER FLUIDA
+   ========================================================================== */
 @media (max-width: 1200px) {
-
   #pos-main-workspace {
     grid-template-columns: 1fr;
   }
-
   #shopping-cart-panel {
     order: -1;
   }
-
 }
 
 @media (max-width: 768px) {
-
-  .workspace-header,
-  .section-header,
-  .admin-header,
-  .cart-header {
+  .workspace-header, .section-header, .admin-header, .cart-header {
     flex-direction: column;
     align-items: flex-start;
   }
-
   .metrics-grid {
     grid-template-columns: 1fr;
   }
-
   .table-head {
     display: none;
   }
-
   .table-row {
     grid-template-columns: 1fr;
     background: #fff;
@@ -600,35 +526,25 @@ textarea {
     padding: 18px;
     margin-bottom: 14px;
   }
-
   .cart-item-row {
     grid-template-columns: 1fr;
   }
-
   .input-grid {
     grid-template-columns: 1fr;
   }
-
-  .auth-card,
-  .modal-card {
+  .auth-card, .modal-card {
     padding: 28px;
   }
-
 }
 
 @media (max-width: 540px) {
-
-  #pos-main-workspace,
-  #admin-dashboard-panel {
+  #pos-main-workspace, #admin-dashboard-panel {
     padding: 18px;
   }
-
   .brand-title {
     font-size: 1.8rem;
   }
-
   #products-grid-container {
     grid-template-columns: 1fr;
   }
-
 }
