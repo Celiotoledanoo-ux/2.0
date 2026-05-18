@@ -5,16 +5,14 @@ import logger from '../../core/logger/logger.js';
 
 /**
  * 📦 INVENTORY REPOSITORY - SQL DIRECT CONNECTION
- * Gestión de productos y stock con integridad de datos para Maquillaje POS.
+ * Gestión de productos y stock con integridad de datos para Maquillaje Glow POS.
  */
 
-// CORRECCIÓN: Agregadas de forma estricta las columnas brand y tone para la boutique
 const PRODUCT_SELECT = 'id, name, brand, tone, sku, price, stock, min_stock, active, category_id, category:categories(name)';
 const TARGET_TABLE = TABLES.INVENTORY || 'inventory';
 
 // 1. Crear producto
 export const create = async (productData) => {
-  // Mapeo seguro para prevenir discrepancias de formato antes de tocar Postgres
   const payload = {
     name: productData.name,
     brand: productData.brand,
@@ -27,93 +25,105 @@ export const create = async (productData) => {
     description: productData.description || null
   };
 
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .insert([payload])
-    .select(PRODUCT_SELECT)
-    .single();
+  try {
+    const { data, error } = await db
+      .from(TARGET_TABLE)
+      .insert([payload])
+      .select(PRODUCT_SELECT)
+      .single();
 
-  if (error) {
+    if (error) throw error;
+    return data;
+  } catch (error) {
     logger.error({ event: 'INVENTORY_REPO_CREATE_ERROR', message: error.message });
     throw new AppError(`Error al crear producto en Supabase: ${error.message}`, 500);
   }
-  return data;
 };
 
-// 2. Búsqueda por SKU (Escáner de barras)
+// 2. Búsqueda por SKU (Escáner de barras - Flexible para múltiples tonos)
 export const findBySku = async (sku) => {
-  if (!sku) return null;
+  if (!sku) return [];
   
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .select(PRODUCT_SELECT)
-    .eq('sku', sku.toUpperCase().trim())
-    .maybeSingle();
+  try {
+    const { data, error } = await db
+      .from(TARGET_TABLE)
+      .select(PRODUCT_SELECT)
+      .eq('sku', sku.toUpperCase().trim())
+      .eq('active', true); // Solo listamos los que están vigentes en vitrina
 
-  if (error) {
+    if (error) throw error;
+    return data || []; // Retorna arreglo para tolerar múltiples variantes de color del mismo SKU
+  } catch (error) {
     logger.error({ event: 'INVENTORY_REPO_SKU_ERROR', message: error.message });
     throw new AppError('Error al buscar por SKU en el almacén.', 500);
   }
-  return data;
 };
 
 // 3. Búsqueda por ID
 export const findById = async (id) => {
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .select(PRODUCT_SELECT)
-    .eq('id', id)
-    .maybeSingle();
+  try {
+    const { data, error } = await db
+      .from(TARGET_TABLE)
+      .select(PRODUCT_SELECT)
+      .eq('id', id)
+      .maybeSingle();
 
-  if (error) {
+    if (error) throw error;
+    return data;
+  } catch (error) {
     logger.error({ event: 'INVENTORY_REPO_ID_ERROR', message: error.message });
     throw new AppError('Error al buscar cosmético por identificador único.', 500);
   }
-  return data;
 };
 
 // 4. Listado con Filtros Dinámicos (Buscador Inteligente del POS)
 export const findAll = async (filters = {}) => {
-  let query = db.from(TARGET_TABLE).select(PRODUCT_SELECT);
+  try {
+    let query = db.from(TARGET_TABLE).select(PRODUCT_SELECT);
 
-  if (filters.sku) {
-    query = query.eq('sku', filters.sku.toUpperCase().trim());
-  }
-  
-  // MEJORA: Búsqueda flexible. Permite encontrar labiales buscando por nombre, marca o tono
-  if (filters.name) {
-    const cleanSearch = filters.name.trim();
-    query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%,tone.ilike.%${cleanSearch}%`);
-  }
+    if (filters.sku) {
+      query = query.eq('sku', filters.sku.toUpperCase().trim());
+    }
+    
+    if (filters.name) {
+      const cleanSearch = filters.name.trim();
+      query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%,tone.ilike.%${cleanSearch}%`);
+    }
 
-  if (filters.category_id || filters.categoryId) {
-    query = query.eq('category_id', filters.category_id || filters.categoryId);
-  }
+    if (filters.category_id || filters.categoryId) {
+      query = query.eq('category_id', filters.category_id || filters.categoryId);
+    }
 
-  const { data, error } = await query
-    .order('active', { ascending: false }) 
-    .order('brand', { ascending: true })
-    .order('name', { ascending: true });
+    const { data, error } = await query
+      .order('active', { ascending: false }) 
+      .order('brand', { ascending: true })
+      .order('name', { ascending: true });
 
-  if (error) {
+    if (error) throw error;
+    return data;
+  } catch (error) {
     logger.error({ event: 'INVENTORY_REPO_FINDALL_ERROR', message: error.message });
     throw new AppError('Error al sincronizar el inventario de vitrinas.', 500);
   }
-  return data;
 };
 
-// 5. Ajuste de Stock Atómico (Blindaje contra cobros simultáneos)
-export const updateStock = async (productId, quantityDelta) => {
-  const { data, error } = await db
-    .rpc('modify_stock', { 
-      p_id: productId, 
-      delta: quantityDelta 
-    });
+// 5. Ajuste de Stock Atómico (Blindado con Auditoría de Logs integrada en Postgres RPC)
+export const updateStock = async (productId, quantityDelta, userId, reason = 'AJUSTE MANUAL REPOSITORIO') => {
+  try {
+    // ⚡ CORRECCIÓN: Adaptado a los 4 parámetros que exige de forma estricta nuestro plano SQL
+    const { error } = await db
+      .rpc('modify_stock', { 
+        p_id: productId, 
+        delta: quantityDelta,
+        p_user_id: userId || null,
+        p_reason: reason
+      });
 
-  if (error) {
-    logger.error({ event: 'INVENTORY_REPO_STOCK_UPDATE_ERROR', message: error.message });
-    throw new AppError('No se pudo actualizar el stock de forma atómica en la base de datos.', 500);
+    if (error) throw error;
+
+    return await findById(productId);
+  } catch (error) {
+    logger.error({ event: 'INVENTORY_REPO_STOCK_UPDATE_ERROR', message: error.message, productId });
+    throw new AppError(`No se pudo alterar el inventario: ${error.message}`, 500);
   }
-
-  return await findById(productId);
 };

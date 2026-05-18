@@ -1,19 +1,31 @@
 import * as salesRepo from './sales.repository.js';
 import * as inventoryRepo from '../inventory/inventory.repository.js';
+import { db } from '../../core/database/supabaseClient.js'; // Requerido para verificar el turno de caja
 import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
  * 💰 SALES SERVICE - EL MOTOR DE INGRESOS (0 ERRORES)
- * Procesa ventas, valida stock y asegura la integridad del inventario.
- * Sincronizado milimétricamente con la estructura dual de roles y pagos mixtos.
+ * Procesa ventas atómicas, valida stock y asegura el amarre con la caja chica activa.
+ * Sincronizado milimétricamente con la estructura corporativa de 4 roles y cobro mixto.
  */
 export const createSale = async (saleData, user) => {
-  // CORRECCIÓN: Extracción usando los nombres normalizados en camelCase del controlador/Zod
-  const { items, paymentMethod, total, cashAmount = 0, digitalAmount = 0, discount = 0, notes } = saleData;
+  const { items, paymentMethod, cashAmount = 0, digitalAmount = 0, discount = 0, notes } = saleData;
 
   if (!items || items.length === 0) {
-    throw new AppError('No puedes vender aire, bro. Agrega productos.', 400);
+    throw new AppError('No puedes vender aire, bro. Agrega productos al carrito.', 400);
+  }
+
+  // 🛡️ REGLA DE NEGOCIO CRÍTICA: Validar que el cajero tenga un turno de caja chica ABIERTO
+  const { data: activeSession, error: sessionError } = await db
+    .from('cash_sessions')
+    .select('id, status')
+    .eq('status', 'OPEN')
+    .eq('user_id', user.id) // Busca la caja de ESTE cajero específico
+    .maybeSingle();
+
+  if (sessionError || !activeSession) {
+    throw new AppError('⚠️ Operación bloqueada: Necesitas iniciar tu turno de caja chica (Abrir Caja) antes de registrar ventas, fiera.', 400);
   }
 
   // 1. 🛡️ VALIDACIÓN Y CÁLCULO (Server-Side Truth)
@@ -21,82 +33,73 @@ export const createSale = async (saleData, user) => {
   const validatedItems = [];
 
   for (const item of items) {
-    const product = await inventoryRepo.findById(item.product_id);
+    // Soportamos de forma flexible si el front manda product_id o productId
+    const productId = item.product_id || item.productId;
+    const product = await inventoryRepo.findById(productId);
     
     if (!product) {
-      throw new AppError(`El producto con ID ${item.product_id} ya no está registrado en el catálogo.`, 404);
+      throw new AppError(`El cosmético solicitado ya no existe en el catálogo de inventario.`, 404);
     }
     
     if (product.stock < item.quantity) {
-      throw new AppError(`¡Stock insuficiente para ${product.name}! Solo quedan ${product.stock} unidades en vitrina.`, 400);
+      throw new AppError(`¡Stock insuficiente en vitrina para [${product.brand}] ${product.name} (${product.tone})! Solo quedan ${product.stock} piezas.`, 400);
     }
 
     const subtotal = Number(product.price) * Number(item.quantity);
     totalCalculado += subtotal;
 
-    // Preparamos el item con el precio "congelado" de este momento para el detalle
     validatedItems.push({
-      product_id: item.product_id,
-      quantity: item.quantity,
+      product_id: product.id,
+      quantity: parseInt(item.quantity, 10),
       price_at_sale: Number(product.price),
-      name: product.name // Conservado para propósitos de auditoría/logs
+      name: product.name 
     });
   }
 
   // Cuadre matemático final del total neto
   const finalTotal = Math.max(0, totalCalculado - Number(discount));
 
-  // 2. 🚀 REGISTRO Y ATOMICIDAD EN SUPABASE SQL
+  // 2. 🚀 REGISTRO Y ATOMICIDAD TOTAL EN ENTRADA ÚNICA
   try {
-    // Creamos el encabezado de la transacción (Ticket Central)
-    // Mapeamos explícitamente a snake_case para asegurar el contrato con sales.repository.js / Supabase
-    const salePayload = {
+    // Estructuramos el payload anidado unificado para el repositorio senior
+    const atomicPayload = {
+      cashSessionId: activeSession.id, // ⚡ Conexión contable obligatoria: El ticket queda amarrado a la caja chica activa
       total: finalTotal,
-      payment_method: paymentMethod || 'CASH',
-      discount: Number(discount),
-      cash_amount: Number(cashAmount),       // MEJORA: Resguarda desglose para caja chica
-      digital_amount: Number(digitalAmount), // MEJORA: Resguarda desglose para caja chica
-      created_by: user.id,
-      status: 'COMPLETED',
-      notes: notes || null
+      paymentMethod: paymentMethod || 'EFECTIVO',
+      cashAmount: Number(cashAmount),       
+      digitalAmount: Number(digitalAmount), 
+      createdBy: user.id,
+      notes: notes || null,
+      items: validatedItems // Renglones anidados
     };
 
-    const sale = await salesRepo.create(salePayload);
-
-    // Insertamos los detalles en lote (Esto disparará el trigger SQL tr_update_stock_on_sale)
-    const itemPromises = validatedItems.map(item => 
-      salesRepo.createItem({
-        sale_id: sale.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price_at_sale: item.price_at_sale
-      })
-    );
-
-    await Promise.all(itemPromises);
+    // ⚡ Disparo maestro: Todo el ticket se guarda o se cancela en un solo viaje de red
+    const savedSale = await salesRepo.createAtomicSale(atomicPayload);
 
     // 3. 📊 AUDITORÍA LOGÍSTICA EN RENDER
     logger.info({
       event: 'SALE_COMPLETED',
-      saleId: sale.id,
+      saleId: savedSale.id,
+      cashSessionId: activeSession.id,
       total: finalTotal,
       seller: user.name,
-      role: user.role, // Trazabilidad de la jerarquía dual (admin/cashier)
+      role: user.role, 
       itemsCount: validatedItems.length
     });
     
-    // Retorno limpio de la cabecera guardada para que el controlador liquide el vuelto de forma exacta
     return {
-        id: sale.id,
+        id: savedSale.id,
+        cash_session_id: activeSession.id,
         total: finalTotal,
-        payment_method: sale.payment_method,
-        created_at: sale.created_at,
+        payment_method: savedSale.payment_method,
+        created_at: savedSale.created_at,
         items: validatedItems
     };
 
   } catch (error) {
-    // Si la inserción explota, el trigger de PostgreSQL ejecutará un ROLLBACK automático de la operación
-    console.error(`[CRITICAL_SALE_ERROR]: ${error.message}`);
-    throw new AppError(`Transacción de venta fallida en la base de datos: ${error.message}`, 500);
+    logger.error({ event: 'SALES_SERVICE_TRANSACTION_CRASH', message: error.message });
+    // Heredamos directamente el mensaje descriptivo si fue disparado por el trigger de stock insuficiente
+    const messageToClient = error.message.includes('Stock insuficiente') ? error.message : 'Transacción de venta fallida en el servidor.';
+    throw new AppError(messageToClient, error.statusCode || 500);
   }
 };

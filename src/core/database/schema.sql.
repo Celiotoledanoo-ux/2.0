@@ -1,30 +1,30 @@
 -- ==========================================================================
--- 🛠️ GLOW BEAUTY POS - ESTRUCTURA SQL DEFINITIVA (0 ERRORES)
--- Carga atómica de extensiones, tipos restrictivos y motores de stock
--- Sincronizado milimétricamente con la arquitectura de 4 roles y cobro mixto
+-- 🛠️ GLOW BEAUTY POS - ESTRUCTURA SQL DEFINITIVA (REFACCIÓN SENIOR)
 -- ==========================================================================
 
--- 1. LIMPIEZA Y EXTENSIONES
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Eliminación preventiva por si cambias los nombres de tus 4 roles
+-- Limpieza ordenada respetando la integridad referencial de llaves foráneas
+DROP TABLE IF EXISTS cash_sessions CASCADE;
+DROP TABLE IF EXISTS return_items CASCADE;
+DROP TABLE IF EXISTS returns CASCADE;
 DROP TABLE IF EXISTS inventory_logs CASCADE;
 DROP TABLE IF EXISTS sales_items CASCADE;
-DROP TABLE table_sales_items IF EXISTS sales CASCADE;
+DROP TABLE IF EXISTS sales CASCADE;
 DROP TABLE IF EXISTS inventory CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TYPE IF EXISTS user_role CASCADE;
 
--- Creación limpia del tipo ENUM optimizado estrictamente para 4 ROLES de tu negocio
+-- Creación del tipo ENUM con tus 4 roles empresariales
 CREATE TYPE user_role AS ENUM ('admin', 'cashier', 'gerente', 'supervisor');
 
--- 2. TABLAS DE NÚCLEO ENLAZADAS
+-- Tablas Base de la Aplicación
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY, -- Enlace atómico sincronizado con Supabase Auth
+    id UUID PRIMARY KEY, 
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
-    role user_role NOT NULL DEFAULT 'cashier', -- Soporta dinámicamente los 4 roles
+    role user_role NOT NULL DEFAULT 'cashier',
     active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -35,40 +35,69 @@ CREATE TABLE IF NOT EXISTS categories (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Tabla de Inventario Perfeccionada para Cosméticos y Maquillaje
 CREATE TABLE IF NOT EXISTS inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sku TEXT UNIQUE NOT NULL,
+    sku TEXT NOT NULL, -- 💄 Senior Tip: Quitamos UNIQUE global para permitir SKU idéntico en tonos diferentes
     name TEXT NOT NULL,
-    brand TEXT NOT NULL, -- 💄 Requerido: Marca (ej: Maybelline)
-    tone TEXT NOT NULL,  -- 💄 Requerido: Tono/Variante (ej: Superstay 20)
-    category_id UUID REFERENCES categories(id) ON DELETE SET NULL, -- Evita fallos si se borra una categoría
+    brand TEXT NOT NULL, 
+    tone TEXT NOT NULL,  
+    category_id UUID REFERENCES categories(id) ON DELETE SET NULL, 
     price DECIMAL(12, 2) NOT NULL CHECK (price >= 0),
     stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-    min_stock INTEGER NOT NULL DEFAULT 5 CHECK (min_stock >= 0), -- Restricción CHECK estricta
+    min_stock INTEGER NOT NULL DEFAULT 5 CHECK (min_stock >= 0), 
     active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT unique_sku_tone UNIQUE (sku, tone) -- 💄 La llave única es la combinación del código con su tono
 );
 
--- Tabla de Ventas (Encabezado del Ticket)
+-- 💵 NUEVA: Tabla esencial para el módulo /cash (Control de Arqueos e ingresos)
+CREATE TABLE IF NOT EXISTS cash_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE RESTRICT,
+    opening_balance DECIMAL(12, 2) NOT NULL CHECK (opening_balance >= 0),
+    closing_balance DECIMAL(12, 2) CHECK (closing_balance >= 0),
+    real_cash DECIMAL(12, 2), -- Lo que el cajero contó físicamente en monedas/billetes
+    status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'CLOSED')),
+    opened_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    closed_at TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS sales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cash_session_id UUID REFERENCES cash_sessions(id) ON DELETE RESTRICT, -- Cada venta pertenece a un turno de caja
     total DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (total >= 0),
-    payment_method TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'COMPLETED',
-    cash_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (cash_amount >= 0),       -- 💵 Columna agregada para arqueos de caja chica
-    digital_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (digital_amount >= 0), -- 💳 Columna agregada para pasarelas de pago
-    notes TEXT,                                                                   -- 📝 Columna de comentarios del ticket añadida
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL, -- Integridad referencial de usuarios
+    payment_method TEXT NOT NULL, -- 'EFECTIVO', 'DIGITAL', 'MIXTO'
+    status TEXT NOT NULL DEFAULT 'COMPLETED' CHECK (status IN ('COMPLETED', 'REFUNDED', 'PARTIAL_REFUNDED')),
+    cash_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (cash_amount >= 0),       
+    digital_amount DECIMAL(12, 2) NOT NULL DEFAULT 0 CHECK (digital_amount >= 0), 
+    notes TEXT,                                                                   
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL, 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS sales_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sale_id UUID REFERENCES sales(id) ON DELETE CASCADE, -- Borrado en cascada correcto para tickets
-    product_id UUID REFERENCES inventory(id) ON DELETE RESTRICT, -- Impide borrar productos con ventas activas
+    sale_id UUID REFERENCES sales(id) ON DELETE CASCADE, 
+    product_id UUID REFERENCES inventory(id) ON DELETE RESTRICT, 
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     price_at_sale DECIMAL(12, 2) NOT NULL CHECK (price_at_sale >= 0)
+);
+
+-- 🔄 NUEVA: Tablas esenciales para el módulo /returns (Devoluciones)
+CREATE TABLE IF NOT EXISTS returns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sale_id UUID REFERENCES sales(id) ON DELETE RESTRICT,
+    reason TEXT NOT NULL,
+    refund_total DECIMAL(12, 2) NOT NULL CHECK (refund_total >= 0),
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS return_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    return_id UUID REFERENCES returns(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES inventory(id) ON DELETE RESTRICT,
+    quantity INTEGER NOT NULL CHECK (quantity > 0)
 );
 
 CREATE TABLE IF NOT EXISTS inventory_logs (
@@ -81,18 +110,29 @@ CREATE TABLE IF NOT EXISTS inventory_logs (
 );
 
 -- ==========================================================================
--- ⚡ TRIGGERS Y AUTOMATIZACIÓN (CERO DESCUADRES FÍSICOS)
+-- ⚡ TRIGGERS EVOLUCIONADOS CON AUDITORÍA AUTOMÁTICA
 -- ==========================================================================
 
 CREATE OR REPLACE FUNCTION handle_sale_stock()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_user_id UUID;
 BEGIN
-    -- Mecanismo preventivo: Detiene la venta si la vitrina se queda vacía
+    -- Validar existencias
     IF (SELECT stock FROM inventory WHERE id = NEW.product_id) < NEW.quantity THEN
         RAISE EXCEPTION 'Stock insuficiente en vitrina para completar la venta.';
     END IF;
 
+    -- Extraer el usuario que hizo la venta para asociarlo al log histórico
+    SELECT created_by INTO v_user_id FROM sales WHERE id = NEW.sale_id;
+
+    -- 1. Actualizar Stock Físico
     UPDATE inventory SET stock = stock - NEW.quantity WHERE id = NEW.product_id;
+
+    -- 2. Inserción de Auditoría Senior Automática en los Logs
+    INSERT INTO inventory_logs (product_id, user_id, change_amount, reason)
+    VALUES (NEW.product_id, v_user_id, -NEW.quantity, 'VENTA REGISTRADA ID: ' || NEW.sale_id);
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -102,16 +142,12 @@ CREATE TRIGGER tr_update_stock_on_sale
 AFTER INSERT ON sales_items
 FOR EACH ROW EXECUTE FUNCTION handle_sale_stock();
 
--- ==========================================================================
--- 🔄 FUNCIÓN RPC ATÓMICA PARA REPOSITORIO NODE.JS (modify_stock)
--- ==========================================================================
-
-CREATE OR REPLACE FUNCTION modify_stock(p_id UUID, delta INT)
+-- RPC Atómica para uso manual desde el repositorio Node.js
+CREATE OR REPLACE FUNCTION modify_stock(p_id UUID, delta INT, p_user_id UUID, p_reason TEXT)
 RETURNS INT AS $$
 DECLARE
     new_stock INT;
 BEGIN
-    -- Ejecuta la suma o resta directamente en PostgreSQL con bloqueo de celda
     UPDATE inventory
     SET stock = stock + delta
     WHERE id = p_id
@@ -120,6 +156,9 @@ BEGIN
     IF new_stock < 0 THEN
         RAISE EXCEPTION 'El stock resultante no puede ser negativo.';
     END IF;
+
+    INSERT INTO inventory_logs (product_id, user_id, change_amount, reason)
+    VALUES (p_id, p_user_id, delta, COALESCE(p_reason, 'AJUSTE MANUAL REPOSITORIO'));
 
     RETURN new_stock;
 END;

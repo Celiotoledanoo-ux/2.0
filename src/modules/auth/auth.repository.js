@@ -1,13 +1,13 @@
 import { db } from '../../core/database/supabaseClient.js';
 import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; // ⚡ Inyectamos tu logger Pro
 
 /**
  * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS (0 ERRORES)
  * Sincronización impecable entre Supabase Auth y nuestras tablas de negocio.
  */
 
-// Definimos los campos que queremos traer siempre para no repetir código (DRY)
 const USER_FIELDS = 'id, email, role, active, name';
 
 /**
@@ -26,15 +26,19 @@ export const findById = async (id) => {
 
     if (error) throw error;
     
-    // CORRECCIÓN: Normalización a minúsculas del rol para total consistencia en memoria
+    // ⚡ CORRECCIÓN: Normalización a MAYÚSCULAS para consistencia total con ROLES.*
     if (data) {
-      data.role = data.role?.toLowerCase().trim();
+      data.role = data.role?.toUpperCase().trim();
     }
     
     return data;
 
   } catch (error) {
-    console.error(`[REPO_ERROR][findById]: 🚨 ${error.message}`);
+    logger.error({
+      event: 'REPO_ERROR_FINDBYID',
+      message: error.message,
+      userId: id
+    });
     throw new AppError('No pudimos verificar tu identidad en la base de datos.', 500);
   }
 };
@@ -55,15 +59,19 @@ export const findByEmail = async (email) => {
 
     if (error) throw error;
     
-    // CORRECCIÓN: Normalización a minúsculas del rol
+    // ⚡ CORRECCIÓN: Normalización a MAYÚSCULAS para consistencia total con ROLES.*
     if (data) {
-      data.role = data.role?.toLowerCase().trim();
+      data.role = data.role?.toUpperCase().trim();
     }
     
     return data;
 
   } catch (error) {
-    console.error(`[REPO_ERROR][findByEmail]: 🚨 ${error.message}`);
+    logger.error({
+      event: 'REPO_ERROR_FINDBYEMAIL',
+      message: error.message,
+      email
+    });
     throw new AppError('Error al rastrear el correo en el sistema.', 500);
   }
 };

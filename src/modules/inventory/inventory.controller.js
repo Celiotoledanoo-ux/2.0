@@ -1,5 +1,5 @@
 import * as inventoryService from './inventory.service.js';
-import catchAsync from '../../shared/utils/async.utils.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; // ⚡ CORRECCIÓN: Importación nombrada con llaves
 import AppError from '../../core/errors/AppError.js';
 
 /**
@@ -9,14 +9,12 @@ import AppError from '../../core/errors/AppError.js';
 
 // 1. REGISTRAR PRODUCTO
 export const create = catchAsync(async (req, res, next) => {
-  // Desanidación limpia tolerante al validador Zod
   const productData = req.body.body || req.body; 
   
   if (!productData || Object.keys(productData).length === 0) {
     return next(new AppError('No se recibieron datos del producto, fiera.', 400));
   }
 
-  // Acoplamos el creador del producto por seguridad en auditoría
   const newProduct = await inventoryService.createProduct({
     ...productData,
     createdBy: req.user?.id
@@ -25,19 +23,18 @@ export const create = catchAsync(async (req, res, next) => {
   res.status(201).json({
     status: 'success',
     message: `Producto [${newProduct.name}] registrado con éxito.`,
-    data: newProduct // Desenvuelto directamente para mantener homogeneidad con el frontend
+    data: newProduct 
   });
 });
 
 // 2. LISTAR INVENTARIO / BUSCADOR DEL POS
 export const getAll = catchAsync(async (req, res) => {
-  // Recibe filtros como ?name=labial o ?sku=LIP01 desde el buscador del POS
   const products = await inventoryService.getProducts(req.query);
 
   res.status(200).json({
     status: 'success',
     results: products.length,
-    data: products // Retorna el arreglo directo para que result.data o result.data.products no fallen en el front
+    data: products 
   });
 });
 
@@ -51,7 +48,6 @@ export const updateStock = catchAsync(async (req, res, next) => {
     return next(new AppError('La cantidad de ajuste es obligatoria.', 400));
   }
 
-  // Encapsulado limpio para evitar errores posicionales en el servicio
   const updatedProduct = await inventoryService.adjustStock({
     productId: id, 
     quantityDelta: Number(quantity), 

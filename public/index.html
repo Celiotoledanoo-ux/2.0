@@ -1,247 +1,526 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Glow Beauty POS - Sistema de Gestión</title>
-  
-  <!-- 🎨 FUENTES PREMIUM DE TU HOJA DE ESTILOS BOUTIQUE (CORREGIDAS) -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Glow Beauty POS</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  
-  <!-- 🎛️ HOJA DE ESTILOS PREMIUM CORREGIDA -->
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
+
 <body>
 
-  <!-- ==========================================================================
-       🛡️ PANTALLA DE AUTENTICACIÓN INTEGRADA (#auth-screen)
-       ========================================================================== -->
-  <div id="auth-screen" class="login-container hidden">
-    <div class="login-card">
-      <h2 class="font-display">Glow Beauty</h2>
-      <p class="text-dim">Inicia sesión para acceder a la caja chica e inventarios</p>
-      
-      <form id="login-form">
-        <div class="form-group">
-          <label for="login-email">Correo Electrónico</label>
-          <input type="email" id="login-email" class="input-field" placeholder="ejemplo@glow.com" required>
+  <!-- ========================= -->
+  <!-- AUTH SCREEN -->
+  <!-- ========================= -->
+  <section id="auth-screen" class="screen-layer active-screen">
+
+    <div class="auth-card glass-card">
+      <div class="brand-block">
+        <h1 class="brand-title">Glow Beauty POS</h1>
+        <p class="brand-subtitle">
+          Boutique Cosmetics Management Suite
+        </p>
+      </div>
+
+      <form id="login-form" class="form-layout">
+
+        <div class="input-group">
+          <label for="login-identifier">Correo o Alias de Caja</label>
+          <input
+            type="text"
+            id="login-identifier"
+            placeholder="beauty.manager"
+            autocomplete="username"
+          >
         </div>
-        
-        <div class="form-group">
+
+        <div class="input-group">
           <label for="login-password">Contraseña</label>
-          <input type="password" id="login-password" class="input-field" placeholder="••••••••" required>
+          <input
+            type="password"
+            id="login-password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+          >
         </div>
-        
-        <button type="submit" id="login-submit-btn" class="btn-submit">
-          Ingresar
+
+        <button type="submit" id="login-submit-btn">
+          Ingresar al Sistema
         </button>
+
       </form>
     </div>
-  </div>
 
-  <!-- ==========================================================================
-       🏛️ CONTENEDOR MAESTRO DE LA APLICACIÓN SPA (#content-root)
-       ========================================================================== -->
-  <div id="content-root" class="app-container">
-    
-    <!-- 🗂️ PANEL LATERAL DE NAVEGACIÓN (SIDEBAR) -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h1 class="brand-title font-display">Glow Beauty</h1>
-        <span class="text-xs tracking-widest text-dim uppercase">POS SYSTEM</span>
+  </section>
+
+
+  <!-- ========================= -->
+  <!-- CASH LOCK SCREEN -->
+  <!-- ========================= -->
+  <section id="cash-lock-screen" class="overlay-screen">
+
+    <div class="modal-card">
+
+      <div class="modal-header">
+        <h2>Apertura de Caja</h2>
+        <p>Ingresa el fondo inicial del turno monetario.</p>
       </div>
-      
-      <nav class="sidebar-menu">
-        <!-- Controladores dinámicos sincronizados mediante data-module -->
-        <button class="sidebar-btn active" data-module="pos">
-          <i data-lucide="shopping-bag"></i> Ventas
+
+      <form id="cash-open-form" class="form-layout">
+
+        <div class="input-group">
+          <label for="cash-opening-balance-input">
+            Fondo Inicial
+          </label>
+
+          <input
+            type="number"
+            id="cash-opening-balance-input"
+            placeholder="$0.00"
+            step="0.01"
+          >
+        </div>
+
+        <button type="submit" id="cash-open-submit-btn">
+          Abrir Caja
         </button>
-        <button class="sidebar-btn" data-module="inventory">
-          <i data-lucide="package"></i> Inventario
+
+      </form>
+
+    </div>
+
+  </section>
+
+
+  <!-- ========================= -->
+  <!-- MAIN POS WORKSPACE -->
+  <!-- ========================= -->
+  <main id="pos-main-workspace">
+
+    <!-- LEFT SIDE -->
+    <section class="products-section">
+
+      <div class="workspace-header">
+        <div>
+          <h2>Catálogo de Cosméticos</h2>
+          <p>Gestión premium de maquillaje y skincare.</p>
+        </div>
+
+        <div id="vault-cash-display">
+          Caja Neta: $0.00
+        </div>
+      </div>
+
+      <div class="search-wrapper">
+        <input
+          type="text"
+          id="product-search-input"
+          placeholder="Buscar productos, marcas, tonos o SKU..."
+        >
+      </div>
+
+      <div id="products-grid-container">
+
+        <!-- SAMPLE PRODUCT CARD -->
+        <article class="product-card">
+
+          <div class="product-card-top">
+            <span class="product-brand">
+              Rare Beauty
+            </span>
+
+            <span class="product-stock-badge">
+              Disponible
+            </span>
+          </div>
+
+          <div class="product-image-placeholder"></div>
+
+          <div class="product-content">
+
+            <h3 class="product-name">
+              Soft Pinch Liquid Blush
+            </h3>
+
+            <p class="product-variant">
+              Tono: Hope
+            </p>
+
+            <p class="product-sku">
+              SKU: RB-SP-2039
+            </p>
+
+          </div>
+
+          <div class="product-footer">
+
+            <span class="product-price">
+              $699.00
+            </span>
+
+            <button class="add-product-btn">
+              Agregar
+            </button>
+
+          </div>
+
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <!-- RIGHT SIDE -->
+    <aside id="shopping-cart-panel">
+
+      <div class="cart-header">
+        <h2>Carrito de Compra</h2>
+        <p>Resumen operativo del ticket.</p>
+      </div>
+
+      <div class="cart-items-container">
+
+        <!-- SAMPLE CART ITEM -->
+        <div class="cart-item-row">
+
+          <div class="cart-item-info">
+            <h4>Soft Pinch Liquid Blush</h4>
+            <span>Rare Beauty · Hope</span>
+          </div>
+
+          <div class="cart-item-controls">
+
+            <button class="qty-btn decrease-btn">
+              −
+            </button>
+
+            <span class="qty-display">
+              1
+            </span>
+
+            <button class="qty-btn increase-btn">
+              +
+            </button>
+
+          </div>
+
+          <div class="cart-item-price">
+            $699.00
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- CHECKOUT FORM -->
+      <form id="checkout-form">
+
+        <div class="panel-section">
+
+          <h3>Liquidación</h3>
+
+          <div class="input-group">
+            <label for="payment-method-select">
+              Método de Pago
+            </label>
+
+            <select id="payment-method-select">
+              <option value="CASH">CASH</option>
+              <option value="CARD">CARD</option>
+              <option value="TRANSFER">TRANSFER</option>
+              <option value="MIXED">MIXED</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="checkout-cash-amount">
+              Pago en Efectivo
+            </label>
+
+            <input
+              type="number"
+              id="checkout-cash-amount"
+              placeholder="$0.00"
+              step="0.01"
+            >
+          </div>
+
+          <div class="input-group">
+            <label for="checkout-digital-amount">
+              Pago Digital
+            </label>
+
+            <input
+              type="number"
+              id="checkout-digital-amount"
+              placeholder="$0.00"
+              step="0.01"
+            >
+          </div>
+
+          <div class="input-group">
+            <label for="checkout-discount-input">
+              Descuento
+            </label>
+
+            <input
+              type="number"
+              id="checkout-discount-input"
+              placeholder="0%"
+              step="0.01"
+            >
+          </div>
+
+          <button type="submit" id="checkout-submit-btn">
+            Procesar Cobro
+          </button>
+
+        </div>
+
+      </form>
+
+
+      <!-- CASH TRANSACTION -->
+      <form id="cash-transaction-form">
+
+        <div class="panel-section">
+
+          <h3>Movimiento de Caja</h3>
+
+          <div class="input-grid">
+
+            <div class="input-group">
+              <label for="trans-type-select">
+                Tipo
+              </label>
+
+              <select id="trans-type-select">
+                <option value="IN">IN</option>
+                <option value="OUT">OUT</option>
+              </select>
+            </div>
+
+            <div class="input-group">
+              <label for="trans-amount-input">
+                Monto
+              </label>
+
+              <input
+                type="number"
+                id="trans-amount-input"
+                placeholder="$0.00"
+                step="0.01"
+              >
+            </div>
+
+          </div>
+
+          <div class="input-group">
+            <label for="trans-concept-input">
+              Concepto
+            </label>
+
+            <input
+              type="text"
+              id="trans-concept-input"
+              placeholder="Descripción del movimiento"
+            >
+          </div>
+
+        </div>
+
+      </form>
+
+
+      <!-- CASH CLOSE -->
+      <div class="cash-close-actions">
+
+        <button id="cash-close-trigger-btn">
+          Realizar Corte de Caja
         </button>
-        <button class="sidebar-btn" data-module="reports">
-          <i data-lucide="bar-chart-3"></i> Reportes
-        </button>
-        <button class="sidebar-btn" data-module="users">
-          <i data-lucide="users"></i> Usuarios
-        </button>
-        <button class="sidebar-btn" data-module="cash">
-          <i data-lucide="wallet"></i> Caja Chica
-        </button>
-      </nav>
+
+      </div>
+
     </aside>
 
-    <!-- 🌐 CONTENIDO PRINCIPAL Y CAPAS DINÁMICAS -->
-    <div class="main-layout">
-      
-      <!-- BARRA SUPERIOR DE INFORMACIÓN UNIFICADA (TOPBAR) -->
-      <header class="topbar">
-        <div class="clock-box">
-          <i data-lucide="clock" class="text-dim"></i>
-          <span id="datetime-display">Cargando reloj...</span>
+  </main>
+
+
+  <!-- ========================= -->
+  <!-- CASH CLOSE MODAL -->
+  <!-- ========================= -->
+  <div class="modal-overlay">
+
+    <div class="modal-card">
+
+      <div class="modal-header">
+        <h2>Cierre de Caja</h2>
+        <p>Realiza el arqueo monetario del turno.</p>
+      </div>
+
+      <form id="cash-close-form">
+
+        <div class="input-group">
+          <label for="cash-real-cash-counted">
+            Dinero Físico Contado
+          </label>
+
+          <input
+            type="number"
+            id="cash-real-cash-counted"
+            placeholder="$0.00"
+            step="0.01"
+          >
         </div>
-        
-        <div class="user-badge" id="user-display">
-          <!-- Inyección dinámica de datos del empleado (Nombre / Rol ENUM) -->
-          <span class="font-bold">Cargando...</span>
+
+        <div class="input-group">
+          <label for="cash-close-notes">
+            Comentarios
+          </label>
+
+          <textarea
+            id="cash-close-notes"
+            placeholder="Notas del cierre..."
+          ></textarea>
         </div>
-      </header>
 
-      <!-- SECCIÓN MAESTRA DE VISTAS (.view) -->
-      <main class="view-container">
-        
-        <!-- ==========================================
-             VISTA 1: PUNTO DE VENTA (ID: view-pos)
-             ========================================== -->
-        <section id="view-pos" class="view active animate-fade">
-          <div class="pos-grid">
-            
-            <!-- PANEL DE CONTROL OPERATIVO -->
-            <div class="card p-6">
-              <h2 class="font-display mb-4">Registro de Productos</h2>
-              
-              <!-- Entrada del Lector de Código de Barras (Mapeado a SKU de Supabase) -->
-              <div class="form-group mb-4">
-                <label for="barcode-input">Lector Láser / Escáner SKU</label>
-                <input type="text" id="barcode-input" class="input-field w-full" placeholder="Posicione el cursor aquí y escanee...">
-              </div>
-              
-              <hr class="my-4 border-gray-200">
-              
-              <!-- Selección Manual de Contingencia -->
-              <div class="form-group mb-4">
-                <label for="cart-product-select">Selección Manual de Catálogo</label>
-                <select id="cart-product-select" class="input-field w-full">
-                  <option value="">Cargando vitrinas...</option>
-                </select>
-              </div>
-              
-              <div class="flex gap-4">
-                <div class="form-group w-1/3">
-                  <label for="cart-qty">Cantidad</label>
-                  <input type="number" id="cart-qty" class="input-field w-full" value="1" min="1">
-                </div>
-                <div class="form-group w-2/3 flex items-end">
-                  <button id="add-to-cart-btn" class="gold-btn w-full py-2.5 rounded-md">
-                    Agregar a la Lista
-                  </button>
-                </div>
-              </div>
-            </div>
+        <button type="submit">
+          Confirmar Cierre
+        </button>
 
-            <!-- TABLA DEL CARRITO DE COMPRAS -->
-            <div class="card table-card p-6">
-              <div class="flex justify-between items-center mb-4">
-                <h2 class="font-display">Ticket Actual</h2>
-                <div id="cart-badge" class="badge hidden">0</div>
-              </div>
-              
-              <div class="table-wrapper">
-                <table>
-                  <thead class="table-head">
-                    <tr>
-                      <th class="text-left p-4">Cosmético</th>
-                      <th class="text-center p-4">Cant.</th>
-                      <th class="text-right p-4">Precio</th>
-                      <th class="text-right p-4">Subtotal</th>
-                      <th class="text-right p-4">Eliminar</th>
-                    </tr>
-                  </thead>
-                  <tbody id="cart-items-body">
-                    <!-- Inyección dinámica de filas desde script.js -->
-                  </tbody>
-                </table>
-              </div>
-              
-              <!-- Estado de alerta vacío -->
-              <div id="cart-empty" class="text-center py-8 text-dim">
-                <i data-lucide="shopping-cart" style="margin: 0 auto 10px; display: block; opacity: 0.5;"></i>
-                No hay cosméticos agregados al ticket de venta.
-              </div>
-            </div>
+      </form>
 
-            <!-- PANEL DE LIQUIDACIÓN Y PAGOS MIXTOS -->
-            <div class="card p-6 settlement-card">
-              <h2 class="font-display mb-4">Módulo de Liquidación</h2>
-              
-              <div class="payment-fields-grid">
-                <div class="form-group">
-                  <label for="payment-cash">💵 Pago en Efectivo ($)</label>
-                  <input type="number" id="payment-cash" class="input-field w-full" placeholder="0.00" min="0" step="0.50">
-                </div>
-                <div class="form-group">
-                  <label for="payment-digital">💳 Pago Digital / Tarjeta ($)</label>
-                  <input type="number" id="payment-digital" class="input-field w-full" placeholder="0.00" min="0" step="0.50">
-                </div>
-              </div>
-              
-              <div class="total-box my-6">
-                <span class="text-dim uppercase tracking-wider text-xs">Total de la Operación</span>
-                <div id="total-venta" class="font-display text-4xl">$0.00</div>
-              </div>
-              
-              <button id="checkout-btn" class="btn-success">
-                <i data-lucide="check-circle"></i> Procesar Venta y Descontar Vitrina
-              </button>
-            </div>
+    </div>
 
-          </div>
-        </section>
+  </div>
 
-        <!-- ==========================================================================
-           📦 CAPAS DE PERFILES SPA (CORREGIDO: CLASE hidden INYECTADA NATIVAMENTE)
-           ========================================================================== -->
 
-      <!-- VISTA 2: INVENTARIO (ID: view-inventory) -->
-      <section id="view-inventory" class="view hidden animate-fade">
-        <div class="card p-6">
-          <h2 class="font-display mb-2">Control de Vitrinas y Almacén</h2>
-          <p class="text-dim mb-4">Monitoreo de existencias, marcas, tonos y alertas de stock mínimo.</p>
-          <div id="inventory-table-root">
-            <!-- Tabla de inventario dinámica inyectada por script.js -->
-          </div>
+  <!-- ========================= -->
+  <!-- ADMIN DASHBOARD -->
+  <!-- ========================= -->
+  <section id="admin-dashboard-panel">
+
+    <div class="admin-header">
+      <div>
+        <h2>Panel Administrativo</h2>
+        <p>Gestión operativa y métricas ejecutivas.</p>
+      </div>
+    </div>
+
+
+    <!-- EMPLOYEES -->
+    <div id="employees-table-container" class="admin-card">
+
+      <div class="section-header">
+        <h3>Personal</h3>
+      </div>
+
+      <div class="employees-table">
+
+        <div class="table-head">
+          <span>Nombre</span>
+          <span>Correo</span>
+          <span>Rol</span>
+          <span>Estado</span>
         </div>
-      </section>
 
-      <!-- VISTA 3: REPORTES (ID: view-reports) -->
-      <section id="view-reports" class="view hidden animate-fade">
-        <div class="card p-6">
-          <h2 class="font-display mb-4">Métricas Comerciales</h2>
-          <div class="metrics-grid">
-            <!-- Rejilla de métricas lista para Chart.js -->
-          </div>
+        <div class="table-row">
+          <span>Andrea López</span>
+          <span>andrea@glowbeauty.com</span>
+          <span>Manager</span>
+
+          <button class="toggle-employee-status-btn">
+            Suspender
+          </button>
         </div>
-      </section>
 
-      <!-- VISTAS ADICIONALES (Mantenidas ocultas de forma segura al inicio) -->
-      <section id="view-users" class="view hidden animate-fade"></section>
-      <section id="view-cash" class="view hidden animate-fade"></section>
+        <div class="table-row">
+          <span>Sofía Méndez</span>
+          <span>sofia@glowbeauty.com</span>
+          <span>Cajera</span>
 
-    </div> <!-- CORRECCIÓN: Cierre exacto de tu contenedor de vistas web -->
-  </div> <!-- CORRECCIÓN: Cierre exacto de tu main-layout de dos columnas -->
-</div> <!-- CORRECCIÓN: Cierre exacto de tu app-container raíz -->
+          <button class="toggle-employee-status-btn">
+            Activar
+          </button>
+        </div>
 
-<!-- NOTIFICACIÓN TOAST FLOTANTE GLOBAL -->
-<div id="toast" class="toast"></div>
+      </div>
 
-<!-- ==========================================================================
-     📡 CARGA ORDENADA DE SCRIPT E ICONOS (ARQUITECTURA DE RENDIMIENTO EXTRA)
-     ========================================================================== -->
+    </div>
 
-<!-- 1. Carga Lucide directamente desde tus node_modules locales gracias a app.use('/vendor') -->
-<script src="/vendor/lucide/dist/umd/lucide.min.js"></script>
 
-<!-- 2. Tu motor lógico interactivo global unificado -->
-<script src="script.js"></script>
+    <!-- ANALYTICS -->
+    <div id="reports-analytics-container" class="admin-card">
 
-<!-- 3. Renderizador seguro post-despliegue -->
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  });
-</script>
+      <div class="section-header">
+
+        <h3>Indicadores Ejecutivos</h3>
+
+        <div class="report-tabs">
+
+          <button class="report-range-tab active-tab">
+            Día
+          </button>
+
+          <button class="report-range-tab">
+            Semana
+          </button>
+
+          <button class="report-range-tab">
+            Mes
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="metrics-grid">
+
+        <div class="metric-card">
+          <span class="metric-label">
+            Revenue
+          </span>
+
+          <h4 id="metric-revenue-display">
+            $0.00
+          </h4>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">
+            Ventas
+          </span>
+
+          <h4 id="metric-sales-count">
+            0
+          </h4>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">
+            Health Score
+          </span>
+
+          <h4 id="metric-health-score">
+            100%
+          </h4>
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
 
 </body>
 </html>

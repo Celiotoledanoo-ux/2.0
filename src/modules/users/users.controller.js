@@ -1,16 +1,15 @@
 import * as userService from './users.service.js';
 import logger from '../../core/logger/logger.js';
-import catchAsync from '../../shared/utils/async.utils.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; // ⚡ CORRECCIÓN: Importación nombrada con llaves
 import AppError from '../../core/errors/AppError.js';
 
 /**
  * 👥 USERS CONTROLLER - GESTIÓN DE PERSONAL (0 ERRORES)
- * Sincronizado milimétricamente con el frontend dinámico de dos roles y Supabase SQL.
+ * Sincronizado milimétricamente con el frontend dinámico de 4 roles y Supabase SQL.
  */
 
 // 1. CREAR USUARIO (EMPLEADO)
 export const create = catchAsync(async (req, res, next) => {
-  // Extraemos 'body' por compatibilidad con tu apiFetch, fallback al body directo
   const userData = req.body.body || req.body; 
   
   if (!userData || Object.keys(userData).length === 0) {
@@ -24,7 +23,7 @@ export const create = catchAsync(async (req, res, next) => {
   return res.status(201).json({
     status: 'success',
     message: `Usuario ${newUser.name} creado correctamente en el sistema.`,
-    data: newUser // CORRECCIÓN: Desenvuelto directo para homogeneidad de lectura
+    data: newUser 
   });
 });
 
@@ -35,7 +34,7 @@ export const getAll = catchAsync(async (req, res) => {
   return res.status(200).json({
     status: 'success',
     results: users.length,
-    data: users // CORRECCIÓN: Retorna el arreglo directo para que result.data.forEach() no explote en script.js
+    data: users 
   });
 });
 
@@ -52,7 +51,6 @@ export const getById = catchAsync(async (req, res) => {
 
 // 4. ACTIVAR/DESACTIVAR USUARIO (Baja Lógica de Cajeros)
 export const toggleStatus = catchAsync(async (req, res, next) => {
-  // CORRECCIÓN: Desanidación limpia tolerante al validador Zod y apiFetch
   const data = req.body.body || req.body;
   const { id } = req.params;
   const { active } = data;

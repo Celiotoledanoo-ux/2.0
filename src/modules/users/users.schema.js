@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * 👥 USERS VALIDATION SCHEMAS - POS MAQUILLAJE (2 ROLES)
+ * 👥 USERS VALIDATION SCHEMAS - GLOW BEAUTY POS
  * El muro de contención definitivo para la gestión del personal en Render.
  */
 
@@ -18,7 +18,6 @@ export const createUserSchema = z.object({
       .string({ required_error: 'El identificador o correo electrónico es requerido.' })
       .trim()
       .min(3, 'El identificador es demasiado corto.'),
-      // No forzamos .email() por tu regla de negocio de alias (ej: "caja1") que el service auto-completa
     
     password: z
       .string({ required_error: 'La contraseña es obligatoria.' })
@@ -26,12 +25,12 @@ export const createUserSchema = z.object({
       .regex(/[A-Z]/, 'La contraseña debe incluir al menos una letra mayúscula.')
       .regex(/[0-9]/, 'La contraseña debe incluir al menos un número.'),
     
-    // CORRECCIÓN: Restringido estrictamente a la jerarquía simplificada de dos roles
+    // ⚡ CORRECCIÓN: Ampliado el ENUM para dar soporte total a los 4 roles del negocio
     role: z
-      .enum(['admin', 'cashier', 'ADMIN', 'CASHIER'], {
-        errorMap: () => ({ message: "El rol asignado no existe en este negocio, bro. Elige admin o cashier." })
+      .enum(['admin', 'cashier', 'gerente', 'supervisor', 'ADMIN', 'CASHIER', 'GERENTE', 'SUPERVISOR'], {
+        errorMap: () => ({ message: "El rol asignado no existe en este negocio, bro. Elige entre admin, cashier, gerente o supervisor." })
       })
-      .transform(val => val.toLowerCase().trim()) // CORRECCIÓN: Homologación automática a minúsculas
+      .transform(val => val.toLowerCase().trim()) // Homologación automática a minúsculas para Postgres
       .default('cashier')
   })
 });

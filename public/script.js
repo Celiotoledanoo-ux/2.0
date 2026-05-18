@@ -1,427 +1,179 @@
-// ==========================================
-// ESTADO GLOBAL DE LA APLICACIÓN
-// ==========================================
-let allData = [];
-let cart = [];
-let currentUser = null;
+/**
+ * 🎨 GLOW BEAUTY POS - CORE FRONTEND ENGINE (PEGAMENTO DEFINITIVO)
+ * Gestiona peticiones por HTTP hacia la API de Express sincronizado al localStorage.
+ */
 
-// Formateador de moneda (Pesos Mexicanos)
-const fmt = (n) =>
-  "$" + Number(n || 0).toLocaleString("es-MX", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const API_BASE_URL = '/api/v1';
 
-// Sistema de Notificaciones Toast
-function showToast(msg) {
-  const toast = document.getElementById("toast");
-  if (!toast) return alert(msg);
-  toast.textContent = msg;
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2500);
-}
-
-// ==========================================
-// CONTROL DE SESIÓN EN PANTALLA ÚNICA
-// ==========================================
-function checkAuth() {
-  const token = localStorage.getItem("pos_token");
-  const userData = localStorage.getItem("pos_user");
-  const authScreen = document.getElementById("auth-screen");
-  const mainApp = document.getElementById("content-root");
-
-  if (!token || !userData) {
-    if (authScreen) authScreen.classList.remove("hidden");
-    if (mainApp) mainApp.classList.add("hidden");
-    return false;
-  }
-
-  currentUser = JSON.parse(userData);
+// 📡 HELPER MAESTRO DE PETICIONES HTTP (Inyecta tokens y desanida payloads de forma automática)
+async function apiFetch(endpoint, options = {}) {
+  const token = localStorage.getItem('glow_pos_token');
   
-  if (authScreen) authScreen.classList.add("hidden");
-  if (mainApp) mainApp.classList.remove("hidden");
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
 
-  // INYECCIÓN DINÁMICA: Acepta cualquier rol que venga de tu base de datos (3 o 4 roles)
-  const userDisplay = document.getElementById("user-display");
-  if (userDisplay && currentUser.role) {
-    // Convierte el rol a mayúsculas para mantener la estética premium (ej: GERENTE, CAJERO)
-    const rolFormateado = currentUser.role.toUpperCase();
-    userDisplay.innerHTML = `
-      <span class="font-bold">${currentUser.name || 'Empleado'}</span>
-      <span class="text-xs block text-gray-400">${rolFormateado}</span>
-    `;
-  }
-  return true;
-}
+  const config = {
+    ...options,
+    headers: { ...defaultHeaders, ...options.headers }
+  };
 
-// ==========================================
-// ENRUTADOR POR MÓDULOS (data-module)
-// ==========================================
-document.querySelectorAll(".sidebar-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".sidebar-btn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
-    
-    const targetModule = btn.dataset.module;
-    const targetView = document.getElementById("view-" + targetModule);
-    if (targetView) {
-      targetView.classList.add("active");
-      initModuleData(targetModule);
-    }
-  });
-});
-
-function initModuleData(moduleName) {
-  switch(moduleName) {
-    case 'inventory':
-      if (typeof renderInventarioTabla === 'function') renderInventarioTabla();
-      break;
-    case 'reports':
-      if (window.Chart && typeof cargarGraficasReportes === 'function') cargarGraficasReportes();
-      break;
-    case 'users':
-      if (typeof cargarListaUsuarios === 'function') cargarListaUsuarios();
-      break;
-    case 'cash':
-      if (typeof cargarFlujoCaja === 'function') cargarFlujoCaja();
-      break;
-  }
-}
-
-// ==========================================
-// CORRECCIÓN: ESCANER ADAPTADO A TU COLUMNA 'sku'
-// ==========================================
-const barcodeInput = document.getElementById("barcode-input");
-if (barcodeInput) {
-  barcodeInput.addEventListener("keypress", function(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const code = this.value.trim();
-      if (!code) return;
-
-      // CORRECCIÓN: Buscamos por 'sku' e 'id' tal como definiste en tu SQL
-      const product = allData.find(p => p.sku === code || p.id === code);
-
-      if (product) {
-        agregarAlCarritoPorObjeto(product, 1);
-        showToast(`Agregado: ${product.name}`);
-      } else {
-        showToast("Producto no registrado o sin inventario en vitrina");
-      }
-      this.value = "";
-    }
-  });
-}
-
-// Reloj del sistema
-function updateClock() {
-  const display = document.getElementById("datetime-display");
-  if (display) {
-    display.textContent = new Date().toLocaleString("es-MX", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  }
-}
-updateClock();
-setInterval(updateClock, 30000);
-
-// ==========================================
-// CORRECCIÓN: SELECTOR CON LAS COLUMNAS REALES DE TU SQL
-// ==========================================
-function refreshProductSelect() {
-  const select = document.getElementById("cart-product-select");
-  if (!select) return;
-
-  const currentValue = select.value;
-  select.innerHTML = `<option value="">Seleccionar manualmente...</option>`;
-
-  allData
-    .filter((p) => p.stock > 0) // Usamos 'stock' de tu schema
-    .forEach((p) => {
-      const option = document.createElement("option");
-      option.value = p.id; // CORRECCIÓN: 'p.id' en lugar de backendId
-      
-      // Inyectamos marca y tono para que luzca premium como pide tu negocio Glow Beauty
-      const marcaTono = (p.brand && p.tone) ? ` [${p.brand} - ${p.tone}]` : '';
-      option.textContent = `${p.name}${marcaTono} — ${fmt(p.price)} (${p.stock} disp.)`;
-      select.appendChild(option);
-    });
-
-  select.value = currentValue;
-}
-
-// ==========================================
-// CONTROL DEL CARRITO DE COMPRAS
-// ==========================================
-function addToCart() {
-  const select = document.getElementById("cart-product-select");
-  if (!select) return;
-  const productId = select.value;
-  const qtyInput = document.getElementById("cart-qty");
-  const qty = parseInt(qtyInput ? qtyInput.value : 1) || 1;
-
-  if (!productId) return showToast("Selecciona un producto");
-
-  const product = allData.find((r) => r.id === productId);
-  if (!product) return;
-
-  agregarAlCarritoPorObjeto(product, qty);
-}
-
-function agregarAlCarritoPorObjeto(product, qty) {
-  const existing = cart.find((c) => c.id === product.id); // Sincronizado con 'id'
-
-  if (existing) {
-    if (existing.qty + qty > product.stock) return showToast("Stock insuficiente en vitrina");
-    existing.qty += qty;
-  } else {
-    if (qty > product.stock) return showToast("Stock insuficiente en vitrina");
-    cart.push({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      qty,
-    });
-  }
-  renderCart();
-}
-
-function removeFromCart(id) {
-  cart = cart.filter((item) => item.id !== id);
-  renderCart();
-}
-
-function renderCart() {
-  const tbody = document.getElementById("cart-items-body");
-  const empty = document.getElementById("cart-empty");
-  const badge = document.getElementById("cart-badge");
-
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  if (!cart.length) {
-    if (empty) empty.style.display = "";
-    if (badge) badge.classList.add("hidden");
-    return;
-  }
-
-  if (empty) empty.style.display = "none";
-  if (badge) {
-    badge.classList.remove("hidden");
-    badge.textContent = cart.length;
-  }
-
-  cart.forEach((item) => {
-    const subtotal = item.price * item.qty;
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td class="p-4">${item.name}</td>
-      <td class="p-4 text-center">${item.qty}</td>
-      <td class="p-4 text-right">${fmt(item.price)}</td>
-      <td class="p-4 text-right">${fmt(subtotal)}</td>
-      <td class="p-4 text-right">
-        <button class="delete-item-btn text-red-500 font-bold" data-id="${item.id}">X</button>
-      </td>
-    `;
-
-    tr.querySelector(".delete-item-btn").addEventListener("click", function() {
-      removeFromCart(this.dataset.id);
-    });
-
-    tbody.appendChild(tr);
-  });
-
-  const totalDisplay = document.getElementById("total-venta");
-  if (totalDisplay) {
-    const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-    totalDisplay.textContent = fmt(total);
-  }
-
-  if (window.lucide) lucide.createIcons();
-}
-
-// ==========================================
-// CONEXIÓN REAL CON TU BACKEND (API /v1/inventory)
-// ==========================================
-async function cargarDatosDesdeServidor() {
   try {
-    const response = await fetch("/api/v1/inventory", {
-      headers: {
-        "Authorization": `Bearer ${localStorage.getItem("pos_token")}`
-      }
-    });
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const result = await response.json();
 
     if (!response.ok) {
-      if (response.status === 401) {
-        checkAuth();
-        return;
-      }
-      throw new Error(`Error de servidor: ${response.status}`);
+      // Si la API arroja un error controlado de Zod o AppError, heredamos su mensaje
+      throw new Error(result.message || 'Algo tronó en la petición del Punto de Venta.');
     }
 
-    const data = await response.json();
-    allData = data; 
-    
-    refreshProductSelect();
-    renderCart();
-    
+    return result; // Retorna el JSON completo estandarizado { status, message, data }
   } catch (error) {
-    console.error("Error conectando con la base de datos:", error);
-    showToast("Modo contingencia: Cargando catálogo local");
-    
-    // Semillas adaptadas milimétricamente a tu tabla 'inventory' de Glow Beauty POS
-    allData = [
-      { id: "1", name: "Labial Superstay 20", brand: "Maybelline", tone: "Pioneer", price: 199.00, stock: 15, sku: "7501055300075" },
-      { id: "2", name: "Base Fit Me Mousse", brand: "Maybelline", tone: "120 Classic Ivory", price: 245.00, stock: 8, sku: "7501011111111" }
-    ];
-    refreshProductSelect();
-    renderCart();
+    console.error(`[API_FETCH_ERROR][${endpoint}]:`, error.message);
+    throw error;
   }
 }
 
-// ==========================================
-// CORRECCIÓN: COBROS MIXTOS ENLAZADOS CON TU TABLA 'sales'
-// ==========================================
-async function procesarPagoMixto() {
-  if (cart.length === 0) return showToast("El carrito está vacío");
+// ==========================================================================
+// 🛠️ INTERFACES DE CONTROL DE TUS MÓDULOS (EJEMPLOS DE ACOPLAMIENTO 100%)
+// ==========================================================================
 
-  const cashInput = document.getElementById("payment-cash");
-  const digitalInput = document.getElementById("payment-digital");
-  
-  const cashAmount = parseFloat(cashInput ? cashInput.value : 0) || 0;
-  const digitalAmount = parseFloat(digitalInput ? digitalInput.value : 0) || 0;
-  
-  const totalVenta = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  const totalPagado = cashAmount + digitalAmount;
-
-  if (totalPagado < totalVenta) {
-    return showToast(`Monto insuficiente. Falta: ${fmt(totalVenta - totalPagado)}`);
-  }
-
-  // Definir el método de pago para tu columna 'payment_method'
-  let metodoPago = "MIXTO";
-  if (cashAmount > 0 && digitalAmount === 0) metodoPago = "EFECTIVO";
-  if (digitalAmount > 0 && cashAmount === 0) metodoPago = "DIGITAL";
-
-  const btnCobrar = document.getElementById("checkout-btn");
-  if (btnCobrar) btnCobrar.disabled = true;
-
+// 1. MÓDULO /AUTH - Formulario de Login de Canva
+async function handleLogin(emailOrIdentifier, password) {
   try {
-    // Estructura limpia lista para ser recibida por tus módulos de Node e insertada en tu SQL
-    const saleData = {
-      total: totalVenta,
-      payment_method: metodoPago,
-      cash_amount: cashAmount,       // Columna cash_amount de tu SQL
-      digital_amount: digitalAmount, // Columna digital_amount de tu SQL
-      notes: "Venta realizada desde el panel de cobro rápido",
-      items: cart.map(item => ({
-        product_id: item.id,       // Llave foránea product_id para sales_items
-        quantity: item.qty,        // Columna quantity para sales_items
-        price_at_sale: item.price  // Columna price_at_sale para sales_items
-      }))
-    };
-
-    const response = await fetch("/api/v1/sales", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem("pos_token")}`
-      },
-      body: JSON.stringify(saleData)
+    const response = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ identifier: emailOrIdentifier, password })
     });
 
-    if (!response.ok) throw new Error("Fallo al registrar la venta en PostgreSQL");
+    // Guardamos las credenciales en el navegador conforme a tus controladores
+    localStorage.setItem('glow_pos_token', response.token);
+    localStorage.setItem('glow_pos_user', JSON.stringify(response.user));
 
-    showToast(`¡Venta procesada con éxito! Cambio: ${fmt(totalPagado - totalVenta)}`);
-    
-    // Resetear estados e inputs
-    cart = [];
-    if (cashInput) cashInput.value = "";
-    if (digitalInput) digitalInput.value = "";
-    renderCart();
-    await cargarDatosDesdeServidor(); // Sincroniza el stock descontado por el trigger SQL
-    
-  } catch (error) {
-    console.error(error);
-    showToast("Error crítico: El trigger de stock o el servidor rechazaron la venta");
-  } finally {
-    if (btnCobrar) btnCobrar.disabled = false;
+    alert(`¡Bienvenida de vuelta, ${response.user.name}! 💄`);
+    window.location.reload(); // Actualiza la UI para abrir los tableros autorizados
+  } catch (err) {
+    alert(`❌ Error de acceso: ${err.message}`);
   }
 }
 
-// ==========================================
-// INICIALIZACIÓN DE LA APLICACIÓN AL CARGAR
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  if (checkAuth()) {
-    cargarDatosDesdeServidor();
+// 2. MÓDULO /CASH - Sincronizar Arqueo y Estado de la Caja Registradora (CORREGIDO)
+async function syncCashRegisterUI() {
+  try {
+    const response = await apiFetch('/cash/status');
+    const { isOpen, session, transactions } = response.data;
+
+    // Buscamos los contenedores usando las clases y los IDs reales de tu nuevo HTML
+    const cashLockScreen = document.getElementById('cash-lock-screen');
+    const vaultDisplay = document.getElementById('vault-cash-display');
+    const tbody = document.getElementById('cash-flows-tbody');
+
+    if (isOpen) {
+      if (cashLockScreen) cashLockScreen.style.display = 'none'; // Oculta bloqueo si está abierta
+      if (vaultDisplay) vaultDisplay.innerText = `Caja Neta: $${Number(session.opening_balance).toFixed(2)}`;
+      
+      // Renderizar tabla de flujos manuales si el contenedor existe en el DOM
+      if (tbody) {
+        tbody.innerHTML = '';
+        (transactions || []).forEach(flow => {
+          tbody.innerHTML += `
+            <div class="table-row">
+              <span>${flow.concept}</span>
+              <span class="${flow.type === 'IN' ? 'text-success' : 'text-danger'}">
+                ${flow.type === 'IN' ? '+' : '-'} $${Number(flow.amount).toFixed(2)}
+              </span>
+            </div>
+          `;
+        });
+      }
+    } else {
+      if (cashLockScreen) cashLockScreen.style.display = 'flex'; // Muestra bloqueo si está cerrada
+    }
+  } catch (err) {
+    console.error('No se pudo sincronizar la terminal monetaria:', err.message);
+  }
+}
+
+// 3. MÓDULO /SALES - El Momento del Cobro Masivo Atómico (CORREGIDO)
+async function processCheckoutCart() {
+  // Array global en memoria: cartItems = [ { id: "uuid-producto", quantity: 2 }, ... ]
+  if (!window.cartItems || window.cartItems.length === 0) {
+    return alert('El carrito está vacío, fiera.');
   }
   
-  const addBtn = document.getElementById("add-to-cart-btn");
-  if (addBtn) addBtn.addEventListener("click", addToCart);
+  // Extraemos datos usando los IDs reales de tu nuevo formulario de liquidación
+  const paymentMethod = document.getElementById('payment-method-select').value; 
+  const cashAmount = parseFloat(document.getElementById('checkout-cash-amount').value) || 0;
+  const digitalAmount = parseFloat(document.getElementById('checkout-digital-amount').value) || 0;
+  const discount = parseFloat(document.getElementById('checkout-discount-input').value) || 0;
+  const notes = document.getElementById('cash-close-notes')?.value || ''; // O el textarea correspondiente
 
-  const checkoutBtn = document.getElementById("checkout-btn");
-  if (checkoutBtn) checkoutBtn.addEventListener("click", procesarPagoMixto);
+  const payload = {
+    items: window.cartItems, // El backend mapeará 'id' a 'product_id' mediante Zod
+    paymentMethod,
+    cashAmount,
+    digitalAmount,
+    discount,
+    notes
+  };
+
+  try {
+    const response = await apiFetch('/sales', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    // Desplegamos el ticket e indicamos el cambio exacto calculado por tu controlador senior
+    alert(`🎉 ¡Cobro Exitoso!\nCambio / Vuelto a entregar: $${response.data.change}`);
+    
+    // Limpiar el carrito de compras y refrescar la UI
+    window.cartItems = [];
+    renderCartUI(); // Tu función para redibujar el carrito vacío
+    syncCashRegisterUI();
+  } catch (err) {
+    alert(`🚨 Error en cobro: ${err.message}`);
+  }
+}
+
+// ==========================================================================
+// 🔌 INICIALIZACIÓN Y CAPTURA DE FORMULARIOS DEL HTML
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
   
-  if (window.lucide) lucide.createIcons();
+  // 1. Escuchar el Formulario de Login
+  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const identifier = document.getElementById('login-identifier').value;
+    const password = document.getElementById('login-password').value;
+    await handleLogin(identifier, password);
+  });
+
+  // 2. Escuchar el Formulario de Apertura de Caja Chica
+  document.getElementById('cash-open-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const balance = document.getElementById('cash-opening-balance-input').value;
+    try {
+      await apiFetch('/cash/open', {
+        method: 'POST',
+        body: JSON.stringify({ openingBalance: balance })
+      });
+      alert('¡Caja chica inicializada correctamente! 🟢');
+      window.location.reload();
+    } catch (err) {
+      alert(`❌ Error al abrir caja: ${err.message}`);
+    }
+  });
+
+  // 3. Escuchar el Formulario de Cobro del Carrito
+  document.getElementById('checkout-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await processCheckoutCart();
+  });
+
+  // Si el usuario ya está logueado, sincronizamos la UI de inmediato
+  if (localStorage.getItem('glow_pos_token')) {
+    syncCashRegisterUI();
+  }
 });
 
-  // ==========================================
-  // DISPARADOR PARA PROCESAR EL INICIO DE SESIÓN
-  // ==========================================
-  const loginForm = document.getElementById("login-form");
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault(); // Evita que la página se recargue
-
-      const emailInput = document.getElementById("login-email");
-      const passwordInput = document.getElementById("login-password");
-      const loginBtn = document.getElementById("login-submit-btn");
-
-      if (!emailInput || !passwordInput) return;
-
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-
-      // Animación estética de Canva en el botón
-      if (loginBtn) {
-        loginBtn.disabled = true;
-        loginBtn.innerHTML = 'Cargando...';
-      }
-
-            try {
-        const response = await fetch("/api/v1/auth/login", { 
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
-
-        const respuestaServidor = await response.json();
-
-        if (!response.ok) {
-          throw new Error(respuestaServidor.message || "Credenciales inválidas");
-        }
-
-        // CORRECCIÓN CRÍTICA: Tu backend guarda todo dentro de la propiedad .data
-        const tokenReal = respuestaServidor.data.token;
-        const usuarioReal = respuestaServidor.data.user;
-
-        if (!tokenReal || !usuarioReal) {
-          throw new Error("El servidor no devolvió una estructura de sesión válida.");
-        }
-
-        // Guardar sesión de forma limpia y permanente en el navegador
-        localStorage.setItem("pos_token", tokenReal);
-        localStorage.setItem("pos_user", JSON.stringify(usuarioReal));
-
-        showToast(respuestaServidor.message || "¡Inicio de sesión correcto!");
-        
-        // Cambiar capas visuales SPA y jalar vitrinas de Supabase
-        checkAuth();
-        await cargarDatosDesdeServidor();
-
-      }

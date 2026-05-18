@@ -1,79 +1,66 @@
 import { db } from '../../core/database/supabaseClient.js';
-import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 🔄 RETURNS REPOSITORY - PERSISTENCIA DE REVERSOS (0 ERRORES)
- * Sincronización milimétrica con la estructura de 2 roles, cosméticos e inventory_logs.
+ * 🔄 RETURNS REPOSITORY - CONTROL DE DEVOLUCIONES (0 ERRORES)
+ * Sincronizado atómicamente con el inventario y el arqueo de caja chica.
  */
 
-const TARGET_TABLE = TABLES.RETURNS || 'returns';
-
-// 1. Crear cabecera de devolución (Asiento contable en Supabase)
-export const create = async (returnData) => {
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .insert([returnData])
-    .select()
-    .single();
-
-  if (error) {
-    console.error(`[REPO_ERROR][createReturn]: 🚨 ${error.message}`);
-    throw new AppError(`No se pudo registrar la cabecera de devolución en la base de datos: ${error.message}`, 500);
-  }
-  return data;
-};
-
-// 2. Crear detalle de items devueltos (Reintegración de stock en el almacén)
-// CORRECCIÓN: Remapeado de 'return_items' a 'inventory_logs' en estricta conformidad con schema.sql
-export const createReturnItem = async (itemData) => {
-  // CORRECCIÓN EFECTUADA: Se cambiaron los guiones `--` por las dos diagonales reglamentarias de JS
-  const logPayload = {
-    product_id: itemData.product_id,
-    user_id: itemData.user_id || null, // Permite asociar qué cajero auditó la devolución
-    change_amount: Math.abs(itemData.quantity), // El reingreso de stock siempre es positivo
-    reason: `DEVOLUCIÓN REF TICKET: ${itemData.return_id ? itemData.return_id.split('-')[0].toUpperCase() : 'MANUAL'}`
+/**
+ * Registra una devolución en cascada atómica (Cabecera + Ítems devueltos)
+ * @param {Object} returnData - Datos de la devolución
+ */
+export const createAtomicReturn = async (returnData) => {
+  const payload = {
+    sale_id: returnData.saleId,
+    reason: returnData.reason.toUpperCase().trim(),
+    refund_total: Number(returnData.refundTotal),
+    created_by: returnData.createdBy,
+    // Insertamos los renglones de los productos que reingresan a vitrina
+    return_items: returnData.items.map(item => ({
+      product_id: item.productId,
+      quantity: parseInt(item.quantity, 10)
+    }))
   };
 
-  const { error } = await db
-    .from('inventory_logs') 
-    .insert([logPayload]);
+  try {
+    const { data, error } = await db
+      .from('returns')
+      .insert([payload])
+      .select(`
+        id, sale_id, refund_total, reason, created_at,
+        return_items (id, product_id, quantity)
+      `)
+      .single();
 
-  if (error) {
-    console.error(`[REPO_ERROR][createReturnItem]: 🚨 ${error.message}`);
-    throw new AppError('Error crítico al asentar el reingreso de stock en el historial de vitrinas.', 500);
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    logger.error({ event: 'RETURNS_REPO_ATOMIC_FAIL', message: error.message, saleId: returnData.saleId });
+    throw new AppError(`Error al procesar la devolución en la base de datos: ${error.message}`, 400);
   }
-  return true;
 };
 
-// 3. Actualizar estado de la venta (Fundamental para balances de cortes de caja chica)
-export const updateSaleStatus = async (saleId, status) => {
-  const { error } = await db
-    .from(TABLES.SALES || 'sales')
-    .update({ status: status.toLowerCase().trim() }) // Estandarizado a minúsculas por compatibilidad con el ENUM
-    .eq('id', saleId);
-
-  if (error) {
-    console.error(`[REPO_ERROR][updateSaleStatus]: 🚨 ${error.message}`);
-    throw new AppError('Error al cambiar el estatus de la venta original en Supabase.', 500);
-  }
-  return true;
-};
-
-// 4. Obtener historial completo con relaciones (Módulo analítico del Administrador)
+/**
+ * Consulta el historial de devoluciones de la boutique (Para el panel de auditoría)
+ */
 export const findAll = async () => {
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .select(`
-      *,
-      user:users (name),
-      sale:sales (total, created_at)
-    `)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await db
+      .from('returns')
+      .select(`
+        id, refund_total, reason, created_at,
+        sales (total, payment_method),
+        users!returns_created_by_fkey (name)
+      `)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error(`[REPO_ERROR][findAllReturns]: 🚨 ${error.message}`);
-    throw new AppError('Error al recuperar el historial de devoluciones desde el almacén.', 500);
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    logger.error({ event: 'RETURNS_REPO_FIND_ALL_FAIL', message: error.message });
+    throw new AppError('No se pudo recuperar el historial de devoluciones.', 500);
   }
-  return data;
 };
+

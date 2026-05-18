@@ -1,11 +1,13 @@
+import jwt from 'jsonwebtoken';
 import AppError from '../errors/AppError.js';
-import { db } from '../database/supabaseClient.js';
+import { env } from '../config/env.js';
 import * as authRepo from '../../modules/auth/auth.repository.js';
 import logger from '../logger/logger.js';
+import { ROLES } from '../../shared/constants/roles.js';
 
 /**
- * 🛡️ MIDDLEWARE DE PROTECCIÓN (0 ERRORES)
- * El guardián que valida tokens, integridad en DB y estado del usuario.
+ * 🛡️ MIDDLEWARE DE PROTECCIÓN (OPTIMIZADO PARA RENDER)
+ * Valida el token localmente usando criptografía para no saturar a Supabase con peticiones HTTP repetitivas.
  */
 export const protect = async (req, res, next) => {
   try {
@@ -16,15 +18,19 @@ export const protect = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verificación atómica directamente contra Supabase Auth
-    const { data: { user: authUser }, error: authError } = await db.auth.getUser(token);
-
-    if (authError || !authUser) {
+    // ⚡ Validación Criptográfica Local (Evita un viaje HTTP externo a Supabase Auth)
+    let decoded;
+    try {
+      decoded = jwt.verify(token, env.jwtSecret);
+    } catch (jwtError) {
       return next(new AppError('Tu sesión expiró o el token es basura. Inicia sesión de nuevo.', 401));
     }
 
-    // Sincronización con PostgreSQL local
-    const dbUser = await authRepo.findById(authUser.id);
+    // El ID del usuario en los tokens de Supabase viene en la propiedad 'sub'
+    const userId = decoded.sub;
+
+    // Sincronización con PostgreSQL local para validar estado en tiempo real
+    const dbUser = await authRepo.findById(userId);
 
     if (!dbUser) {
       return next(new AppError('Tu perfil de empleado ya no existe en nuestro sistema SQL.', 401));
@@ -42,13 +48,14 @@ export const protect = async (req, res, next) => {
       ? emailPrefix.replace('CAJA', 'CAJA ').replace('VENTAS', 'PUNTO ')
       : 'GESTIÓN CENTRAL';
 
-    // Inyección congelada en memoria para evitar mutaciones
+    // Inyección congelada en memoria garantizando consistencia en MAYÚSCULAS para las constantes
     req.user = Object.freeze({
       id: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role?.toLowerCase().trim(),
+      role: dbUser.role?.toUpperCase().trim(), // Lo normalizamos a MAYÚSCULAS para que cuadre con ROLES.ADMIN
       caja: displayCaja,
-      name: dbUser.name
+      name: dbUser.name,
+      token // Guardamos el token limpio por si necesitas pasárselo a createUserClient()
     });
 
     next();
@@ -64,7 +71,6 @@ export const protect = async (req, res, next) => {
 
 /**
  * 🚦 MIDDLEWARE DE RESTRICCIÓN DE ROLES (JERARQUÍA COMPLETA BLINDADA)
- * Controla el acceso a rutas según los roles permitidos y concede superpoderes al admin.
  */
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
@@ -72,10 +78,10 @@ export const restrictTo = (...roles) => {
       return next(new AppError('Contexto de usuario no encontrado en la petición.', 401));
     }
 
-    const allowedRoles = roles.map(role => role.toLowerCase().trim());
+    // Convertimos los roles requeridos a MAYÚSCULAS para que hagan match perfecto con req.user.role
+    const allowedRoles = roles.map(role => role.toUpperCase().trim());
 
-    // Si el rol está listado o si el usuario es directamente el admin supremo, pasa
-    if (allowedRoles.includes(req.user.role) || req.user.role === 'admin') {
+    if (allowedRoles.includes(req.user.role) || req.user.role === ROLES.ADMIN) {
       return next();
     }
     

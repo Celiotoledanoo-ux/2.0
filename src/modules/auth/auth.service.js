@@ -1,10 +1,11 @@
 import { db } from '../../core/database/supabaseClient.js';
 import * as authRepo from './auth.repository.js';
 import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; // ⚡ Inyectamos tu logger
 
 /**
  * 🔐 AUTH SERVICE - FULL MODULE
- * Perfección, limpieza y control total de sesiones.
+ * Perfección, limpieza y control total de sesiones con Rollback de seguridad.
  */
 
 export const login = async (identifier, password) => {
@@ -25,7 +26,7 @@ export const login = async (identifier, password) => {
   if (!userProfile.active) throw new AppError('Esta cuenta está desactivada, bro.', 403);
 
   return {
-    user: userProfile,
+    user: userProfile, // Su rol ya sale en MAYÚSCULAS gracias al repositorio corregido
     session: {
       accessToken: data.session?.access_token,
       refreshToken: data.session?.refresh_token,
@@ -37,16 +38,17 @@ export const login = async (identifier, password) => {
 export const register = async (userData) => {
   const { email, name, role } = userData;
 
-  // Sincronización estricta con el ENUM de Postgres
+  // Sincronización estricta con el ENUM de Postgres (Almacena en minúsculas)
   const cleanRole = role ? role.trim().toLowerCase() : 'cashier';
   const cleanEmail = email?.trim().toLowerCase();
 
   const existing = await authRepo.findByEmail(cleanEmail);
   if (existing) throw new AppError('Este correo ya está registrado en el Punto de Venta.', 400);
 
-  // Generación de contraseña por defecto ya que el admin registra desde su panel
+  // Generación de contraseña dinámica por año actual
   const temporaryPassword = `GlowPos${new Date().getFullYear()}*`;
 
+  // 1. Crear usuario en Supabase Auth
   const { data, error: signUpError } = await db.auth.signUp({
     email: cleanEmail,
     password: temporaryPassword,
@@ -63,7 +65,7 @@ export const register = async (userData) => {
 
   if (!authUser) throw new AppError('No se pudo recuperar el ID de autenticación generado.', 500);
 
-  // Inserción explícita en cascada hacia la tabla pública SQL 'users'
+  // 2. Inserción explícita en la tabla pública 'users'
   const { error: profileError } = await db
     .from('users')
     .insert([
@@ -76,17 +78,24 @@ export const register = async (userData) => {
       }
     ]);
 
+  // 🛡️ MECANISMO DE ROLLBACK SENIOR (Evita usuarios huérfanos si la base de datos SQL falla)
   if (profileError) {
-    console.error('[PROFILE_CREATION_WARNING]:', profileError.message);
-    if (profileError.code !== '23505') {
-      throw new AppError(`Cuenta creada en Auth, pero falló el perfil en base de datos: ${profileError.message}`, 500);
-    }
+    logger.warn({
+      event: 'AUTH_REGISTRATION_ROLLBACK_TRIGGERED',
+      message: `Falló perfil en DB, eliminando cuenta de Auth: ${profileError.message}`,
+      userId: authUser.id
+    });
+
+    // Usamos los superpoderes de la serviceRoleKey de 'db' para borrar el usuario de Auth inmediatamente
+    await db.auth.admin.deleteUser(authUser.id);
+
+    throw new AppError('No se pudo completar el alta del empleado en la base de datos relacional. Intenta de nuevo.', 500);
   }
 
   return {
     id: authUser.id,
     email: authUser.email,
-    role: cleanRole,
+    role: cleanRole.toUpperCase(), // ⚡ Normalizado a MAYÚSCULAS para cumplir el estándar
     temporaryKey: temporaryPassword,
     message: 'Empleado dado de alta de forma exitosa en la boutique.'
   };
@@ -98,7 +107,7 @@ export const refreshSession = async (refreshToken) => {
   const { data, error } = await db.auth.refreshSession({ refresh_token: refreshToken });
 
   if (error || !data.session) {
-    console.error('[REFRESH_ERROR]:', error?.message);
+    logger.error({ event: 'AUTH_REFRESH_SESSION_FAIL', message: error?.message });
     throw new AppError('Sesión expirada. Por favor, inicia sesión de nuevo.', 401);
   }
 
@@ -112,8 +121,8 @@ export const refreshSession = async (refreshToken) => {
 export const logout = async () => {
   const { error } = await db.auth.signOut();
   if (error) {
-    console.error('[LOGOUT_ERROR]:', error.message);
-    throw new AppError('Error al cerrar sesión, pero el cliente debería limpiar el estado.', 500);
+    logger.error({ event: 'AUTH_LOGOUT_FAIL', message: error.message });
+    throw new AppError('Error al cerrar sesión en el servidor.', 500);
   }
   return { message: 'Sesión cerrada. ¡Vuelve pronto, bro!' };
 };

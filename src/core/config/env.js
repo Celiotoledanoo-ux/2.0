@@ -23,14 +23,14 @@ const rawEnvs = {
   JWT_SECRET: process.env.JWT_SECRET?.trim(),
 };
 
-// 🔴 1. Verificación de Existencia
+// 🔴 1. Verificación de Existencia (Tu lógica original impecable)
 const missing = Object.entries(rawEnvs)
   .filter(([, value]) => !isNonEmptyString(value))
   .map(([key]) => key);
 
 if (missing.length > 0) {
   console.error(`❌ ERROR CRÍTICO: Faltan variables en el .env: ${missing.join(', ')}`);
-  process.exit(1); // Detenemos el servidor si no hay llaves
+  process.exit(1); 
 }
 
 // 🔴 2. Validaciones de Integridad Técnica
@@ -44,10 +44,16 @@ if (rawEnvs.SUPABASE_SERVICE_ROLE_KEY.length < 50) {
   process.exit(1);
 }
 
+// ⚡ ADICIÓN SENIOR: Valida que la firma maestra JWT no esté recortada o corrupta
+if (rawEnvs.JWT_SECRET.length < 32) {
+  console.error('❌ ERROR: Tu JWT_SECRET es demasiado corto. El secreto máster de Supabase debe ser una firma robusta de base64.');
+  process.exit(1);
+}
+
 // 🔹 Normalización de Puerto (Vital para el deploy en Render)
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// 🚀 Exportación Final Inmutable
+// 🚀 Exportación Final Inmutable (Conserva tu estructura para createUserClient)
 export const env = Object.freeze({
   nodeEnv: rawEnvs.NODE_ENV,
   port,

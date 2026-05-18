@@ -3,9 +3,9 @@
  * Inmutables para asegurar que la jerarquía no se altere.
  */
 export const ROLES = Object.freeze({
-  OWNER: 'OWNER',
   ADMIN: 'ADMIN',
-  MANAGER: 'MANAGER',
+  GERENTE: 'GERENTE',
+  SUPERVISOR: 'SUPERVISOR',
   CASHIER: 'CASHIER'
 });
 
@@ -17,8 +17,8 @@ export const ROLE_VALUES = Object.freeze(Object.values(ROLES));
  * Permite saber si un rol tiene más poder que otro.
  */
 export const ROLE_HIERARCHY = Object.freeze({
-  [ROLES.OWNER]: 4,
-  [ROLES.ADMIN]: 3,
-  [ROLES.MANAGER]: 2,
+  [ROLES.ADMIN]: 4,
+  [ROLES.GERENTE]: 3,
+  [ROLES.SUPERVISOR]: 2,
   [ROLES.CASHIER]: 1
 });

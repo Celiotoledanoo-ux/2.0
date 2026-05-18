@@ -1,47 +1,46 @@
 import { Router } from 'express';
 import * as cashController from './cash.controller.js';
 import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
-import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; // CORRECCIÓN: Nombre exacto del middleware
-import { openCashSchema, closeCashSchema, cashTransactionSchema } from './cash.schema.js'; // CORRECCIÓN: Importado esquema de transacciones
+import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
+import { openCashSchema, closeCashSchema, cashTransactionSchema } from './cash.schema.js'; 
+import { ROLES } from '../../shared/constants/roles.js'; // ⚡ Inyectamos constantes para consistencia
 
 const router = Router();
 
 /**
- * 💰 CASH ROUTES - CONTROL DE TURNOS (0 ERRORES)
+ * 💰 CASH ROUTES - CONTROL DE TURNOS
  * Gestiona quién abre, quién cierra y cuánto dinero hay en el sistema.
- * Sincronizado milimétricamente con la estructura dual de roles y el frontend.
+ * Sincronizado milimétricamente con la estructura global de roles y el frontend.
  */
 
-// 1. Capa de Autenticación Global: Toda la gestión de efectivo requiere sesión activa de Supabase Auth
+// 1. Capa de Autenticación Global (Nadie toca el dinero sin estar logueado)
 router.use(protect);
 
-// 2. Consulta de Estado (GET /api/v1/cash/status)
-// CORRECCIÓN: Ambos roles ('admin' y 'cashier') en minúsculas acceden a la sincronización en tiempo real de la UI
-router.get('/status', restrictTo('admin', 'cashier'), cashController.getStatus);
+// 2. Definición de Roles Autorizados para operar la caja chica (⚡ Jerarquía completa en MAYÚSCULAS)
+const personalDeCaja = restrictTo(ROLES.ADMIN, ROLES.GERENTE, ROLES.SUPERVISOR, ROLES.CASHIER);
 
-// 3. Operaciones de Turno y Control de Flujo Diario
-// CORRECCIÓN: Roles normalizados en minúsculas en conformidad con auth.middlewares.js y schema.sql
-const authorizedRoles = restrictTo('admin', 'cashier');
+// 3. Consulta de Estado (GET /api/v1/cash/status)
+router.get('/status', personalDeCaja, cashController.getStatus);
 
-// POST /api/v1/cash/open -> Inicializar turno de caja chica
+// 4. Operaciones de Turno y Control de Flujo Diario
+// POST /api/v1/cash/open -> Inicializar turno de caja chica con fondo fijo
 router.post('/open', 
-  authorizedRoles,
-  validationMiddleware(openCashSchema), // CORRECCIÓN: Uso de la función correcta de validación
+  personalDeCaja,
+  validationMiddleware(openCashSchema), 
   cashController.open
 );
 
 // POST /api/v1/cash/close -> Realizar arqueo y corte de caja chica
 router.post('/close', 
-  authorizedRoles,
-  validationMiddleware(closeCashSchema), // CORRECCIÓN: Uso de la función correcta de validación
+  personalDeCaja,
+  validationMiddleware(closeCashSchema), 
   cashController.close
 );
 
-// 🌟 4. OPERACIONES DE FLUJO DIARIO (handleCashFlow del Frontend)
-// POST /api/v1/cash/transaction -> Registra entradas/salidas en Supabase
+// POST /api/v1/cash/transaction -> Registra entradas/salidas manuales (Caja Chica)
 router.post('/transaction',
-  authorizedRoles,
-  validationMiddleware(cashTransactionSchema), // CORRECCIÓN: Inyección obligatoria de escudo Zod para flujos manuales
+  personalDeCaja,
+  validationMiddleware(cashTransactionSchema), 
   cashController.registerTransaction
 );
 

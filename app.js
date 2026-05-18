@@ -58,10 +58,8 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 // --- 6. FRONTEND (Servidor de archivos estáticos) ---
 // CORREGIDO: Aseguramos rutas absolutas limpias para evitar fallos de ubicación en despliegue
 const publicPath = path.resolve(__dirname, 'public');
-const nodeModulesPath = path.resolve(__dirname, 'node_modules');
 
 app.use(express.static(publicPath));
-app.use('/vendor', express.static(nodeModulesPath));
 
 // --- 7. MONTAJE DE RUTAS DE LA API ---
 app.use('/api/v1', apiRouter);

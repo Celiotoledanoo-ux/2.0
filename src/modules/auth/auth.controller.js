@@ -1,6 +1,6 @@
 import * as authService from './auth.service.js';
 import logger from '../../core/logger/logger.js';
-import catchAsync from '../../shared/utils/async.utils.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; // ⚡ CORRECCIÓN: Importación nombrada corregida
 
 /**
  * 🔐 CONTROLADOR DE AUTENTICACIÓN - GLOW BEAUTY POS
@@ -8,11 +8,10 @@ import catchAsync from '../../shared/utils/async.utils.js';
  */
 
 export const login = catchAsync(async (req, res) => {
-  // MEJORA: Extrae de forma flexible el campo 'email' o 'identifier' que mande el script de Canva
   const { email, identifier, password } = req.body;
   const loginUser = identifier || email;
 
-  // Ejecutamos el servicio con el identificador resuelto
+  // Ejecutamos la lógica de negocio
   const result = await authService.login(loginUser, password);
 
   logger.info({
@@ -27,8 +26,8 @@ export const login = catchAsync(async (req, res) => {
   res.status(200).json({
     status: 'success',
     message: `¡Qué onda, ${result.user.name.split(' ')[0]}! Ya puedes operar.`,
-    token: result.token, // Clonamos los punteros principales a la raíz de la respuesta
-    user: result.user,   // Esto evita romper el localStorage del script.js
+    token: result.session.accessToken, // ⚡ CORRECCIÓN: Mapeo correcto del token desde la sesión
+    user: result.user,   // Mantiene la compatibilidad con el localStorage del frontend
     data: result
   });
 });

@@ -1,11 +1,11 @@
 import * as salesService from './sales.service.js';
-import catchAsync from '../../shared/utils/async.utils.js'; 
+import { catchAsync } from '../../shared/utils/async.utils.js'; // ⚡ CORRECCIÓN: Importación nombrada corregida con llaves
 import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
  * 💰 SALES CONTROLLER - EL MOMENTO DEL COBRO (0 ERRORES)
- * Sincronizado milimétricamente con el nuevo esquema de pagos mixtos y dos roles
+ * Sincronizado milimétricamente con el nuevo esquema de pagos mixtos y 4 roles.
  */
 export const checkout = catchAsync(async (req, res, next) => {
   // 1. Extracción limpia desde req.body (Ya parseado, validado y normalizado por Zod)
@@ -18,7 +18,6 @@ export const checkout = catchAsync(async (req, res, next) => {
   }
 
   // 3. Ejecución de la lógica de venta en el Service
-  // Pasamos el payload limpio. El service se encargará de impactar las tablas sales y sales_items
   const sale = await salesService.createSale(
     { items, paymentMethod, total, cashAmount, digitalAmount, discount, notes },
     req.user 
@@ -28,8 +27,6 @@ export const checkout = catchAsync(async (req, res, next) => {
   let change = 0;
   
   if (paymentMethod === 'CASH') {
-    // Si es efectivo puro, el cashAmount actúa como el dinero recibido de la clienta
-    // Si el frontend no lo mandó, asumimos pago exacto
     const received = cashAmount > 0 ? cashAmount : sale.total;
     change = received - sale.total;
 
@@ -37,7 +34,6 @@ export const checkout = catchAsync(async (req, res, next) => {
       throw new AppError(`Faltan $${Math.abs(change).toFixed(2)} en efectivo para completar el pago.`, 400);
     }
   } else if (paymentMethod === 'MIXED') {
-    // En pagos mixtos, el dinero digital es exacto, el vuelto solo se genera si dan efectivo de más
     const totalNeto = total - discount;
     const efectivoRequerido = totalNeto - digitalAmount;
     
@@ -54,7 +50,7 @@ export const checkout = catchAsync(async (req, res, next) => {
     saleId: sale.id,
     total: sale.total,
     seller: req.user.name,
-    role: req.user.role, // Monitoreo de jerarquía dual (admin/cashier)
+    role: req.user.role, // Trazabilidad de los 4 roles
     method: paymentMethod,
     ip: req.ip
   });
@@ -67,7 +63,7 @@ export const checkout = catchAsync(async (req, res, next) => {
       id: sale.id,
       total: sale.total,
       paymentMethod: sale.payment_method || paymentMethod,
-      change: Number(change.toFixed(2)), // Forzamos redondeo financiero a 2 decimales
+      change: Number(change.toFixed(2)), 
       createdAt: sale.created_at
     }
   });

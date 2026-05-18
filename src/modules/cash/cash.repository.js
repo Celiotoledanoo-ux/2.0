@@ -5,116 +5,157 @@ import logger from '../../core/logger/logger.js';
 
 /**
  * 💰 CASH REPOSITORY - CONTROL DE FLUJO DE EFECTIVO (0 ERRORES)
- * Sincronización milimétricamente acoplada con flujos mixtos, dos roles e inventory_logs.
+ * Sincronización milimétricamente acoplada con el plano SQL real y aislamiento por cajero.
  */
 
+// ⚡ CORRECCIÓN: Alineación estricta con las columnas reales de nuestro schema.sql
 const SESSION_SELECT = `
-  id, status, initial_amount, actual_amount, expected_amount, difference, notes, opened_at, closed_at,
-  opened_by_user:users!cash_sessions_opened_by_fkey (name),
-  closed_by_user:users!cash_sessions_closed_by_fkey (name)
+  id, user_id, opening_balance, closing_balance, real_cash, status, opened_at, closed_at,
+  users!cash_sessions_user_id_fkey (name, email)
 `;
 
 const TARGET_TABLE = TABLES.CASH_SESSIONS || 'cash_sessions';
 
-// 1. Buscar la sesión de caja que está actualmente activa (Turno Abierto)
-export const findOpenSession = async () => {
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .select(SESSION_SELECT)
-    .eq('status', 'OPEN')
-    .maybeSingle(); // Retorna null de forma limpia si la caja está cerrada
+/**
+ * 1. Buscar la sesión de caja abierta que pertenece ESPECÍFICAMENTE al cajero en turno.
+ * @param {string} userId - UUID del empleado autenticado.
+ */
+export const findOpenSession = async (userId) => {
+  if (!userId) return null;
 
-  if (error) {
-    logger.error({ event: 'CASH_REPO_ERROR', message: error.message });
-    throw new AppError('Error al consultar el estado de apertura de la caja.', 500);
+  try {
+    const { data, error } = await db
+      .from(TARGET_TABLE)
+      .select(SESSION_SELECT)
+      .eq('status', 'OPEN')
+      .eq('user_id', userId) // ⚡ Aislamiento Senior: Cada cajero ve solo su turno activo
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    logger.error({ event: 'CASH_REPO_FIND_OPEN_ERROR', message: error.message, userId });
+    throw new AppError('Error al consultar el estado de apertura de tu caja.', 500);
   }
-  return data;
 };
 
-// 2. Crear una nueva apertura de caja (Fondo Inicial)
+/**
+ * 2. Crear una nueva apertura de caja (Fondo Inicial)
+ */
 export const createSession = async (sessionData) => {
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .insert([sessionData])
-    .select(SESSION_SELECT)
-    .single();
+  // Mapeamos el payload hacia las columnas exactas de la tabla pública
+  const payload = {
+    user_id: sessionData.userId || sessionData.user_id,
+    opening_balance: Number(sessionData.openingBalance || sessionData.opening_balance || 0),
+    status: 'OPEN'
+  };
 
-  if (error) {
-    logger.error({ event: 'CASH_REPO_ERROR', message: error.message });
-    throw new AppError('No se pudo registrar la apertura de caja en Supabase.', 500);
+  try {
+    const { data, error } = await db
+      .from(TARGET_TABLE)
+      .insert([payload])
+      .select(SESSION_SELECT)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    logger.error({ event: 'CASH_REPO_CREATE_ERROR', message: error.message, payload });
+    throw new AppError('No se pudo registrar la apertura de caja en el sistema relacional.', 500);
   }
-  return data;
 };
 
-// 3. Actualizar la sesión (Cerrar Turno o Realizar Ajustes de Arqueo)
+/**
+ * 3. Actualizar la sesión (Cerrar Turno o Realizar Ajustes de Arqueo)
+ */
 export const updateSession = async (id, updateData) => {
-  const { data, error } = await db
-    .from(TARGET_TABLE)
-    .update(updateData)
-    .eq('id', id)
-    .select(SESSION_SELECT)
-    .single();
+  const payload = {
+    closing_balance: updateData.closingBalance !== undefined ? Number(updateData.closingBalance) : updateData.closing_balance,
+    real_cash: updateData.realCash !== undefined ? Number(updateData.realCash) : updateData.real_cash,
+    status: updateData.status,
+    closed_at: updateData.closedAt || updateData.closed_at
+  };
 
-  if (error) {
-    logger.error({ event: 'CASH_REPO_ERROR', message: error.message });
+  try {
+    const { data, error } = await db
+      .from(TARGET_TABLE)
+      .update(payload)
+      .eq('id', id)
+      .select(SESSION_SELECT)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    logger.error({ event: 'CASH_REPO_UPDATE_ERROR', message: error.message, sessionId: id });
     throw new AppError('Error crítico al intentar asentar el corte de caja chica.', 500);
   }
-  return data;
 };
 
-// 🌟 CORRECCIÓN CRÍTICA: 4. INSERTAR MOVIMIENTO MANUAL DE CAJA CHICA (inventory_logs)
+/**
+ * 4. INSERTAR MOVIMIENTO MANUAL DE CAJA CHICA (inventory_logs)
+ */
 export const insertTransaction = async (transactionData) => {
-  // CORRECCIÓN EFECTUADA: Se cambiaron los guiones `--` por las dos diagonales correspondientes a JS
   const logPayload = {
-    product_id: null, // Campo nulo porque representa un movimiento de efectivo puro y no de maquillaje
+    product_id: null, 
     user_id: transactionData.user_id,
-    change_amount: transactionData.type === 'IN' ? Number(transactionData.amount) : -Number(transactionData.amount), // Multiplica por -1 si es salida (OUT)
+    change_amount: transactionData.type === 'IN' ? Number(transactionData.amount) : -Number(transactionData.amount),
     reason: `[CAJA CHICA - ${transactionData.type}] ${transactionData.concept?.toUpperCase()}`
   };
 
-  const { data, error } = await db
-    .from('inventory_logs') // Tabla contable central unificada
-    .insert([logPayload])
-    .select()
-    .single();
+  try {
+    const { data, error } = await db
+      .from('inventory_logs') 
+      .insert([logPayload])
+      .select()
+      .single();
 
-  if (error) {
+    if (error) throw error;
+    
+    return {
+      id: data.id,
+      type: logPayload.change_amount > 0 ? 'IN' : 'OUT',
+      amount: Math.abs(data.change_amount),
+      concept: data.reason,
+      created_at: data.created_at
+    };
+  } catch (error) {
     logger.error({ event: 'CASH_TRANSACTION_REPO_ERROR', message: error.message });
     throw new AppError('Error de persistencia: No se pudo guardar el flujo manual de efectivo.', 500);
   }
-  
-  // Normalización adaptativa de retorno para que el servicio lea de forma homogénea
-  return {
-    id: data.id,
-    type: logPayload.change_amount > 0 ? 'IN' : 'OUT',
-    amount: Math.abs(data.change_amount),
-    concept: data.reason,
-    created_at: data.created_at
-  };
 };
 
-// 🌟 CORRECCIÓN CRÍTICA: 5. RECUPERAR TRANSACCIONES MANUALES DEL TURNO VIGENTE
-export const findTransactionsSince = async (openedAtISO) => {
+/**
+ * 5. RECUPERAR TRANSACCIONES MANUALES DEL TURNO VIGENTE
+ */
+export const findTransactionsSince = async (openedAtISO, userId) => {
   if (!openedAtISO) return [];
 
-  const { data, error } = await db
-    .from('inventory_logs')
-    .select('id, change_amount, reason, created_at, user_id')
-    .is('product_id', null) // Extrae estrictamente movimientos de dinero y descarta logs de maquillaje
-    .gte('created_at', openedAtISO)
-    .order('created_at', { ascending: true });
+  try {
+    let query = db
+      .from('inventory_logs')
+      .select('id, change_amount, reason, created_at, user_id')
+      .is('product_id', null) 
+      .gte('created_at', openedAtISO);
 
-  if (error) {
+    // Si pasamos el ID del usuario, filtramos estrictamente los movimientos de su propio turno
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(log => ({
+      id: log.id,
+      type: log.change_amount > 0 ? 'IN' : 'OUT',
+      amount: Math.abs(log.change_amount),
+      concept: log.reason,
+      created_at: log.created_at
+    }));
+  } catch (error) {
     logger.error({ event: 'CASH_REPO_FETCH_FLOWS_ERROR', message: error.message });
     throw new AppError('Error al recuperar el histórico de transacciones manuales del turno.', 500);
   }
-
-  // Mapeamos de regreso a la estructura que consume el Reduce del arqueo del servicio
-  return (data || []).map(log => ({
-    id: log.id,
-    type: log.change_amount > 0 ? 'IN' : 'OUT',
-    amount: Math.abs(log.change_amount),
-    concept: log.reason,
-    created_at: log.created_at
-  }));
 };

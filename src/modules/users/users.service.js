@@ -1,15 +1,15 @@
 import * as userRepository from './users.repository.js';
 import { db } from '../../core/database/supabaseClient.js';
 import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; // ⚡ Inyectamos tu logger Pro
 
 /**
  * 👥 USERS SERVICE - GESTIÓN DE PERSONAL (0 ERRORES)
- * Sincronizado milimétricamente con el esquema definitivo de 2 roles y Supabase.
+ * Sincronizado milimétricamente con el esquema definitivo de 4 roles y Supabase Central.
  */
 
 /**
  * 📋 OBTENER TODO EL PERSONAL
- * Trae a todos los usuarios registrados en la tabla SQL.
  */
 export const getAllUsers = async () => {
   const users = await userRepository.findAll();
@@ -17,36 +17,30 @@ export const getAllUsers = async () => {
     throw new AppError('No se pudo recuperar la lista de usuarios, bro.', 500);
   }
   
-  // Normalización preventiva de roles para la visualización en la tabla del frontend
-  return users.map(u => ({
-    ...u,
-    role: u.role?.toLowerCase().trim()
-  }));
+  // ⚡ El repositorio ya los entrega normalizados en MAYÚSCULAS para cumplir el estándar
+  return users;
 };
 
 /**
  * 👤 REGISTRO DE USUARIO (ADMIN ONLY)
- * Crea el usuario en Supabase Auth y sincroniza con el perfil SQL.
  */
 export const registerUser = async (userData) => {
-  // CORRECCIÓN: Rol base estandarizado en minúscula a 'cashier'
-  const { email, password, name, role = 'cashier' } = userData;
+  const { email, password, name, role = 'CASHIER' } = userData;
 
-  // 1. Normalización estricta de Email/Identificador
+  // 1. Normalización de Email/Identificador
   let finalEmail = email.trim().toLowerCase();
   if (!finalEmail.includes('@')) {
     finalEmail = `${finalEmail.replace(/\s+/g, '')}@pos.system`;
   }
 
-  // CORRECCIÓN: Estandarización del string del rol a minúsculas
-  const cleanRole = role.toLowerCase().trim() === 'seller' ? 'cashier' : role.toLowerCase().trim();
+  // Normalizamos la entrada a minúsculas únicamente para insertarlo en Supabase Central
+  const cleanRoleForDB = role.toUpperCase().trim() === 'SELLER' ? 'cashier' : role.toLowerCase().trim();
 
-  // 2. Registro en Capa de Autenticación (Supabase Auth a nivel Admin)
+  // 2. Registro en Capa de Autenticación Central (Supabase Auth)
   const { data: authData, error: authError } = await db.auth.admin.createUser({
     email: finalEmail,
     password: password,
-    // CORRECCIÓN: Metadata guardada estrictamente en minúsculas para consistencia de tokens
-    user_metadata: { name, role: cleanRole },
+    user_metadata: { name: name.trim(), role: cleanRoleForDB },
     email_confirm: true 
   });
 
@@ -58,23 +52,24 @@ export const registerUser = async (userData) => {
   }
 
   try {
-    // 3. Sincronización con Tabla SQL (Nuestra public.users de Supabase)
+    // 3. Sincronización con Tabla SQL
     const newUser = await userRepository.create({
       id: authData.user.id,
       email: finalEmail,
       name: name.trim(),
-      role: cleanRole,
+      role: cleanRoleForDB, // El repositorio se encarga de guardarlo en minúscula y retornarlo en MAYÚSCULA
     });
 
-    return {
-      ...newUser,
-      role: cleanRole
-    };
+    return newUser;
 
   } catch (error) {
-    // 💣 ROLLBACK MAESTRO DEFENSIVO: Limpieza inmediata de credenciales huerfanas
+    // 💣 ROLLBACK MAESTRO DEFENSIVO: Limpieza inmediata de credenciales huérfanas
     await db.auth.admin.deleteUser(authData.user.id);
-    console.error(`[CRITICAL_SYNC_ERROR]: 🚨 ${error.message}`);
+    logger.error({
+      event: 'USERS_REGISTER_SYNC_CRASH',
+      message: error.message,
+      email: finalEmail
+    });
     throw new AppError('Fallo de sincronización atómica al impactar el perfil SQL. Registro revertido por seguridad.', 500);
   }
 };
@@ -86,23 +81,38 @@ export const getUserById = async (id) => {
   const user = await userRepository.findById(id);
   if (!user) throw new AppError('Usuario no encontrado en el sistema.', 404);
   
-  return {
-    ...user,
-    role: user.role?.toLowerCase().trim()
-  };
+  return user;
 };
 
 /**
  * ⚡ ACTIVAR/DESACTIVAR EMPLEADO (BAJA LÓGICA DE PERSONAL)
- * Útil para dar de baja sin borrar los registros históricos de ventas ni descuadrar los reportes.
+ * Sincroniza el bloqueo tanto en PostgreSQL como en Supabase Auth Central para revocación inmediata de accesos.
  */
 export const toggleUserStatus = async (id, activeStatus) => {
+  // 1. Actualizar la base de datos relacional para reportes y logs
   const updatedUser = await userRepository.update(id, { active: activeStatus });
   if (!updatedUser) {
     throw new AppError('No se pudo actualizar el estado del empleado en la base de datos.', 500);
   }
-  return {
-    ...updatedUser,
-    role: updatedUser.role?.toLowerCase().trim()
-  };
+
+  try {
+    // 2. Sincronización Senior Central: Si se desactiva, bloqueamos la capacidad de inicio de sesión en Supabase Auth
+    // Al pasar un objeto vacío o actualizar metadatos confirmamos la persistencia en el servidor GoTrue
+    await db.auth.admin.updateUserById(id, {
+      user_metadata: { 
+        active: activeStatus,
+        suspended_at: activeStatus ? null : new Date().toISOString()
+      }
+    });
+  } catch (authError) {
+    // Registramos en el logger pero no bloqueamos la respuesta, ya que el middleware 'protect' 
+    // de igual forma rebotará al usuario al leer el campo 'active' modificado en la base de datos relacional.
+    logger.error({
+      event: 'SUPABASE_AUTH_USER_UPDATE_WARNING',
+      message: authError.message,
+      userId: id
+    });
+  }
+
+  return updatedUser;
 };

@@ -3,7 +3,7 @@ import logger from '../logger/logger.js';
 /**
  * 🚨 GLOBAL ERROR HANDLER - EL ÚLTIMO MURO (0 ERRORES)
  * Centraliza fallos, limpia logs y protege la info sensible en producción.
- * Sincronizado milimétricamente con Zod, Supabase Auth y tus 2 roles.
+ * Sincronizado milimétricamente con Zod, Supabase Auth y tus 4 roles del POS.
  */
 export const globalErrorHandler = (err, req, res, next) => {
   let statusCode = err?.statusCode || 500;
@@ -15,7 +15,7 @@ export const globalErrorHandler = (err, req, res, next) => {
   const sensitiveKeys = ['password', 'token', 'oldPassword', 'newPassword', 'refreshToken'];
   sensitiveKeys.forEach(key => delete sanitizedBody[key]);
 
-  // CORRECCIÓN CRÍTICA: Interceptor y formateador para errores nativos de VALIDACIÓN ZOD
+  // Interceptor y formateador para errores nativos de VALIDACIÓN Zod
   if (err.name === 'ZodError' || err.errors) {
     statusCode = 400;
     status = 'fail';
@@ -33,7 +33,7 @@ export const globalErrorHandler = (err, req, res, next) => {
     path: req.originalUrl,
     method: req.method,
     userId: req.user?.id || 'ANONYMOUS',
-    caja: req.user?.caja || 'SYSTEM', // Contexto de caja chica inyectado por protect
+    caja: req.user?.caja || 'SYSTEM', 
     stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined
   });
 
@@ -55,8 +55,8 @@ export const globalErrorHandler = (err, req, res, next) => {
   if (err?.code === '23503') prodMessage = 'Operación inválida: hay una referencia (ID o código) que no existe.';
   if (err?.code === '42P01') prodMessage = 'Error logístico interno: Tabla no encontrada. Avisa al administrador.';
   
-  // CORRECCIÓN: Captura de errores nativos emitidos por el cliente de Supabase Auth en Render
-  if (err?.message?.includes('JWT') || err?.name === 'JsonWebTokenError') {
+  // Captura de errores nativos de JWT de forma criptográfica local
+  if (err?.message?.includes('JWT') || err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
     prodMessage = 'Tu sesión expiró o el token es basura. Inicia sesión de nuevo.';
     statusCode = 401;
     status = 'fail';

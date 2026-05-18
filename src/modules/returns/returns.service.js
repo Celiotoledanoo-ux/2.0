@@ -1,97 +1,99 @@
 import * as returnsRepo from './returns.repository.js';
 import * as salesRepo from '../sales/sales.repository.js';
-import * as inventoryService from '../inventory/inventory.service.js';
+import * as cashRepo from '../cash/cash.repository.js';
+import { db } from '../../core/database/supabaseClient.js';
 import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js';
 
 /**
- * 🔄 RETURNS SERVICE - GESTIÓN DE REVERSOS (0 ERRORES)
- * Restaura el stock en vitrinas y actualiza el balance financiero de la venta.
- * Sincronizado milimétricamente con la estructura dual de 2 roles y cosméticos.
+ * 🔄 RETURNS SERVICE - LÓGICA DE AUDITORÍA FINANCIERA
  */
+export const processReturn = async ({ saleId, items, reason, userId }) => {
+  if (!items || items.length === 0) throw new AppError('Debes especificar qué productos se van a devolver.', 400);
 
-// CORRECCIÓN: Firma adaptada a objeto estructurado para recibir el payload limpio del controlador
-export const processFullReturn = async ({ saleId, items: returnedItems, reason, userId }) => {
-  // 1. 🔍 VALIDACIÓN DE ESTADO EN EL HISTORIAL DE VENTAS
-  const sale = await salesRepo.findWithItems(saleId);
-  if (!sale) throw new AppError('Esa transacción de venta no existe en nuestros registros.', 404);
-  
-  if (sale.status === 'REFUNDED') {
-    throw new AppError('Esta venta ya fue marcada como devuelta anteriormente.', 400);
+  // 1. Validar contexto de caja chica activa para el cajero (De ahí saldrá el reembolso en efectivo)
+  const activeSession = await cashRepo.findOpenSession(userId);
+  if (!activeSession) {
+    throw new AppError('⚠️ Operación denegada: Tu turno de caja chica debe estar ABIERTO para efectuar un reembolso.', 400);
   }
 
-  // Calculamos de forma matemática el monto real a reembolsar sumando los precios congelados del ticket original
-  let totalReembolso = 0;
-  const originalItems = sale.items || [];
-
-  // Mapeo defensivo: Validamos que los productos devueltos realmente existan en el ticket original
-  for (const rItem of returnedItems) {
-    const originalMatch = originalItems.find(oItem => oItem.product_id === rItem.product_id);
-    if (!originalMatch) {
-      throw new AppError(`El cosmético con ID ${rItem.product_id} no pertenece al ticket de venta original.`, 400);
-    }
-    if (rItem.quantity > originalMatch.quantity) {
-      throw new AppError(`Operación denegada. Intentas devolver más piezas (${rItem.quantity}) de las compradas originalmente (${originalMatch.quantity}).`, 400);
-    }
-    totalReembolso += Number(originalMatch.price_at_sale) * Number(rItem.quantity);
+  // 2. Recuperar la venta original para auditar cantidades y precios con "Server-Side Truth"
+  const originalSale = await salesRepo.findWithItems(saleId);
+  if (originalSale.status === 'REFUNDED') {
+    throw new AppError('Esta venta ya fue devuelta en su totalidad previamente.', 400);
   }
 
-  // 2. 📝 REGISTRO DE CABECERA EN EL LIBRO DE DEVOLUCIONES DE SUPABASE
-  // Mapeo explícito a snake_case para cumplir el contrato con el repositorio de Supabase
-  const returnEntry = await returnsRepo.create({
-    sale_id: saleId,
-    reason: reason?.trim() || 'DEVOLUCIÓN MANUAL',
-    amount_refunded: Number(totalReembolso.toFixed(2)),
-    user_id: userId
-  });
+  let refundTotal = 0;
+  const validatedReturnItems = [];
 
+  // 3. Cruzar renglones de la clienta vs renglones originales del ticket
+  for (const item of items) {
+    const originalItem = originalSale.items.find(i => i.product.id === item.productId);
+    if (!originalItem) {
+      throw new AppError(`El producto enviado no pertenece al ticket de compra original.`, 400);
+    }
+    if (item.quantity > originalItem.quantity) {
+      throw new AppError(`Operación fraudulenta: Intentas devolver ${item.quantity} pz pero solo se compraron ${originalItem.quantity} pz.`, 400);
+    }
+
+    const itemRefundValue = Number(originalItem.price_at_sale) * parseInt(item.quantity, 10);
+    refundTotal += itemRefundValue;
+
+    validatedReturnItems.push({
+      productId: item.productId,
+      quantity: parseInt(item.quantity, 10),
+      priceAtSale: Number(originalItem.price_at_sale)
+    });
+  }
+
+  // 4. Ejecución en bloque transaccional controlado
   try {
-    // 3. 🔁 REINCORPORACIÓN DE STOCK EN VITRINA (ATÓMICO)
-    for (const item of returnedItems) {
-      // CORRECCIÓN: Invocación adaptada milimétricamente al contrato del objeto unificado de inventory.service.js
-      await inventoryService.adjustStock({
-        productId: item.product_id,
-        quantityDelta: Math.abs(item.quantity), // Pasamos valor positivo para incrementar el stock en vitrina
-        userId,
-        reason: `DEVOLUCIÓN: Ticket #${saleId.split('-')[0].toUpperCase()}`
-      });
-
-      // Guardamos el desglose de qué producto específico regresó al almacén
-      await returnsRepo.createReturnItem({
-        return_id: returnEntry.id,
-        product_id: item.product_id,
-        quantity: Math.abs(item.quantity)
-      });
-    }
-
-    // 4. ACTUALIZACIÓN DE ESTADO FINAL (Si se devolvieron todos los artículos, marcamos REFUNDED)
-    // Para simplificar la lógica del POS, actualizamos el estado central del ticket
-    await returnsRepo.updateSaleStatus(saleId, 'REFUNDED');
-
-    // Alerta logística en Render Logs
-    logger.warn({
-      event: 'INVENTORY_RESTORED',
+    // A. Registrar la devolución en las tablas SQL de Supabase
+    const savedReturn = await returnsRepo.createAtomicReturn({
       saleId,
-      refundedAmount: totalReembolso,
-      performedBy: userId,
-      role: user?.role // Trazabilidad de jerarquía dual
+      reason,
+      refundTotal,
+      createdBy: userId,
+      items: validatedReturnItems
     });
 
-    return {
-      id: returnEntry.id,
-      saleId: saleId,
-      amountRefunded: Number(totalReembolso.toFixed(2)),
-      itemsCount: returnedItems.length,
-      createdAt: returnEntry.created_at
-    };
+    // B. Reinyectar físicamente las piezas devueltas al almacén usando tu RPC atómica de la Fase 2
+    for (const item of validatedReturnItems) {
+      await db.rpc('modify_stock', {
+        p_id: item.productId,
+        delta: item.quantity, // Delta positivo suma piezas
+        p_user_id: userId,
+        p_reason: `DEVOLUCIÓN ACEPTADA TICKET ID: ${saleId}`
+      });
+    }
 
+    // C. Si la venta original se pagó en efectivo, restamos el reembolso de la caja chica activa
+    if (originalSale.payment_method === 'EFECTIVO' || originalSale.payment_method === 'MIXTO') {
+      const cashToRefund = originalSale.payment_method === 'EFECTIVO' ? refundTotal : Math.min(refundTotal, Number(originalSale.cash_amount));
+      
+      await cashRepo.insertTransaction({
+        user_id: userId,
+        type: 'OUT',
+        amount: cashToRefund,
+        concept: `REEMBOLSO CLIENTA DEVOLUCIÓN ID: ${savedReturn.id}`
+      });
+    }
+
+    // D. Marcar el estado del ticket original
+    const newSaleStatus = (items.length === originalSale.items.length) ? 'REFUNDED' : 'PARTIAL_REFUNDED';
+    await db.from('sales').update({ status: newSaleStatus }).eq('id', saleId);
+
+    logger.warn({
+      event: 'RETURN_PROCESSED_SUCCESS',
+      returnId: savedReturn.id,
+      saleId,
+      refundTotal,
+      operator: userId
+    });
+
+    return savedReturn;
   } catch (error) {
-    console.error(`[RETURN_CRITICAL_ERROR]: 🚨 ${error.message}`);
-    throw new AppError(`Error al reintegrar la mercancía en la base de datos: ${error.message}`, 500);
+    logger.error({ event: 'RETURN_SERVICE_CRASH', message: error.message });
+    throw new AppError(`Fallo crítico al liquidar la devolución en el mostrador: ${error.message}`, 500);
   }
-};
-
-export const getAllReturns = async () => {
-  const history = await returnsRepo.findAll();
-  return history || [];
 };
