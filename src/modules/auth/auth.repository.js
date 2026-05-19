@@ -1,7 +1,7 @@
 import { db } from '../../core/database/supabaseClient.js';
 import { TABLES } from '../../core/config/db.js';
 import AppError from '../../core/errors/AppError.js';
-import logger from '../../core/logger/logger.js'; // ⚡ Inyectamos tu logger Pro
+import logger from '../../core/logger/logger.js'; 
 
 /**
  * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS (0 ERRORES)
@@ -18,7 +18,10 @@ export const findById = async (id) => {
   if (!id) return null;
 
   try {
-    const { data, error } = await db
+    // ⚡ BYPASS DE SEGURIDAD: Usa el cliente administrativo si existe para saltar las RLS en el backend
+    const client = db.admin || db;
+
+    const { data, error } = await client
       .from(TABLES.USERS || 'users')
       .select(USER_FIELDS)
       .eq('id', id)
@@ -26,7 +29,7 @@ export const findById = async (id) => {
 
     if (error) throw error;
     
-    // ⚡ CORRECCIÓN: Normalización a MAYÚSCULAS para consistencia total con ROLES.*
+    // ⚡ Normalización a MAYÚSCULAS para consistencia total con ROLES.*
     if (data) {
       data.role = data.role?.toUpperCase().trim();
     }
@@ -51,7 +54,10 @@ export const findByEmail = async (email) => {
   if (!email?.trim()) return null;
 
   try {
-    const { data, error } = await db
+    // ⚡ BYPASS DE SEGURIDAD: Usa el cliente administrativo si existe para saltar las RLS en el backend
+    const client = db.admin || db;
+
+    const { data, error } = await client
       .from(TABLES.USERS || 'users')
       .select(USER_FIELDS)
       .eq('email', email.toLowerCase().trim())
@@ -59,7 +65,7 @@ export const findByEmail = async (email) => {
 
     if (error) throw error;
     
-    // ⚡ CORRECCIÓN: Normalización a MAYÚSCULAS para consistencia total con ROLES.*
+    // ⚡ Normalización a MAYÚSCULAS para consistencia total con ROLES.*
     if (data) {
       data.role = data.role?.toUpperCase().trim();
     }
