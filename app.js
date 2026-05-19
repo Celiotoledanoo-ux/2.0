@@ -11,7 +11,7 @@ import apiRouter from './src/routes/index.js';
 import logger from './src/core/logger/logger.js';    
 import httpLogger from './src/core/logger/httpLogger.js'; 
 import AppError from './src/core/errors/AppError.js'; 
-import { errorHandler } from './src/core/middlewares/error.middlewares.js'; // ⚡ CORRECCIÓN: Nombre unificado oficial
+import { globalErrorHandler as errorHandler } from './src/core/middlewares/error.middlewares.js'; // ⚡ Nombre unificado oficial
 import { HTTP_STATUS } from './src/shared/constants/httpStatusCodes.js'; 
 
 // 🛠️ CONFIGURACIÓN DE RUTAS PARA ES MODULES
