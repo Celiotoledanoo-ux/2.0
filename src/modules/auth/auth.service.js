@@ -1,7 +1,7 @@
 import { db } from '../../core/database/supabaseClient.js';
 import * as authRepo from './auth.repository.js';
 import AppError from '../../core/errors/AppError.js';
-import logger from '../../core/logger/logger.js'; // ⚡ Inyectamos tu logger
+import logger from '../../core/logger/logger.js'; 
 
 /**
  * 🔐 AUTH SERVICE - FULL MODULE
@@ -26,11 +26,14 @@ export const login = async (identifier, password) => {
   if (!userProfile.active) throw new AppError('Esta cuenta está desactivada, bro.', 403);
 
   return {
-    user: userProfile, // Su rol ya sale en MAYÚSCULAS gracias al repositorio corregido
+    user: userProfile, 
+    // ⚡ CORRECCIÓN: Retornamos los nombres nativos con guion bajo e inyectamos duplicados en camelCase como fail-safe
     session: {
-      accessToken: data.session?.access_token,
-      refreshToken: data.session?.refresh_token,
-      expiresAt: data.session?.expires_at
+      access_token: data.session?.access_token,
+      refresh_token: data.session?.refresh_token,
+      expires_at: data.session?.expires_at,
+      accessToken: data.session?.access_token, // Doble mapeo defensivo (Fail-Safe)
+      refreshToken: data.session?.refresh_token
     }
   };
 };
@@ -38,14 +41,12 @@ export const login = async (identifier, password) => {
 export const register = async (userData) => {
   const { email, name, role } = userData;
 
-  // Sincronización estricta con el ENUM de Postgres (Almacena en minúsculas)
   const cleanRole = role ? role.trim().toLowerCase() : 'cashier';
   const cleanEmail = email?.trim().toLowerCase();
 
   const existing = await authRepo.findByEmail(cleanEmail);
   if (existing) throw new AppError('Este correo ya está registrado en el Punto de Venta.', 400);
 
-  // Generación de contraseña dinámica por año actual
   const temporaryPassword = `GlowPos${new Date().getFullYear()}*`;
 
   // 1. Crear usuario en Supabase Auth
@@ -78,7 +79,7 @@ export const register = async (userData) => {
       }
     ]);
 
-  // 🛡️ MECANISMO DE ROLLBACK SENIOR (Evita usuarios huérfanos si la base de datos SQL falla)
+  // 🛡️ MECANISMO DE ROLLBACK SENIOR 
   if (profileError) {
     logger.warn({
       event: 'AUTH_REGISTRATION_ROLLBACK_TRIGGERED',
@@ -86,16 +87,14 @@ export const register = async (userData) => {
       userId: authUser.id
     });
 
-    // Usamos los superpoderes de la serviceRoleKey de 'db' para borrar el usuario de Auth inmediatamente
     await db.auth.admin.deleteUser(authUser.id);
-
-    throw new AppError('No se pudo completar el alta del empleado en la base de datos relacional. Intenta de nuevo.', 500);
+    throw new AppError('No se pudo completar el alta del empleado en la base de datos relacional.', 500);
   }
 
   return {
     id: authUser.id,
     email: authUser.email,
-    role: cleanRole.toUpperCase(), // ⚡ Normalizado a MAYÚSCULAS para cumplir el estándar
+    role: cleanRole.toUpperCase(), 
     temporaryKey: temporaryPassword,
     message: 'Empleado dado de alta de forma exitosa en la boutique.'
   };
@@ -112,9 +111,11 @@ export const refreshSession = async (refreshToken) => {
   }
 
   return {
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    expires_at: data.session.expires_at,
     accessToken: data.session.access_token,
-    refreshToken: data.session.refresh_token,
-    expiresAt: data.session.expires_at
+    refreshToken: data.session.refresh_token
   };
 };
 

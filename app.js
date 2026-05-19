@@ -11,7 +11,7 @@ import apiRouter from './src/routes/index.js';
 import logger from './src/core/logger/logger.js';    
 import httpLogger from './src/core/logger/httpLogger.js'; 
 import AppError from './src/core/errors/AppError.js'; 
-import { globalErrorHandler } from './src/core/middlewares/error.middlewares.js'; 
+import { errorHandler } from './src/core/middlewares/error.middlewares.js'; // ⚡ CORRECCIÓN: Nombre unificado oficial
 import { HTTP_STATUS } from './src/shared/constants/httpStatusCodes.js'; 
 
 // 🛠️ CONFIGURACIÓN DE RUTAS PARA ES MODULES
@@ -36,7 +36,8 @@ app.use(helmet({
 app.use(cors({
   origin: env.isProduction ? process.env.CORS_ORIGIN : true,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // --- 4. RATE LIMIT (Escudo contra abusos y denegación de servicios) ---
@@ -51,13 +52,13 @@ app.use('/api/', rateLimit({
   }
 }));
 
-// --- 5. PARSERS (Límites de carga estrictos por seguridad de desbordamiento) ---
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// --- 5. PARSERS (⚡ CORRECCIÓN: Subimos el límite a 10MB para tolerar carritos masivos y fotos) ---
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // --- 6. FRONTEND (Servidor de archivos estáticos) ---
-// CORREGIDO: Aseguramos rutas absolutas limpias para evitar fallos de ubicación en despliegue
-const publicPath = path.resolve(__dirname, 'public');
+// ⚡ CORRECCIÓN Fail-Safe: Tolera de forma flexible si el archivo corre desde la raíz o dentro de /src
+const publicPath = path.resolve(__dirname, __dirname.endsWith('src') ? '../public' : 'public');
 
 app.use(express.static(publicPath));
 
@@ -76,7 +77,7 @@ app.get('*', (req, res, next) => {
 });
 
 // --- 10. GESTOR DE ERRORES GLOBAL (El Último Muro) ---
-app.use(globalErrorHandler);
+app.use(errorHandler); // ⚡ CORRECCIÓN: Conectado con la firma unificada
 
 logger.info('✅ App.js configurado, blindado contra fallas de SPA y listo para la ignición del servidor.');
 

@@ -1,6 +1,6 @@
 import * as authService from './auth.service.js';
 import logger from '../../core/logger/logger.js';
-import { catchAsync } from '../../shared/utils/async.utils.js'; // ⚡ CORRECCIÓN: Importación nombrada corregida
+import { catchAsync } from '../../shared/utils/async.utils.js'; 
 
 /**
  * 🔐 CONTROLADOR DE AUTENTICACIÓN - GLOW BEAUTY POS
@@ -8,7 +8,10 @@ import { catchAsync } from '../../shared/utils/async.utils.js'; // ⚡ CORRECCI�
  */
 
 export const login = catchAsync(async (req, res) => {
-  const { email, identifier, password } = req.body;
+  // ⚡ CORRECCIÓN: Extracción segura tolerante a la desanidación del validador de Zod
+  const payload = req.body.body || req.body;
+  const { email, identifier, password } = payload;
+  
   const loginUser = identifier || email;
 
   // Ejecutamos la lógica de negocio
@@ -26,8 +29,8 @@ export const login = catchAsync(async (req, res) => {
   res.status(200).json({
     status: 'success',
     message: `¡Qué onda, ${result.user.name.split(' ')[0]}! Ya puedes operar.`,
-    token: result.session.accessToken, // ⚡ CORRECCIÓN: Mapeo correcto del token desde la sesión
-    user: result.user,   // Mantiene la compatibilidad con el localStorage del frontend
+    token: result.session?.access_token || result.token, // ⚡ CORRECCIÓN: Mapeo real de Supabase access_token
+    user: result.user,   
     data: result
   });
 });
@@ -48,7 +51,9 @@ export const logout = catchAsync(async (req, res) => {
 });
 
 export const register = catchAsync(async (req, res) => {
-  const newUser = await authService.register(req.body);
+  // ⚡ CORRECCIÓN: Extracción segura para el registro de nuevos empleados
+  const payload = req.body.body || req.body;
+  const newUser = await authService.register(payload);
 
   logger.info({
     event: 'AUTH_USER_REGISTERED',
