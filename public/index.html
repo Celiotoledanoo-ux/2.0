@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,23 +7,27 @@
 
   <title>Glow Beauty POS</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
 
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
+  <link rel="stylesheet" href="/style.css" />
 </head>
-
 <body>
 
-  <!-- ========================= -->
+  <!-- ===================================================== -->
   <!-- AUTH SCREEN -->
-  <!-- ========================= -->
-  <section id="auth-screen" class="screen-layer active-screen">
+  <!-- ===================================================== -->
+  <section id="auth-screen" class="overlay-screen">
 
     <div class="auth-card glass-card">
+
       <div class="brand-block">
         <h1 class="brand-title">Glow Beauty POS</h1>
         <p class="brand-subtitle">
@@ -33,23 +38,27 @@
       <form id="login-form" class="form-layout">
 
         <div class="input-group">
-          <label for="login-identifier">Correo o Alias de Caja</label>
+          <label for="login-identifier">Correo o Alias</label>
+
           <input
             type="text"
             id="login-identifier"
             placeholder="beauty.manager"
             autocomplete="username"
-          >
+            required
+          />
         </div>
 
         <div class="input-group">
           <label for="login-password">Contraseña</label>
+
           <input
             type="password"
             id="login-password"
             placeholder="••••••••"
             autocomplete="current-password"
-          >
+            required
+          />
         </div>
 
         <button type="submit" id="login-submit-btn">
@@ -57,21 +66,22 @@
         </button>
 
       </form>
+
     </div>
 
   </section>
 
 
-  <!-- ========================= -->
+  <!-- ===================================================== -->
   <!-- CASH LOCK SCREEN -->
-  <!-- ========================= -->
+  <!-- ===================================================== -->
   <section id="cash-lock-screen" class="overlay-screen d-none">
 
     <div class="modal-card">
 
       <div class="modal-header">
         <h2>Apertura de Caja</h2>
-        <p>Ingresa el fondo inicial del turno monetario.</p>
+        <p>Ingresa el fondo inicial del turno.</p>
       </div>
 
       <form id="cash-open-form" class="form-layout">
@@ -86,7 +96,9 @@
             id="cash-opening-balance-input"
             placeholder="$0.00"
             step="0.01"
-          >
+            min="0"
+            required
+          />
         </div>
 
         <button type="submit" id="cash-open-submit-btn">
@@ -100,129 +112,59 @@
   </section>
 
 
-  <!-- ========================= -->
-  <!-- MAIN POS WORKSPACE -->
-  <!-- ========================= -->
+  <!-- ===================================================== -->
+  <!-- MAIN WORKSPACE -->
+  <!-- ===================================================== -->
   <main id="pos-main-workspace" class="d-none">
 
-    <!-- LEFT SIDE -->
+    <!-- LEFT PANEL -->
     <section class="products-section">
 
       <div class="workspace-header">
+
         <div>
-          <h2>Catálogo de Cosméticos</h2>
-          <p>Gestión premium de maquillaje y skincare.</p>
+          <h2>Catálogo de Productos</h2>
+          <p>Inventario sincronizado en tiempo real.</p>
         </div>
 
         <div id="vault-cash-display">
           Caja Neta: $0.00
         </div>
+
       </div>
 
       <div class="search-wrapper">
+
         <input
           type="text"
           id="product-search-input"
-          placeholder="Buscar productos, marcas, tonos o SKU..."
-        >
-      </div>
-
-      <div id="products-grid-container">
-
-        <!-- SAMPLE PRODUCT CARD -->
-        <article class="product-card">
-
-          <div class="product-card-top">
-            <span class="product-brand">
-              Rare Beauty
-            </span>
-
-            <span class="product-stock-badge">
-              Disponible
-            </span>
-          </div>
-
-          <div class="product-image-placeholder"></div>
-
-          <div class="product-content">
-
-            <h3 class="product-name">
-              Soft Pinch Liquid Blush
-            </h3>
-
-            <p class="product-variant">
-              Tono: Hope
-            </p>
-
-            <p class="product-sku">
-              SKU: RB-SP-2039
-            </p>
-
-          </div>
-
-          <div class="product-footer">
-
-            <span class="product-price">
-              $699.00
-            </span>
-
-            <button class="add-product-btn">
-              Agregar
-            </button>
-
-          </div>
-
-        </article>
+          placeholder="Buscar productos, SKU o marcas..."
+        />
 
       </div>
+
+      <!-- PRODUCTS GRID -->
+      <div id="products-grid-container"></div>
 
     </section>
 
 
-    <!-- RIGHT SIDE -->
+    <!-- RIGHT PANEL -->
     <aside id="shopping-cart-panel">
 
       <div class="cart-header">
-        <h2>Carrito de Compra</h2>
-        <p>Resumen operativo del ticket.</p>
-      </div>
-
-      <div class="cart-items-container">
-
-        <!-- SAMPLE CART ITEM -->
-        <div class="cart-item-row">
-
-          <div class="cart-item-info">
-            <h4>Soft Pinch Liquid Blush</h4>
-            <span>Rare Beauty · Hope</span>
-          </div>
-
-          <div class="cart-item-controls">
-
-            <button class="qty-btn decrease-btn">
-              −
-            </button>
-
-            <span class="qty-display">
-              1
-            </span>
-
-            <button class="qty-btn increase-btn">
-              +
-            </button>
-
-          </div>
-
-          <div class="cart-item-price">
-            $699.00
-          </div>
-
+        <div>
+          <h2>Carrito</h2>
+          <p>Ticket operativo.</p>
         </div>
-
       </div>
 
 
-      <!-- CHECKOUT FORM -->
+      <!-- CART ITEMS -->
+      <div class="cart-items-container"></div>
+
+
+      <!-- CHECKOUT -->
       <form id="checkout-form">
 
         <div class="panel-section">
@@ -234,7 +176,7 @@
               Método de Pago
             </label>
 
-            <select id="payment-method-select">
+            <select id="payment-method-select" required>
               <option value="CASH">CASH</option>
               <option value="CARD">CARD</option>
               <option value="TRANSFER">TRANSFER</option>
@@ -252,7 +194,8 @@
               id="checkout-cash-amount"
               placeholder="$0.00"
               step="0.01"
-            >
+              min="0"
+            />
           </div>
 
           <div class="input-group">
@@ -265,7 +208,8 @@
               id="checkout-digital-amount"
               placeholder="$0.00"
               step="0.01"
-            >
+              min="0"
+            />
           </div>
 
           <div class="input-group">
@@ -276,9 +220,11 @@
             <input
               type="number"
               id="checkout-discount-input"
-              placeholder="0%"
+              placeholder="0"
               step="0.01"
-            >
+              min="0"
+              max="100"
+            />
           </div>
 
           <button type="submit" id="checkout-submit-btn">
@@ -290,7 +236,7 @@
       </form>
 
 
-      <!-- CASH TRANSACTION -->
+      <!-- CASH MOVEMENTS -->
       <form id="cash-transaction-form">
 
         <div class="panel-section">
@@ -304,7 +250,7 @@
                 Tipo
               </label>
 
-              <select id="trans-type-select">
+              <select id="trans-type-select" required>
                 <option value="IN">IN</option>
                 <option value="OUT">OUT</option>
               </select>
@@ -320,7 +266,9 @@
                 id="trans-amount-input"
                 placeholder="$0.00"
                 step="0.01"
-              >
+                min="0"
+                required
+              />
             </div>
 
           </div>
@@ -334,18 +282,33 @@
               type="text"
               id="trans-concept-input"
               placeholder="Descripción del movimiento"
-            >
+              required
+            />
           </div>
+
+          <button type="submit" id="cash-transaction-submit-btn">
+            Registrar Movimiento
+          </button>
 
         </div>
 
       </form>
 
 
+      <!-- CASH FLOW TABLE -->
+      <div class="panel-section">
+
+        <h3>Historial de Caja</h3>
+
+        <div id="cash-flows-tbody" class="cash-flows-table"></div>
+
+      </div>
+
+
       <!-- CASH CLOSE -->
       <div class="cash-close-actions">
 
-        <button id="cash-close-trigger-btn">
+        <button id="cash-close-trigger-btn" type="button">
           Realizar Corte de Caja
         </button>
 
@@ -356,23 +319,23 @@
   </main>
 
 
-  <!-- ========================= -->
+  <!-- ===================================================== -->
   <!-- CASH CLOSE MODAL -->
-  <!-- ========================= -->
+  <!-- ===================================================== -->
   <div id="cash-close-modal" class="modal-overlay d-none">
 
     <div class="modal-card">
 
       <div class="modal-header">
         <h2>Cierre de Caja</h2>
-        <p>Realiza el arqueo monetario del turno.</p>
+        <p>Arqueo monetario del turno.</p>
       </div>
 
-      <form id="cash-close-form">
+      <form id="cash-close-form" class="form-layout">
 
         <div class="input-group">
           <label for="cash-real-cash-counted">
-            Dinero Físico Contado
+            Dinero Contado
           </label>
 
           <input
@@ -380,7 +343,9 @@
             id="cash-real-cash-counted"
             placeholder="$0.00"
             step="0.01"
-          >
+            min="0"
+            required
+          />
         </div>
 
         <div class="input-group">
@@ -390,7 +355,7 @@
 
           <textarea
             id="cash-close-notes"
-            placeholder="Notas del cierre..."
+            placeholder="Notas operativas..."
           ></textarea>
         </div>
 
@@ -405,122 +370,9 @@
   </div>
 
 
-  <!-- ========================= -->
-  <!-- ADMIN DASHBOARD -->
-  <!-- ========================= -->
-  <section id="admin-dashboard-panel" class="d-none">
-
-    <div class="admin-header">
-      <div>
-        <h2>Panel Administrativo</h2>
-        <p>Gestión operativa y métricas ejecutivas.</p>
-      </div>
-    </div>
-
-
-    <!-- EMPLOYEES -->
-    <div id="employees-table-container" class="admin-card">
-
-      <div class="section-header">
-        <h3>Personal</h3>
-      </div>
-
-      <div class="employees-table">
-
-        <div class="table-head">
-          <span>Nombre</span>
-          <span>Correo</span>
-          <span>Rol</span>
-          <span>Estado</span>
-        </div>
-
-        <div class="table-row">
-          <span>Andrea López</span>
-          <span>andrea@glowbeauty.com</span>
-          <span>Manager</span>
-
-          <button class="toggle-employee-status-btn">
-            Suspender
-          </button>
-        </div>
-
-        <div class="table-row">
-          <span>Sofía Méndez</span>
-          <span>sofia@glowbeauty.com</span>
-          <span>Cajera</span>
-
-          <button class="toggle-employee-status-btn">
-            Activar
-          </button>
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- ANALYTICS -->
-    <div id="reports-analytics-container" class="admin-card">
-
-      <div class="section-header">
-
-        <h3>Indicadores Ejecutivos</h3>
-
-        <div class="report-tabs">
-
-          <button class="report-range-tab active-tab">
-            Día
-          </button>
-
-          <button class="report-range-tab">
-            Semana
-          </button>
-
-          <button class="report-range-tab">
-            Mes
-          </button>
-
-        </div>
-
-      </div>
-
-      <div class="metrics-grid">
-
-        <div class="metric-card">
-          <span class="metric-label">
-            Revenue
-          </span>
-
-          <h4 id="metric-revenue-display">
-            $0.00
-          </h4>
-        </div>
-
-        <div class="metric-card">
-          <span class="metric-label">
-            Ventas
-          </span>
-
-          <h4 id="metric-sales-count">
-            0
-          </h4>
-        </div>
-
-        <div class="metric-card">
-          <span class="metric-label">
-            Health Score
-          </span>
-
-          <h4 id="metric-health-score">
-            100%
-          </h4>
-        </div>
-
-      </div>
-
-    </div>
-
-  </section>
-
+  <script src="/script.js"></script>
 </body>
 </html>
+
+
+

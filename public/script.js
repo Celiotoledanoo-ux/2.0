@@ -1,227 +1,479 @@
-/**
- * 🎨 GLOW BEAUTY POS - CORE FRONTEND ENGINE (PEGAMENTO DEFINITIVO)
- * Gestiona peticiones por HTTP hacia la API de Express sincronizado al localStorage.
- */
-
 const API_BASE_URL = '/api/v1';
 
-// 📡 HELPER MAESTRO DE PETICIONES HTTP (Inyecta tokens y desanida payloads de forma automática)
+const AppState = {
+  cartItems: [],
+  products: []
+};
+
+// =====================================================
+// API ENGINE
+// =====================================================
 async function apiFetch(endpoint, options = {}) {
   const token = localStorage.getItem('glow_pos_token');
-  
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
 
   const config = {
     ...options,
-    headers: { ...defaultHeaders, ...options.headers }
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && {
+        Authorization: `Bearer ${token}`
+      }),
+      ...(options.headers || {})
+    }
   };
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result.message || 'Algo tronó en la petición del Punto de Venta.');
+    let result = null;
+
+    const contentType = response.headers.get('content-type');
+
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
     }
 
-    return result; 
+    if (!response.ok) {
+      throw new Error(
+        result?.message ||
+        'Error inesperado en la petición.'
+      );
+    }
+
+    return result;
+
   } catch (error) {
-    console.error(`[API_FETCH_ERROR][${endpoint}]:`, error.message);
+    console.error(`[API ERROR][${endpoint}]`, error);
     throw error;
   }
 }
 
-// ==========================================================================
-// 🛠️ INTERFACES DE CONTROL DE TUS MÓDULOS
-// ==========================================================================
-
-// 1. MÓDULO /AUTH - Formulario de Login de la Boutique
-async function handleLogin(emailOrIdentifier, password) {
-  try {
-    const response = await apiFetch('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ identifier: emailOrIdentifier, password })
-    });
-
-    // Guardamos de forma limpia el token y el perfil
-    localStorage.setItem('glow_pos_token', response.token);
-    localStorage.setItem('glow_pos_user', JSON.stringify(response.user));
-
-    alert(`¡Bienvenida de vuelta, ${response.user.name}! 💄`);
-    
-    // ⚡ Corrección Senior: En lugar de recargar a ciegas, ejecutamos la sincronización de la UI inmediatamente
-    await syncCashRegisterUI(); 
-  } catch (err) {
-    alert(`❌ Error de acceso: ${err.message}`);
-  }
+// =====================================================
+// DOM HELPERS
+// =====================================================
+function $(id) {
+  return document.getElementById(id);
 }
 
-// 2. MÓDULO /CASH - Sincronizar Arqueo y Estado de la Caja Registradora (CORREGIDO CON CLASES REACONDICIONADAS)
+function show(element) {
+  element?.classList.remove('d-none');
+}
+
+function hide(element) {
+  element?.classList.add('d-none');
+}
+
+function money(value = 0) {
+  return `$${Number(value).toFixed(2)}`;
+}
+
+// =====================================================
+// LOGIN
+// =====================================================
+async function handleLogin(identifier, password) {
+
+  const response = await apiFetch('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({
+      identifier,
+      password
+    })
+  });
+
+  localStorage.setItem('glow_pos_token', response.token);
+  localStorage.setItem('glow_pos_user', JSON.stringify(response.user));
+
+  await syncCashRegisterUI();
+}
+
+// =====================================================
+// CASH STATUS
+// =====================================================
 async function syncCashRegisterUI() {
+
+  const token = localStorage.getItem('glow_pos_token');
+
+  if (!token) {
+    show($('auth-screen'));
+    hide($('cash-lock-screen'));
+    hide($('pos-main-workspace'));
+    return;
+  }
+
+  hide($('auth-screen'));
+
   try {
-    const token = localStorage.getItem('glow_pos_token');
-    
-    // CAPA DE SEGURIDAD 1: Si no hay token, el Login toma el control total y apaga las vitrinas
-    if (!token) {
-      document.getElementById('auth-screen')?.classList.remove('d-none');
-      document.getElementById('cash-lock-screen')?.classList.add('d-none');
-      document.getElementById('pos-main-workspace')?.classList.add('d-none');
+
+    const response = await apiFetch('/cash/status');
+
+    const payload = response?.data || response || {};
+
+    const {
+      isOpen = false,
+      session = null,
+      transactions = []
+    } = payload;
+
+    if (!isOpen) {
+      show($('cash-lock-screen'));
+      hide($('pos-main-workspace'));
       return;
     }
 
-    // Si el usuario está logueado, apagamos permanentemente la pantalla de Autenticación
-    document.getElementById('auth-screen')?.classList.add('d-none');
+    hide($('cash-lock-screen'));
+    show($('pos-main-workspace'));
 
-    // Consultamos el estado financiero en la API de Render
-    const response = await apiFetch('/cash/status');
-    const { isOpen, session, transactions } = response.data;
+    $('vault-cash-display').innerText =
+      `Caja Neta: ${money(session?.opening_balance || 0)}`;
 
-    // Vinculamos los nodos reales de tu nuevo HTML
-    const cashLockScreen = document.getElementById('cash-lock-screen');
-    const mainWorkspace = document.getElementById('pos-main-workspace');
-    const vaultDisplay = document.getElementById('vault-cash-display');
-    const tbody = document.getElementById('cash-flows-tbody');
+    renderCashFlows(transactions);
 
-    if (isOpen) {
-      // CAPA DE SEGURIDAD 2: Si la caja está abierta, desbloqueamos la vitrina digital claro y oro
-      if (cashLockScreen) cashLockScreen.classList.add('d-none');
-      if (mainWorkspace) mainWorkspace.classList.remove('d-none');
-      
-      if (vaultDisplay) vaultDisplay.innerText = `Caja Neta: $${Number(session.opening_balance).toFixed(2)}`;
-      
-      // Renderizar tabla de flujos manuales de caja chica
-      if (tbody) {
-        tbody.innerHTML = '';
-        (transactions || []).forEach(flow => {
-          tbody.innerHTML += `
-            <div class="table-row">
-              <span>${flow.concept}</span>
-              <span class="${flow.type === 'IN' ? 'text-success' : 'text-danger'}">
-                ${flow.type === 'IN' ? '+' : '-'} $${Number(flow.amount).toFixed(2)}
-              </span>
-            </div>
-          `;
-        });
-      }
-    } else {
-      // CAPA DE SEGURIDAD 3: Logueado pero con caja cerrada, se fuerza la sobrecapa de Apertura
-      if (mainWorkspace) mainWorkspace.classList.add('d-none');
-      if (cashLockScreen) cashLockScreen.classList.remove('d-none');
-    }
-  } catch (err) {
-    console.error('No se pudo sincronizar la terminal monetaria:', err.message);
-    localStorage.clear();
-    window.location.reload();
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
   }
 }
 
-// 3. MÓDULO /SALES - Carrito de Compras de la Tienda
-async function processCheckoutCart() {
-  if (!window.cartItems || window.cartItems.length === 0) {
-    return alert('El carrito está vacío, fiera.');
-  }
-  
-  const paymentMethod = document.getElementById('payment-method-select').value; 
-  const cashAmount = parseFloat(document.getElementById('checkout-cash-amount').value) || 0;
-  const digitalAmount = parseFloat(document.getElementById('checkout-digital-amount').value) || 0;
-  const discount = parseFloat(document.getElementById('checkout-discount-input').value) || 0;
-  const notes = document.getElementById('cash-close-notes')?.value || ''; 
+// =====================================================
+// CASH FLOWS
+// =====================================================
+function renderCashFlows(flows = []) {
 
-  const payload = {
-    items: window.cartItems, 
-    paymentMethod,
-    cashAmount,
-    digitalAmount,
-    discount,
-    notes
-  };
+  const container = $('cash-flows-tbody');
 
-  try {
-    const response = await apiFetch('/sales', {
-      method: 'POST',
-      body: JSON.stringify(payload)
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  flows.forEach(flow => {
+
+    const row = document.createElement('div');
+    row.className = 'cash-flow-row';
+
+    const concept = document.createElement('span');
+    concept.textContent = flow.concept;
+
+    const amount = document.createElement('span');
+
+    amount.className =
+      flow.type === 'IN'
+        ? 'text-success'
+        : 'text-danger';
+
+    amount.textContent =
+      `${flow.type === 'IN' ? '+' : '-'} ${money(flow.amount)}`;
+
+    row.appendChild(concept);
+    row.appendChild(amount);
+
+    container.appendChild(row);
+  });
+}
+
+// =====================================================
+// PRODUCTS
+// =====================================================
+function renderProducts(products = []) {
+
+  const container = $('products-grid-container');
+
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  products.forEach(product => {
+
+    const card = document.createElement('article');
+    card.className = 'product-card';
+
+    card.innerHTML = `
+      <div class="product-card-top">
+        <span class="product-brand">
+          ${product.brand || 'Marca'}
+        </span>
+
+        <span class="product-stock-badge">
+          ${product.stock > 0 ? 'Disponible' : 'Sin Stock'}
+        </span>
+      </div>
+
+      <div class="product-image-placeholder"></div>
+
+      <div class="product-content">
+        <h3 class="product-name">
+          ${product.name}
+        </h3>
+
+        <p class="product-sku">
+          SKU: ${product.sku || 'N/A'}
+        </p>
+      </div>
+
+      <div class="product-footer">
+        <span class="product-price">
+          ${money(product.price)}
+        </span>
+
+        <button class="add-product-btn">
+          Agregar
+        </button>
+      </div>
+    `;
+
+    const button = card.querySelector('.add-product-btn');
+
+    button.addEventListener('click', () => {
+      addToCart(product);
     });
 
-    alert(`🎉 ¡Cobro Exitoso!\nCambio / Vuelto a entregar: $${response.data.change}`);
-    
-    window.cartItems = [];
-    const cartContainer = document.querySelector('.cart-items-container');
-    if (cartContainer) cartContainer.innerHTML = '';
-    
-    syncCashRegisterUI();
-  } catch (err) {
-    alert(`🚨 Error en cobro: ${err.message}`);
-  }
+    container.appendChild(card);
+  });
 }
 
-// ==========================================================================
-// 🔌 INICIALIZACIÓN Y CAPTURA DE FORMULARIOS DEL HTML
-// ==========================================================================
-window.cartItems = []; // Inicialización fail-safe para el mostrador
+// =====================================================
+// CART
+// =====================================================
+function addToCart(product) {
 
-document.addEventListener('DOMContentLoaded', () => {
-  
-  // 1. Escuchar el Formulario de Login
-  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const identifier = document.getElementById('login-identifier').value.trim();
-    const password = document.getElementById('login-password').value;
-    await handleLogin(identifier, password);
+  const existing = AppState.cartItems.find(item => {
+    return item.id === product.id;
   });
 
-  // 2. Escuchar el Formulario de Apertura de Caja Chica
-  document.getElementById('cash-open-form')?.addEventListener('submit', async (e) => {
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    AppState.cartItems.push({
+      ...product,
+      quantity: 1
+    });
+  }
+
+  renderCart();
+}
+
+function renderCart() {
+
+  const container = document.querySelector('.cart-items-container');
+
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  AppState.cartItems.forEach(item => {
+
+    const row = document.createElement('div');
+    row.className = 'cart-item-row';
+
+    row.innerHTML = `
+      <div class="cart-item-info">
+        <h4>${item.name}</h4>
+        <span>${item.brand || ''}</span>
+      </div>
+
+      <div class="cart-item-controls">
+        <button class="qty-btn decrease-btn">−</button>
+        <span class="qty-display">${item.quantity}</span>
+        <button class="qty-btn increase-btn">+</button>
+      </div>
+
+      <div class="cart-item-price">
+        ${money(item.price * item.quantity)}
+      </div>
+    `;
+
+    row.querySelector('.increase-btn')
+      .addEventListener('click', () => {
+        item.quantity += 1;
+        renderCart();
+      });
+
+    row.querySelector('.decrease-btn')
+      .addEventListener('click', () => {
+
+        item.quantity -= 1;
+
+        if (item.quantity <= 0) {
+          AppState.cartItems = AppState.cartItems.filter(i => {
+            return i.id !== item.id;
+          });
+        }
+
+        renderCart();
+      });
+
+    container.appendChild(row);
+  });
+}
+
+// =====================================================
+// CHECKOUT
+// =====================================================
+async function processCheckoutCart() {
+
+  if (!AppState.cartItems.length) {
+    return alert('El carrito está vacío.');
+  }
+
+  const payload = {
+    items: AppState.cartItems,
+    paymentMethod: $('payment-method-select').value,
+    cashAmount: Number($('checkout-cash-amount').value || 0),
+    digitalAmount: Number($('checkout-digital-amount').value || 0),
+    discount: Number($('checkout-discount-input').value || 0)
+  };
+
+  const response = await apiFetch('/sales', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
+  alert(`Cobro exitoso. Cambio: ${money(response?.data?.change || 0)}`);
+
+  AppState.cartItems = [];
+
+  renderCart();
+
+  await syncCashRegisterUI();
+}
+
+// =====================================================
+// CASH TRANSACTION
+// =====================================================
+async function createCashTransaction() {
+
+  const payload = {
+    type: $('trans-type-select').value,
+    amount: Number($('trans-amount-input').value),
+    concept: $('trans-concept-input').value.trim()
+  };
+
+  await apiFetch('/cash/transaction', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
+  $('cash-transaction-form').reset();
+
+  await syncCashRegisterUI();
+}
+
+// =====================================================
+// EVENTS
+// =====================================================
+document.addEventListener('DOMContentLoaded', () => {
+
+  $('login-form')?.addEventListener('submit', async e => {
+
     e.preventDefault();
-    const balance = document.getElementById('cash-opening-balance-input').value;
+
     try {
+
+      await handleLogin(
+        $('login-identifier').value.trim(),
+        $('login-password').value
+      );
+
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  $('cash-open-form')?.addEventListener('submit', async e => {
+
+    e.preventDefault();
+
+    try {
+
       await apiFetch('/cash/open', {
         method: 'POST',
-        body: JSON.stringify({ openingBalance: balance })
+        body: JSON.stringify({
+          openingBalance: Number(
+            $('cash-opening-balance-input').value
+          )
+        })
       });
-      alert('¡Caja chica inicializada correctamente! 🟢');
-      window.location.reload();
-    } catch (err) {
-      alert(`❌ Error al abrir caja: ${err.message}`);
+
+      await syncCashRegisterUI();
+
+    } catch (error) {
+      alert(error.message);
     }
   });
 
-  // 3. Escuchar el Formulario de Cobro del Carrito
-  document.getElementById('checkout-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    await processCheckoutCart();
-  });
+  $('checkout-form')?.addEventListener('submit', async e => {
 
-  // 4. INTERRUPTOR VISUAL: Despertar el modal de Cierre de Caja
-  document.getElementById('cash-close-trigger-btn')?.addEventListener('click', () => {
-    const modal = document.getElementById('cash-close-modal');
-    if (modal) modal.classList.remove('d-none'); 
-  });
-
-  // 5. Escuchar el Formulario de Cierre de Caja
-  document.getElementById('cash-close-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const realCash = document.getElementById('cash-real-cash-counted').value;
-    const notes = document.getElementById('cash-close-notes').value;
 
     try {
-      const response = await apiFetch('/cash/close', {
-        method: 'POST',
-        body: JSON.stringify({ realCash: realCash, notes: notes })
-      });
-
-      alert(response.message || 'Corte de caja procesado con éxito. 🏁');
-      document.getElementById('cash-close-modal')?.classList.add('d-none');
-      localStorage.clear(); 
-      window.location.reload(); 
-    } catch (err) {
-      alert(`❌ Error al asentar el corte de caja: ${err.message}`);
+      await processCheckoutCart();
+    } catch (error) {
+      alert(error.message);
     }
   });
 
-  // ⚡ Sincronización perimetral de inicio (Determina qué pantalla pintar al arrancar)
+  $('cash-transaction-form')?.addEventListener('submit', async e => {
+
+    e.preventDefault();
+
+    try {
+      await createCashTransaction();
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  $('cash-close-trigger-btn')?.addEventListener('click', () => {
+    show($('cash-close-modal'));
+  });
+
+  $('cash-close-form')?.addEventListener('submit', async e => {
+
+    e.preventDefault();
+
+    try {
+
+      await apiFetch('/cash/close', {
+        method: 'POST',
+        body: JSON.stringify({
+          realCash: Number($('cash-real-cash-counted').value),
+          notes: $('cash-close-notes').value
+        })
+      });
+
+      hide($('cash-close-modal'));
+
+      localStorage.removeItem('glow_pos_token');
+      localStorage.removeItem('glow_pos_user');
+
+      await syncCashRegisterUI();
+
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  // MOCK PRODUCTS TEMPORALES
+  AppState.products = [
+    {
+      id: 1,
+      name: 'Soft Pinch Liquid Blush',
+      brand: 'Rare Beauty',
+      sku: 'RB-2039',
+      price: 699,
+      stock: 12
+    },
+    {
+      id: 2,
+      name: 'Dior Lip Glow',
+      brand: 'Dior',
+      sku: 'DG-9201',
+      price: 850,
+      stock: 8
+    }
+  ];
+
+  renderProducts(AppState.products);
+
   syncCashRegisterUI();
-}); // ⚡ CORRECCIÓN: Llave y paréntesis del DOMContentLoaded cerrados de forma correcta!
+});
+
