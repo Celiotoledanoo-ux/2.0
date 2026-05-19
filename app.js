@@ -57,10 +57,14 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // --- 6. FRONTEND (Servidor de archivos estáticos) ---
-// ⚡ CORRECCIÓN Fail-Safe: Tolera de forma flexible si el archivo corre desde la raíz o dentro de /src
-const publicPath = path.resolve(__dirname, __dirname.endsWith('src') ? '../public' : 'public');
+// ⚡ REPARACIÓN SENIOR: Obliga a buscar la carpeta 'public' basándose siempre en la raíz real del proyecto
+const rootPath = process.cwd(); // Captura el directorio de ejecución actual de Node (/opt/render/project/src)
+const publicPath = path.isAbsolute(rootPath) 
+  ? path.join(rootPath, 'public') 
+  : path.resolve(rootPath, 'public');
 
 app.use(express.static(publicPath));
+
 
 // --- 7. MONTAJE DE RUTAS DE LA API ---
 app.use('/api/v1', apiRouter);
