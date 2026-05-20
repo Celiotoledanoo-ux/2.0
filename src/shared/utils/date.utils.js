@@ -7,7 +7,7 @@
  * Genera la fecha y hora actual garantizando el formato ISO compatible con Supabase (TIMESTAMPTZ)
  * @returns {string} Fecha en formato ISO string
  */
-export const getCurrentISOString = () => {
+const getCurrentISOString = () => {
   return new Date().toISOString();
 };
 
@@ -17,7 +17,8 @@ export const getCurrentISOString = () => {
  * @param {string|Date} date - Fecha a formatear
  * @param {string} [locale='es-MX'] - Localización
  */
-export const formatLocalDate = (date, locale = 'es-MX') => {
+const formatLocalDate = (date, locale = 'es-MX') => {
+  if (!date) return 'N/A';
   return new Date(date).toLocaleString(locale, {
     timeZone: 'America/Mexico_City', 
     dateStyle: 'short',
@@ -31,10 +32,17 @@ export const formatLocalDate = (date, locale = 'es-MX') => {
  * @param {Date} date - Objeto de fecha base
  * @returns {string} Fecha formateada (ej: "2026-05-17")
  */
-export const getISODate = (date = new Date()) => {
+const getISODate = (date = new Date()) => {
   const localDate = new Date(date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
   const year = localDate.getFullYear();
   const month = String(localDate.getMonth() + 1).padStart(2, '0');
   const day = String(localDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para controladores y servicios)
+module.exports = {
+  getCurrentISOString,
+  formatLocalDate,
+  getISODate
 };
