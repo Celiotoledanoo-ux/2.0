@@ -1,11 +1,13 @@
 /**
- * 🎨 GLOW BEAUTY POS - CORE FRONTEND ENGINE (PEGAMENTO DEFINITIVO)
+ * 🎨 GLOW BEAUTY POS - CORE FRONTEND ENGINE (UNIFICADO Y BLINDADO)
  * Gestiona peticiones por HTTP hacia la API de Express sincronizado al localStorage.
  */
 
 const API_BASE_URL = '/api/v1';
 
-// 📡 HELPER MAESTRO DE PETICIONES HTTP (Inyecta tokens y desanida payloads de forma automática)
+// ==========================================================================
+// 📡 CAPA 1: HELPER MAESTRO DE PETICIONES HTTP
+// ==========================================================================
 async function apiFetch(endpoint, options = {}) {
   const token = localStorage.getItem('glow_pos_token');
   
@@ -35,10 +37,10 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // ==========================================================================
-// 🛠️ INTERFACES DE CONTROL DE TUS MÓDULOS
+// 🛠️ CAPA 2: INTERFACES DE CONTROL DE LOS MÓDULOS DE NEGOCIO
 // ==========================================================================
 
-// 1. MÓDULO /AUTH - Formulario de Login de la Boutique
+// --- MÓDULO 1: /AUTH (Inicio de Sesión) ---
 async function handleLogin(emailOrIdentifier, password) {
   try {
     const response = await apiFetch('/auth/login', {
@@ -46,20 +48,17 @@ async function handleLogin(emailOrIdentifier, password) {
       body: JSON.stringify({ identifier: emailOrIdentifier, password })
     });
 
-    // Guardamos de forma limpia el token y el perfil
     localStorage.setItem('glow_pos_token', response.token);
     localStorage.setItem('glow_pos_user', JSON.stringify(response.user));
 
-    alert(`¡Bienvenida de vuelta, ${response.user.name}! 💄`);
-    
-    // ⚡ Corrección Senior: En lugar de recargar a ciegas, ejecutamos la sincronización de la UI inmediatamente
+    alert(response.message || `¡Bienvenida de vuelta! 💄`);
     await syncCashRegisterUI(); 
   } catch (err) {
     alert(`❌ Error de acceso: ${err.message}`);
   }
 }
 
-// 2. MÓDULO /CASH - Sincronizar Arqueo y Estado de la Caja Registradora (CORREGIDO CON CLASES REACONDICIONADAS)
+// --- MÓDULO 2: /CASH (Sincronización del Estado de Caja) ---
 async function syncCashRegisterUI() {
   try {
     const token = localStorage.getItem('glow_pos_token');
@@ -70,7 +69,6 @@ async function syncCashRegisterUI() {
     const vaultDisplay = document.getElementById('vault-cash-display');
     const tbody = document.getElementById('cash-flows-tbody');
 
-    // SIN TOKEN → mostrar login
     if (!token) {
       authScreen?.classList.remove('d-none');
       cashLockScreen?.classList.add('d-none');
@@ -78,16 +76,9 @@ async function syncCashRegisterUI() {
       return;
     }
 
-    // ocultar login inmediatamente
     authScreen?.classList.add('d-none');
 
     const response = await apiFetch('/cash/status');
-
-    console.log('Cash Status Response:', response);
-
-    // 🛡️ CORRECCIÓN SENIOR ANTI-NULOS:
-    // Si response.data es null o indefinido (porque la base de datos está vacía), 
-    // forzamos un fallback seguro a un objeto vacío "{}" para evitar que la desestructuración de abajo colapse el hilo de JS.
     const payload = response.data || response || {};
 
     const {
@@ -101,27 +92,25 @@ async function syncCashRegisterUI() {
       mainWorkspace?.classList.remove('d-none');
 
       if (vaultDisplay && session?.opening_balance != null) {
-        vaultDisplay.innerText =
-          `Caja Neta: $${Number(session.opening_balance).toFixed(2)}`;
+        vaultDisplay.innerText = `Fondo en Caja: $${Number(session.opening_balance).toFixed(2)}`;
       }
 
-      // ⚡ ADICIÓN DE COMPATIBILIDAD: Renderizar tabla contable de flujos manuales si el contenedor existe
       if (tbody) {
         tbody.innerHTML = '';
         (transactions || []).forEach(flow => {
-          tbody.innerHTML += `
-            <div class="table-row">
-              <span>${flow.concept}</span>
-              <span class="${flow.type === 'IN' ? 'text-success' : 'text-danger'}">
-                ${flow.type === 'IN' ? '+' : '-'} $${Number(flow.amount).toFixed(2)}
-              </span>
-            </div>
+          const tr = document.createElement('tr');
+          tr.className = 'table-row-item';
+          tr.innerHTML = `
+            <td>${flow.concept}</td>
+            <td class="${flow.type === 'IN' ? 'text-success' : 'text-danger'}" style="text-align: right; font-weight: bold;">
+              ${flow.type === 'IN' ? '+' : '-'} $${Number(flow.amount).toFixed(2)}
+            </td>
           `;
+          tbody.appendChild(tr);
         });
       }
 
     } else {
-      // Si la caja está cerrada, ocultamos vitrinas y encendemos la sobrecapa de Apertura
       mainWorkspace?.classList.add('d-none');
       cashLockScreen?.classList.remove('d-none');
     }
@@ -132,17 +121,17 @@ async function syncCashRegisterUI() {
   }
 }
 
-// 3. MÓDULO /SALES - Carrito de Compras de la Tienda
+// --- MÓDULO 3: /SALES (Procesamiento del Carrito de Ventas) ---
 async function processCheckoutCart() {
   if (!window.cartItems || window.cartItems.length === 0) {
     return alert('El carrito está vacío, fiera.');
   }
   
-  const paymentMethod = document.getElementById('payment-method-select').value; 
-  const cashAmount = parseFloat(document.getElementById('checkout-cash-amount').value) || 0;
-  const digitalAmount = parseFloat(document.getElementById('checkout-digital-amount').value) || 0;
-  const discount = parseFloat(document.getElementById('checkout-discount-input').value) || 0;
-  const notes = document.getElementById('cash-close-notes')?.value || ''; 
+  const paymentMethod = document.getElementById('payment-method-select')?.value || 'CASH'; 
+  const cashAmount = parseFloat(document.getElementById('checkout-cash-amount')?.value) || 0;
+  const digitalAmount = parseFloat(document.getElementById('checkout-digital-amount')?.value) || 0;
+  const discount = parseFloat(document.getElementById('checkout-discount-input')?.value) || 0;
+  const notes = document.getElementById('checkout-notes-input')?.value || ''; 
 
   const payload = {
     items: window.cartItems, 
@@ -159,37 +148,98 @@ async function processCheckoutCart() {
       body: JSON.stringify(payload)
     });
 
-    alert(`🎉 ¡Cobro Exitoso!\nCambio / Vuelto a entregar: $${response.data.change}`);
+    alert(response.message || '¡Venta realizada con éxito! 🎉');
+    if (response.data && response.data.change > 0) {
+      alert(`💵 Cambio / Vuelto a entregar: $${Number(response.data.change).toFixed(2)}`);
+    }
     
     window.cartItems = [];
     const cartContainer = document.querySelector('.cart-items-container');
     if (cartContainer) cartContainer.innerHTML = '';
     
-    syncCashRegisterUI();
+    await syncCashRegisterUI();
   } catch (err) {
     alert(`🚨 Error en cobro: ${err.message}`);
   }
 }
 
+// --- MÓDULO 4: /REPORTS (Business Intelligence del Panel de Control) ---
+async function fetchAndRenderAnalytics(range = 'day') {
+  try {
+    const response = await apiFetch(`/reports/summary?range=${range}`);
+    const payload = response.data || response || {};
+    const { metrics, business_status } = payload;
+
+    const revenueDisplay = document.getElementById('metric-revenue-display');
+    const salesCountDisplay = document.getElementById('metric-sales-count');
+    const healthScoreDisplay = document.getElementById('metric-health-score');
+
+    if (revenueDisplay) {
+      const revenue = metrics?.total_revenue != null ? Number(metrics.total_revenue) : 0;
+      revenueDisplay.innerText = `$${revenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+    }
+
+    if (salesCountDisplay) {
+      salesCountDisplay.innerText = metrics?.sales_count != null ? metrics.sales_count : 0;
+    }
+
+    if (healthScoreDisplay) {
+      const score = business_status?.health_score || 'EXCELLENT';
+      healthScoreDisplay.innerText = score === 'EXCELLENT' ? '🟢 100%' : score === 'WARNING' ? '🟡 75%' : '🔴 40%';
+      healthScoreDisplay.title = business_status?.message || '';
+    }
+
+    console.log(`[BI_ENGINE] Analíticas del rango [${range.toUpperCase()}] renderizadas.`);
+  } catch (err) {
+    console.error('fetchAndRenderAnalytics ERROR:', err);
+    alert(`❌ Error al cargar los reportes analíticos:\n${err.message}`);
+  }
+}
+
+function initializeAdminDashboardListeners() {
+  const tabs = document.querySelectorAll('.report-range-tab');
+  
+  tabs.forEach(tab => {
+    tab.addEventListener('click', async (e) => {
+      e.preventDefault();
+      tabs.forEach(t => t.classList.remove('active-tab'));
+      
+      const clickedTab = e.target;
+      clickedTab.classList.add('active-tab');
+
+      const selectedRange = clickedTab.dataset.range || 'day';
+      await fetchAndRenderAnalytics(selectedRange);
+    });
+  });
+
+  const defaultTab = document.querySelector('.report-range-tab[data-range="day"]');
+  if (defaultTab) {
+    defaultTab.classList.add('active-tab');
+    fetchAndRenderAnalytics('day');
+  }
+}
+
 // ==========================================================================
-// 🔌 INICIALIZACIÓN Y CAPTURA DE FORMULARIOS DEL HTML
+// 🔌 CAPA 3: INICIALIZACIÓN GLOBAL Y CAPTURA DE EVENTOS DEL DOM
 // ==========================================================================
-window.cartItems = []; // Inicialización fail-safe para el mostrador
+window.cartItems = []; // Memoria volátil del carrito en mostrador
 
 document.addEventListener('DOMContentLoaded', () => {
   
   // 1. Escuchar el Formulario de Login
   document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const identifier = document.getElementById('login-identifier').value.trim();
-    const password = document.getElementById('login-password').value;
-    await handleLogin(identifier, password);
+    const identifier = document.getElementById('login-identifier')?.value.trim();
+    const password = document.getElementById('login-password')?.value;
+    if (identifier && password) {
+      await handleLogin(identifier, password);
+    }
   });
 
   // 2. Escuchar el Formulario de Apertura de Caja Chica
   document.getElementById('cash-open-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const balance = document.getElementById('cash-opening-balance-input').value;
+    const balance = document.getElementById('cash-opening-balance-input')?.value;
     try {
       await apiFetch('/cash/open', {
         method: 'POST',
@@ -208,18 +258,17 @@ document.addEventListener('DOMContentLoaded', () => {
     await processCheckoutCart();
   });
 
-  // 4. INTERRUPTOR VISUAL: Despertar el modal de Cierre de Caja
+  // 4. INTERRUPTOR VISUAL: Abrir el modal de Arqueo de Caja
   document.getElementById('cash-close-trigger-btn')?.addEventListener('click', () => {
     const modal = document.getElementById('cash-close-modal');
     if (modal) modal.classList.remove('d-none'); 
   });
 
-  // 5. Escuchar el Formulario de Cierre de Caja
+  // 5. Escuchar el Formulario de Cierre de Caja (Arqueo Final)
   document.getElementById('cash-close-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const realCash = document.getElementById('cash-real-cash-counted').value;
-    const notes = document.getElementById('cash-close-notes').value;
+    const realCash = document.getElementById('cash-real-cash-counted')?.value;
+    const notes = document.getElementById('cash-close-notes')?.value || '';
 
     try {
       const response = await apiFetch('/cash/close', {
@@ -229,13 +278,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       alert(response.message || 'Corte de caja procesado con éxito. 🏁');
       document.getElementById('cash-close-modal')?.classList.add('d-none');
-      localStorage.clear(); 
+      
+      localStorage.clear(); // Seguridad total: Limpia credenciales al terminar turno
       window.location.reload(); 
     } catch (err) {
       alert(`❌ Error al asentar el corte de caja: ${err.message}`);
     }
   });
 
-  // ⚡ Sincronización perimetral de inicio (Determina qué pantalla pintar al arrancar)
+  // 🌟 Inicializar los disparadores del panel de analíticas administrativas
+  initializeAdminDashboardListeners();
+
+  // Determinar qué pantalla pintar en el arranque de la terminal
   syncCashRegisterUI();
 });

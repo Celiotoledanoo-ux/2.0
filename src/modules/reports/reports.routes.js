@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import * as reportsController from './reports.controller.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
-import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
-import { getSummarySchema } from './reports.schema.js'; 
-import { ROLES } from '../../shared/constants/roles.js'; // ⚡ Inyectamos constantes para consistencia
+const { Router } = require('express');
+const reportsController = require('./reports.controller');
+const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
+const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
+const { getSummarySchema } = require('./reports.schema'); 
+const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
 
 const router = Router();
 
@@ -26,4 +26,5 @@ router.get(
   reportsController.getSummary
 );
 
-export default router;
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
+module.exports = router;

@@ -1,15 +1,14 @@
-import { z } from 'zod';
+const { z } = require('zod');
 
 /**
  * 💰 SALES VALIDATION SCHEMA (0 ERRORES)
  * Asegura que los datos de la transacción sean íntegros antes de tocar el stock.
  */
-export const createSaleSchema = z.object({
+const createSaleSchema = z.object({
   body: z.object({
-    // Soporte para desanidación limpia (body.body o body directo)
     items: z.array(
       z.object({
-        // CORRECCIÓN: Tolera que el frontend mande tanto 'id' como 'product_id'
+        // Tolera que el frontend mande tanto 'id' como 'product_id'
         id: z.string().uuid().optional(),
         product_id: z.string().uuid('El ID del producto debe ser un UUID válido.').optional(),
         quantity: z.coerce
@@ -19,18 +18,18 @@ export const createSaleSchema = z.object({
       })
     )
     .min(1, 'La venta debe tener al menos un producto, fiera.')
-    // CORRECCIÓN: Transformación atómica de los items para asegurar que al Service le llegue 'product_id'
+    // Transformación atómica de los items para asegurar que al Service le llegue estrictamente 'product_id'
     .transform(items => items.map(item => ({
       product_id: item.product_id || item.id,
       quantity: item.quantity
     }))),
 
-    // CORRECCIÓN: Agregado 'MIXED' y normalizado a camelCase en conformidad con script.js
+    // Agregado 'MIXED' y normalizado a camelCase en conformidad con script.js
     paymentMethod: z.enum(['CASH', 'CARD', 'TRANSFER', 'MIXED'], {
       errorMap: () => ({ message: 'Ese método de pago no lo aceptamos aquí.' })
     }).default('CASH'),
 
-    // CORRECCIÓN: Captura de flujos para pagos combinados en el POS
+    // Captura de flujos para pagos combinados en el POS
     cashAmount: z.coerce
       .number()
       .nonnegative('El monto en efectivo no puede ser negativo.')
@@ -52,3 +51,8 @@ export const createSaleSchema = z.object({
     notes: z.string().max(200, 'Nota demasiado larga.').optional()
   })
 });
+
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
+module.exports = {
+  createSaleSchema
+};

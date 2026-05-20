@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import * as cashController from './cash.controller.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
-import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
-import { openCashSchema, closeCashSchema, cashTransactionSchema } from './cash.schema.js'; 
-import { ROLES } from '../../shared/constants/roles.js'; // ⚡ Inyectamos constantes para consistencia
+const { Router } = require('express');
+const cashController = require('./cash.controller');
+const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
+const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
+const { openCashSchema, closeCashSchema, cashTransactionSchema } = require('./cash.schema'); 
+const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
 
 const router = Router();
 
@@ -44,4 +44,5 @@ router.post('/transaction',
   cashController.registerTransaction
 );
 
-export default router;
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
+module.exports = router;

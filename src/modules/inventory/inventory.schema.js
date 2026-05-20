@@ -1,10 +1,10 @@
-import { z } from 'zod';
+const { z } = require('zod');
 
 /**
  * 📦 PRODUCT SCHEMA - MAQUILLAJE POS CORREGIDO
  * Sincronizado milimétricamente con el formulario dinámico del frontend.
  */
-export const productSchema = z.object({
+const productSchema = z.object({
   body: z.object({ 
     name: z
       .string({ required_error: 'El nombre es obligatorio, fiera.' })
@@ -53,7 +53,7 @@ export const productSchema = z.object({
  * 📦 STOCK ADJUSTMENT SCHEMA
  * Valida las entradas y salidas manuales de mercancía.
  */
-export const stockAdjustmentSchema = z.object({
+const stockAdjustmentSchema = z.object({
   body: z.object({
     quantity: z.coerce
       .number({ required_error: '¿Cuánto vamos a ajustar?' })
@@ -71,3 +71,9 @@ export const stockAdjustmentSchema = z.object({
     id: z.string().uuid('El ID del producto no es un UUID válido.')
   })
 });
+
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
+module.exports = {
+  productSchema,
+  stockAdjustmentSchema
+};

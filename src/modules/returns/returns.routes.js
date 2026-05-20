@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import * as returnsController from './returns.controller.js';
-import { createReturnSchema } from './returns.schema.js'; // ⚡ Inyección del nuevo esquema
-import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
-import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js';
-import { ROLES } from '../../shared/constants/roles.js';
+const { Router } = require('express');
+const returnsController = require('./returns.controller');
+const { createReturnSchema } = require('./returns.schema'); // ⚡ Inyección del nuevo esquema
+const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
+const { validationMiddleware } = require('../../core/middlewares/validation.middlewares');
+const { ROLES } = require('../../shared/constants/roles');
 
 const router = Router();
 
@@ -18,4 +18,5 @@ router.post('/',
   returnsController.executeReturn
 );
 
-export default router;
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
+module.exports = router;

@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import * as salesController from './sales.controller.js';
-import { createSaleSchema } from './sales.schema.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
-import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
-import { ROLES } from '../../shared/constants/roles.js'; // ⚡ Inyectamos constantes para consistencia
+const { Router } = require('express');
+const salesController = require('./sales.controller');
+const { createSaleSchema } = require('./sales.schema');
+const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
+const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
+const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
 
 const router = Router();
 
@@ -24,4 +24,5 @@ router.post(
   salesController.checkout
 );
 
-export default router;
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
+module.exports = router;

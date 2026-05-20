@@ -1,15 +1,16 @@
-import { db } from '../database/supabaseClient.js';
-import logger from '../logger/logger.js';
+const { db } = require('../database/supabaseClient');
+const logger = require('../logger/logger');
 
 /**
  * 🚀 SISTEMA DE CARGA CENTRALIZADO (LOADER)
  * Inicializa los servicios del núcleo antes de que Express escuche peticiones.
  */
-const initLoader = async (app) => {
+const initLoader = async (_app) => {
   try {
     logger.info('⚙️ Iniciando cargador de módulos del sistema...');
 
-    if (!db || !db.auth) {
+    // Validación estructural estricta del Singleton del ORM/SDK de Supabase
+    if (!db || typeof db.auth !== 'object') {
       throw new Error('El cliente de Supabase no se inicializó correctamente en database/supabaseClient.js');
     }
     logger.info('✅ Conexión con Supabase verificada con éxito.');
@@ -22,4 +23,5 @@ const initLoader = async (app) => {
   }
 };
 
-export default initLoader;
+// Exportación en formato estricto CommonJS para evitar SyntaxError
+module.exports = initLoader;

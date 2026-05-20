@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import * as userController from './users.controller.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
-import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
-import { createUserSchema, toggleStatusSchema } from './users.schema.js';
-import { ROLES } from '../../shared/constants/roles.js'; // ⚡ Inyectamos constantes para consistencia
+const { Router } = require('express');
+const userController = require('./users.controller');
+const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
+const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
+const { createUserSchema, toggleStatusSchema } = require('./users.schema');
+const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
 
 const router = Router();
 
@@ -41,4 +41,5 @@ router.get(
   userController.getById
 );
 
-export default router;
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
+module.exports = router;

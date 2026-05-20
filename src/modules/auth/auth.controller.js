@@ -1,71 +1,81 @@
-import * as authService from './auth.service.js';
-import logger from '../../core/logger/logger.js';
-import { catchAsync } from '../../shared/utils/async.utils.js'; 
+const authService = require('./auth.service');
+const logger = require('../../core/logger/logger');
+const { catchAsync } = require('../../shared/utils/async.utils'); 
 
 /**
  * 🔐 CONTROLADOR DE AUTENTICACIÓN - GLOW BEAUTY POS
  * El puente inteligente entre la validación (Schema) y la lógica (Service).
  */
+const authController = {
+  /**
+   * 1. INICIO DE SESIÓN DE EMPLEADOS
+   */
+  login: catchAsync(async (req, res) => {
+    // El validationMiddleware ya limpió el objeto y lo dejó directo en req.body
+    const { email, identifier, password } = req.body;
+    
+    const loginUser = identifier || email;
 
-export const login = catchAsync(async (req, res) => {
-  // ⚡ CORRECCIÓN: Extracción segura tolerante a la desanidación del validador de Zod
-  const payload = req.body.body || req.body;
-  const { email, identifier, password } = payload;
-  
-  const loginUser = identifier || email;
+    // Ejecutamos la lógica de negocio
+    const result = await authService.login(loginUser, password);
 
-  // Ejecutamos la lógica de negocio
-  const result = await authService.login(loginUser, password);
+    logger.info({
+      event: 'AUTH_LOGIN_SUCCESS',
+      user: result.user.email,
+      role: result.user.role,
+      ip: req.ip
+    });
 
-  logger.info({
-    event: 'AUTH_LOGIN_SUCCESS',
-    user: result.user.email,
-    role: result.user.role,
-    ip: req.ip,
-    userAgent: req.headers['user-agent']
-  });
+    // Mantenemos el formato de respuesta limpia sincronizado con tu script.js
+    return res.status(200).json({
+      status: 'success',
+      message: `¡Qué onda, ${result.user.name.split(' ')[0]}! Ya puedes operar.`,
+      token: result.session?.access_token || result.token, // Mapeo real de Supabase access_token
+      user: result.user,   
+      data: result
+    });
+  }),
 
-  // Mantenemos el formato de respuesta limpia sincronizado con tu script.js
-  res.status(200).json({
-    status: 'success',
-    message: `¡Qué onda, ${result.user.name.split(' ')[0]}! Ya puedes operar.`,
-    token: result.session?.access_token || result.token, // ⚡ CORRECCIÓN: Mapeo real de Supabase access_token
-    user: result.user,   
-    data: result
-  });
-});
+  /**
+   * 2. CIERRE DE SESIÓN CENTRAL
+   */
+  logout: catchAsync(async (req, res) => {
+    await authService.logout();
 
-export const logout = catchAsync(async (req, res) => {
-  await authService.logout();
+    logger.info({
+      event: 'AUTH_LOGOUT',
+      userId: req.user?.id || 'unknown',
+      ip: req.ip
+    });
 
-  logger.info({
-    event: 'AUTH_LOGOUT',
-    userId: req.user?.id || 'unknown',
-    ip: req.ip
-  });
+    return res.status(200).json({
+      status: 'success',
+      message: 'Sesión terminada. ¡Nos vemos en el próximo turno!'
+    });
+  }),
 
-  res.status(200).json({
-    status: 'success',
-    message: 'Sesión terminada. ¡Nos vemos en el próximo turno!'
-  });
-});
+  /**
+   * 3. REGISTRO / ALTA DE PERSONAL (ADMIN ONLY)
+   */
+  register: catchAsync(async (req, res) => {
+    // Parsea los datos limpios de la raíz gracias al validationMiddleware
+    const newUser = await authService.register(req.body);
 
-export const register = catchAsync(async (req, res) => {
-  // ⚡ CORRECCIÓN: Extracción segura para el registro de nuevos empleados
-  const payload = req.body.body || req.body;
-  const newUser = await authService.register(payload);
+    logger.info({
+      event: 'AUTH_USER_REGISTERED',
+      adminId: req.user?.id || 'SYSTEM',
+      newUserId: newUser.id,
+      newUserEmail: newUser.email,
+      newUserRole: newUser.role
+    });
 
-  logger.info({
-    event: 'AUTH_USER_REGISTERED',
-    adminId: req.user?.id || 'SYSTEM',
-    newUserId: newUser.id,
-    newUserEmail: newUser.email,
-    newUserRole: newUser.role
-  });
+    return res.status(201).json({
+      status: 'success',
+      message: 'Empleado registrado con éxito en el sistema.',
+      data: { user: newUser }
+    });
+  })
+};
 
-  res.status(201).json({
-    status: 'success',
-    message: 'Empleado registrado con éxito en el sistema.',
-    data: { user: newUser }
-  });
-});
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
+module.exports = authController;

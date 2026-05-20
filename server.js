@@ -1,16 +1,19 @@
 /**
- * 🚀 SERVER.JS - EL MOTOR DE ARRANQUE
+ * 🚀 SERVER.JS - EL MOTOR DE ARRANQUE (CommonJS)
  * Responsabilidad: Levantar el puerto, vigilar fallos críticos y cerrar con elegancia.
  */
-import app from './app.js';
-import { env } from './src/core/config/env.js';
-import logger from './src/core/logger/logger.js';
+
+// Inyección limpia de dependencias mediante CommonJS
+const app = require('./app');
+const { env } = require('./src/core/config/env');
+const logger = require('./src/core/logger/logger');
 
 let server;
 let isShuttingDown = false;
 
 /**
  * 📴 GESTOR DE CIERRE (Graceful Shutdown)
+ * Cierra conexiones limpiamente antes de liberar el proceso.
  */
 function handleShutdown(code = 0) {
   if (isShuttingDown) return;
@@ -18,6 +21,7 @@ function handleShutdown(code = 0) {
 
   logger.info('🛑 Señal de cierre recibida. Finalizando procesos...');
 
+  // Evita colgues: Forzar salida tras 10 segundos
   const forceExit = setTimeout(() => {
     logger.warn('⚠️ Cierre forzado por tiempo límite excedido.');
     process.exit(code);
@@ -47,19 +51,25 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
   logger.error({ 
     event: 'UNHANDLED_REJECTION', 
-    message: err instanceof Error ? err.message : err 
+    message: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error && env.isDevelopment ? err.stack : undefined
   });
   handleShutdown(1);
 });
 
 // 🚀 IGNICIÓN DEL POS
-// Usamos el puerto de 'env' que ya está normalizado para Render
-server = app.listen(env.port, () => {
-  logger.info(`✨ POS System [${env.nodeEnv.toUpperCase()}]`);
-  logger.info(`📡 Escuchando en puerto: ${env.port}`);
+const PORT = env.port || 3000;
+const NODE_ENV = (env.nodeEnv || 'development').toUpperCase();
+
+server = app.listen(PORT, () => {
+  logger.info(`✨ POS System [${NODE_ENV}]`);
+  logger.info(`📡 Escuchando en puerto: ${PORT}`);
   logger.info('✅ Todos los sistemas operativos y listos para la venta.');
 });
 
-// 📡 SEÑALES DE TERMINACIÓN
+// 📡 SEÑALES DE TERMINACIÓN DEL SISTEMA
 process.on('SIGTERM', () => handleShutdown(0));
 process.on('SIGINT', () => handleShutdown(0));
+
+// Exportación modular por si se requiere para tests de integración (Supertest)
+module.exports = server;

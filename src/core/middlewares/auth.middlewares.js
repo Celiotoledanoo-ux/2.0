@@ -1,15 +1,15 @@
-import jwt from 'jsonwebtoken';
-import AppError from '../errors/AppError.js';
-import { env } from '../config/env.js';
-import * as authRepo from '../../modules/auth/auth.repository.js';
-import logger from '../logger/logger.js';
-import { ROLES } from '../../shared/constants/roles.js';
+const jwt = require('jsonwebtoken');
+const AppError = require('../errors/AppError');
+const { env } = require('../config/env');
+const authRepo = require('../../modules/auth/auth.repository'); // Importación directa limpia
+const logger = require('../logger/logger');
+const { ROLES } = require('../../shared/constants/roles');
 
 /**
- * 🛡️ MIDDLEWARE DE PROTECCIÓN (OPTIMIZADO PARA RENDER)
+ * 🛡️ MIDDLEWARE DE PROTECCIÓN (OPTIMIZADO PARA PRODUCCIÓN / RENDER)
  * Valida el token localmente usando criptografía para no saturar a Supabase con peticiones HTTP repetitivas.
  */
-export const protect = async (req, res, next) => {
+const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
@@ -26,7 +26,7 @@ export const protect = async (req, res, next) => {
       return next(new AppError('Tu sesión expiró o el token es basura. Inicia sesión de nuevo.', 401));
     }
 
-    // El ID del usuario en los tokens de Supabase viene en la propiedad 'sub'
+    // El ID del usuario en los tokens de Supabase viene de forma estandarizada en la propiedad 'sub'
     const userId = decoded.sub;
 
     // Sincronización con PostgreSQL local para validar estado en tiempo real
@@ -52,10 +52,10 @@ export const protect = async (req, res, next) => {
     req.user = Object.freeze({
       id: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role?.toUpperCase().trim(), // Lo normalizamos a MAYÚSCULAS para que cuadre con ROLES.ADMIN
+      role: dbUser.role?.toUpperCase().trim(), // Normalizado para cuadrar con ROLES.ADMIN
       caja: displayCaja,
       name: dbUser.name,
-      token // Guardamos el token limpio por si necesitas pasárselo a createUserClient()
+      token // Guardamos el token limpio para poder pasárselo a createUserClient()
     });
 
     next();
@@ -72,7 +72,7 @@ export const protect = async (req, res, next) => {
 /**
  * 🚦 MIDDLEWARE DE RESTRICCIÓN DE ROLES (JERARQUÍA COMPLETA BLINDADA)
  */
-export const restrictTo = (...roles) => {
+const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return next(new AppError('Contexto de usuario no encontrado en la petición.', 401));
@@ -80,11 +80,21 @@ export const restrictTo = (...roles) => {
 
     // Convertimos los roles requeridos a MAYÚSCULAS para que hagan match perfecto con req.user.role
     const allowedRoles = roles.map(role => role.toUpperCase().trim());
+    const userRole = req.user.role;
 
-    if (allowedRoles.includes(req.user.role) || req.user.role === ROLES.ADMIN) {
+    // Obtener de forma segura el rol administrador de la constante compartida
+    const adminRole = ROLES?.ADMIN?.toUpperCase().trim() || 'ADMIN';
+
+    if (allowedRoles.includes(userRole) || userRole === adminRole) {
       return next();
     }
     
     return next(new AppError('Acceso Denegado: Tu usuario no posee los permisos suficientes para efectuar esta acción.', 403));
   };
+};
+
+// Exportación unificada CJS
+module.exports = {
+  protect,
+  restrictTo
 };

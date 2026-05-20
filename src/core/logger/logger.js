@@ -1,19 +1,19 @@
-import pino from 'pino';
+const pino = require('pino');
+const { env } = require('../config/env'); // Consistencia absoluta con el núcleo inmutable
 
 /**
  * 👁️ LOGGER CENTRALIZADO - EL VIGILANTE DEL POS
- * Responsabilidad: Registro de eventos, errores y auditoría con censura automática.
+ * Responsabilidad: Registro de eventos, errores y auditorías con censura automática.
  */
 
-const isProd = process.env.NODE_ENV === 'production';
-
-const logger = pino({
-  // Nivel de detalle: info en producción para no llenar el disco, debug en desarrollo
-  level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'),
+// Configuramos las opciones base del logger
+const loggerOptions = {
+  // Nivel de detalle: info en producción para optimizar E/S de disco, debug en desarrollo
+  level: process.env.LOG_LEVEL || (env.isProduction ? 'info' : 'debug'),
   
   timestamp: pino.stdTimeFunctions.isoTime,
   
-  // 🛡️ REDACCIÓN DE SEGURIDAD (Capa de Privacidad Pro)
+  // 🛡️ REDACCIÓN DE SEGURIDAD (Capa de Privacidad Pro para evitar fugas en Kibana/Render)
   redact: {
     paths: [
       'password', 'token', 'accessToken', 'refreshToken', 
@@ -25,18 +25,24 @@ const logger = pino({
   },
   
   formatters: {
-    // Ponemos el nivel en mayúsculas (INFO, ERROR) para que sea más legible
+    // Ponemos el nivel en mayúsculas (INFO, ERROR) para que sea altamente legible
     level: (label) => ({ level: label.toUpperCase() }),
-    // Eliminamos pid y hostname para un log más limpio y ligero
+    // Eliminamos pid y hostname para mantener un payload JSON ligero y limpio
     bindings: () => ({}) 
   }
-}, isProd ? undefined : pino.transport({
-  target: 'pino-pretty',
-  options: { 
-    colorize: true, 
-    translateTime: 'SYS:standard',
-    ignore: 'pid,hostname'
-  }
-}));
+};
 
-export default logger;
+// Configuración del transporte según el entorno de ejecución
+const logger = env.isProduction
+  ? pino(loggerOptions)
+  : pino(loggerOptions, pino.transport({
+      target: 'pino-pretty',
+      options: { 
+        colorize: true, 
+        translateTime: 'SYS:standard',
+        ignore: 'pid,hostname'
+      }
+    }));
+
+// Exportación en formato unificado CommonJS
+module.exports = logger;

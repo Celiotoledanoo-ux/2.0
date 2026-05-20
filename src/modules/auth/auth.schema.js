@@ -1,13 +1,14 @@
-import { z } from 'zod';
+const { z } = require('zod');
+const { ROLE_VALUES } = require('../../shared/constants/roles');
 
 /**
  * 🔐 AUTH VALIDATION SCHEMAS - GLOW BEAUTY POS (4 ROLES)
- * Sincronizado milimétricamente con el frontend y tu base de datos Supabase
+ * Sincronizado milimétricamente con el frontend y tu base de datos Supabase.
  */
 
-export const loginSchema = z.object({
+const loginSchema = z.object({
   body: z.object({
-    // MEJORA: Acepta tanto 'email' como 'identifier' de forma flexible
+    // Permite flexibilidad total para el inicio de sesión del personal de cajas
     email: z.string().trim().email("Eso no parece un correo real, fiera").toLowerCase().optional(),
     identifier: z.string().trim().min(3, "Identificador demasiado corto").toLowerCase().optional(),
     
@@ -20,7 +21,7 @@ export const loginSchema = z.object({
   })
 });
 
-export const registerSchema = z.object({
+const registerSchema = z.object({
   body: z.object({
     name: z
       .string({ required_error: 'Nombre obligatorio' })
@@ -41,12 +42,25 @@ export const registerSchema = z.object({
       .regex(/[A-Z]/, 'Métele al menos una mayúscula')
       .regex(/[0-9]/, 'Métele al menos un número'),
       
-    // CORRECCIÓN: Ampliado el ENUM para dar soporte total a tus 4 roles comerciales
+    // ⚡ MEJORA SENIOR: Consumo dinámico de constantes inmutables para el ENUM de roles
     role: z
-      .enum(['admin', 'cashier', 'gerente', 'supervisor', 'ADMIN', 'CASHIER', 'GERENTE', 'SUPERVISOR'], {
-        error_map: () => ({ message: "Rol inválido. Elige entre admin, cashier, gerente o supervisor." })
-      })
+      .enum(
+        [
+          ...ROLE_VALUES.map(r => r.toLowerCase()), 
+          ...ROLE_VALUES.map(r => r.toUpperCase())
+        ], 
+        {
+          // CORRECCIÓN: Cambiado de error_map a errorMap (Nativo de Zod)
+          errorMap: () => ({ message: "Rol inválido. Elige entre admin, cashier, gerente o supervisor." })
+        }
+      )
       .transform(val => val.toLowerCase().trim()) 
       .default('cashier')
   })
 });
+
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable)
+module.exports = {
+  loginSchema,
+  registerSchema
+};

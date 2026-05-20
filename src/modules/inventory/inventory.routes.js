@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import * as inventoryController from './inventory.controller.js';
-import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
-import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
-import { stockAdjustmentSchema, productSchema } from './inventory.schema.js';
-import { ROLES } from '../../shared/constants/roles.js'; // ⚡ Inyectamos constantes para consistencia
+const { Router } = require('express');
+const inventoryController = require('./inventory.controller');
+const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
+const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
+const { stockAdjustmentSchema, productSchema } = require('./inventory.schema');
+const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
 
 const router = Router();
 
@@ -20,12 +20,12 @@ router.get('/', inventoryController.getAll);
 
 // 3. Operaciones de Gestión (⚡ Ajustado a nuestro estándar unificado de roles en MAYÚSCULAS)
 // Solo perfiles directivos pueden registrar mercancía o alterar stock manualmente
-const directivosAuthorizados = restrictTo(ROLES.ADMIN, ROLES.GERENTE, ROLES.SUPERVISOR);
+const directivosAutorizados = restrictTo(ROLES.ADMIN, ROLES.GERENTE, ROLES.SUPERVISOR);
 
 // Crear producto nuevo en catálogo
 router.post(
   '/',
-  directivosAuthorizados,
+  directivosAutorizados,
   validationMiddleware(productSchema), 
   inventoryController.create
 );
@@ -33,9 +33,10 @@ router.post(
 // Ajustar stock manualmente (Entradas/Salidas de almacén)
 router.patch(
   '/:id/stock',
-  directivosAuthorizados,
+  directivosAutorizados,
   validationMiddleware(stockAdjustmentSchema), 
   inventoryController.updateStock
 );
 
-export default router;
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
+module.exports = router;

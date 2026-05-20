@@ -1,5 +1,6 @@
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');
 
+// 🚀 INYECCIÓN INMEDIATA: Asegura la lectura del .env antes de cualquier evaluación
 dotenv.config();
 
 /**
@@ -7,14 +8,18 @@ dotenv.config();
  * Valida que todas las llaves maestras existan y sean íntegras antes de arrancar.
  */
 
-// 🔹 Helpers de validación
+// 🔹 Helpers de validación estrictos
 const isNonEmptyString = (val) => typeof val === 'string' && val.trim().length > 0;
 
 const isValidUrl = (val) => {
-  try { return Boolean(new URL(val)); } catch { return false; }
+  try { 
+    return Boolean(new URL(val)); 
+  } catch { 
+    return false; 
+  }
 };
 
-// 🔹 Extracción y Limpieza (Trim preventivo para evitar errores de copiado)
+// 🔹 Extracción y Limpieza (Safe navigation + Trim preventivo)
 const rawEnvs = {
   NODE_ENV: process.env.NODE_ENV?.trim() || 'development',
   SUPABASE_URL: process.env.SUPABASE_URL?.trim(),
@@ -23,38 +28,38 @@ const rawEnvs = {
   JWT_SECRET: process.env.JWT_SECRET?.trim(),
 };
 
-// 🔴 1. Verificación de Existencia (Tu lógica original impecable)
+// 🔴 1. Verificación de Existencia Estricta
 const missing = Object.entries(rawEnvs)
   .filter(([, value]) => !isNonEmptyString(value))
   .map(([key]) => key);
 
 if (missing.length > 0) {
-  console.error(`❌ ERROR CRÍTICO: Faltan variables en el .env: ${missing.join(', ')}`);
+  console.error(`❌ ERROR CRÍTICO: Faltan variables esenciales en el archivo .env: [${missing.join(', ')}]`);
   process.exit(1); 
 }
 
-// 🔴 2. Validaciones de Integridad Técnica
+// 🔴 2. Validaciones de Integridad Técnica Avanzada
 if (!isValidUrl(rawEnvs.SUPABASE_URL)) {
-  console.error('❌ SUPABASE_URL no es una URL válida. Revisa tu .env');
+  console.error('❌ ERROR CRÍTICO: SUPABASE_URL no es una URL válida. Revisa tu .env');
   process.exit(1);
 }
 
 if (rawEnvs.SUPABASE_SERVICE_ROLE_KEY.length < 50) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY es demasiado corta. Posible error de copiado.');
+  console.error('❌ ERROR CRÍTICO: SUPABASE_SERVICE_ROLE_KEY es demasiado corta. Estructura corrupta.');
   process.exit(1);
 }
 
-// ⚡ ADICIÓN SENIOR: Valida que la firma maestra JWT no esté recortada o corrupta
 if (rawEnvs.JWT_SECRET.length < 32) {
-  console.error('❌ ERROR: Tu JWT_SECRET es demasiado corto. El secreto máster de Supabase debe ser una firma robusta de base64.');
+  console.error('❌ ERROR CRÍTICO: El JWT_SECRET es peligrosamente corto (mínimo recomendado: 32 caracteres).');
   process.exit(1);
 }
 
-// 🔹 Normalización de Puerto (Vital para el deploy en Render)
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+// 🔹 Normalización de Puerto Robusta (Previene NaN en despliegues)
+const rawPort = process.env.PORT?.trim();
+const port = rawPort && !isNaN(rawPort) ? Number(rawPort) : 3000;
 
-// 🚀 Exportación Final Inmutable (Conserva tu estructura para createUserClient)
-export const env = Object.freeze({
+// 🚀 Exportación Final Inmutable de Arquitectura Limpia
+const env = Object.freeze({
   nodeEnv: rawEnvs.NODE_ENV,
   port,
   jwtSecret: rawEnvs.JWT_SECRET,
@@ -68,3 +73,5 @@ export const env = Object.freeze({
   isDevelopment: rawEnvs.NODE_ENV === 'development',
   isProduction: rawEnvs.NODE_ENV === 'production',
 });
+
+module.exports = { env };

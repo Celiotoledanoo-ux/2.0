@@ -1,31 +1,32 @@
-import { createClient } from '@supabase/supabase-js';
-import { env } from '../config/env.js';
-import AppError from '../errors/AppError.js';
-import logger from '../logger/logger.js';
+const { createClient } = require('@supabase/supabase-js');
+const { env } = require('../config/env');
+const AppError = require('../errors/AppError');
+const logger = require('../logger/logger');
 
 const { url, serviceRoleKey, anonKey } = env.supabase;
 
-// Garantizamos de forma estricta que las variables críticas de Render existan antes de inicializar
+// Garantizamos de forma estricta que las variables críticas existan antes de inicializar
 if (!url || !serviceRoleKey || !anonKey) {
   logger.fatal({
     event: 'SUPABASE_CONFIG_MISSING',
-    message: '🚨 Error crítico: Faltan variables de entorno de Supabase (URL, ServiceRole o AnonKey) en Render.'
+    message: '🚨 Error crítico: Faltan variables de entorno de Supabase (URL, ServiceRole o AnonKey) en la inicialización.'
   });
   process.exit(1);
 }
 
 /**
  * ⚡ CLIENTE MAESTRO CENTRAL (db) - PATRÓN SINGLETON
- * Utiliza serviceRoleKey. Tiene superpoderes para ignorar RLS.
- * USO EXCLUSIVO: Registro de personal de Auth, rollbacks y tareas administrativas de fondo.
+ * Utiliza serviceRoleKey. Tiene privilegios para ignorar RLS (Bypass Row Level Security).
+ * USO EXCLUSIVO: Registro inicial, tareas automáticas de fondo, rollbacks e inventarios globales.
  */
-export const db = createClient(url, serviceRoleKey, {
+const db = createClient(url, serviceRoleKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
   },
   global: {
-    fetch: (...args) => fetch(...args).catch(err => {
+    // Interceptor de red blindado para entornos Cloud asíncronos
+    fetch: (resource, options) => fetch(resource, options).catch(err => {
       logger.fatal({
         event: 'SUPABASE_NETWORK_FAILURE',
         message: 'Fallo de conexión de red en el cliente maestro de Supabase.',
@@ -40,15 +41,15 @@ export const db = createClient(url, serviceRoleKey, {
  * 👤 FACTORÍA DE CLIENTES DE USUARIO DE CONTEXTO REAL
  * Utiliza la anonKey e inyecta el token JWT del empleado autenticado en el POS.
  * USO RECOMENDADO: En repositorios donde desees que las políticas RLS de Supabase 
- * identifiquen exactamente qué cajero (cashier) está realizando la venta o alterando stock.
+ * identifiquen exactamente qué cajero está realizando la venta o alterando el stock.
  */
-export const createUserClient = (token) => {
+const createUserClient = (token) => {
   if (!token) {
     throw new AppError('Acceso denegado. Token de seguridad requerido.', 401);
   }
 
-  // Sustituimos la palabra 'Bearer ' de forma preventiva si el frontend la envía duplicada
-  const cleanToken = token.replace('Bearer ', '').trim();
+  // Sanitización estricta del token de autorización HTTP
+  const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
 
   return createClient(url, anonKey, {
     global: { 
@@ -59,4 +60,10 @@ export const createUserClient = (token) => {
       autoRefreshToken: false
     }
   });
+};
+
+// Exportación unificada en CommonJS
+module.exports = {
+  db,
+  createUserClient
 };

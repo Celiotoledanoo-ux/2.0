@@ -1,10 +1,10 @@
-import { z } from 'zod';
+const { z } = require('zod');
 
 /**
  * 🔄 RETURNS VALIDATION SCHEMAS - GLOW BEAUTY POS
- * El escudo criptográfico que valida las devoluciones de mercancía antes de restaurar stock.
+ * El escudo que valida las devoluciones de mercancía antes de restaurar el stock.
  */
-export const createReturnSchema = z.object({
+const createReturnSchema = z.object({
   body: z.object({
     // Validamos que el ticket original sea un UUID legítimo de Supabase
     saleId: z
@@ -40,3 +40,8 @@ export const createReturnSchema = z.object({
       })))
   })
 });
+
+// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
+module.exports = {
+  createReturnSchema
+};

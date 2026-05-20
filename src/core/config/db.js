@@ -28,5 +28,8 @@ const DB_SETTINGS = Object.freeze({
   TIMEOUT_MS: 10000 
 });
 
-export { TABLES, DB_SETTINGS };
-
+// 🎯 CORRECCIÓN SENIOR: Exportación CommonJS limpia y desestructurable
+module.exports = {
+  TABLES,
+  DB_SETTINGS
+};
