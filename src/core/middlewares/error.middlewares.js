@@ -1,16 +1,10 @@
 import logger from '../logger/logger.js';
 
-/**
- * 🚨 GLOBAL ERROR HANDLER - EL ÚLTIMO MURO (0 ERRORES)
- * Centraliza fallos, limpia logs y protege la info sensible en producción.
- * Sincronizado milimétricamente con Zod, Supabase Auth y tus 4 roles del POS.
- */
 export const globalErrorHandler = (err, req, res, next) => {
   let statusCode = err?.statusCode || 500;
   let status = err?.status || 'error';
   let message = err?.message || 'Algo salió mal en el servidor.';
 
-  // 1. 🛡️ SANITIZACIÓN DE AUDITORÍA (Meticulosa)
   const sanitizedBody = { ...req.body };
   const sensitiveKeys = ['password', 'token', 'oldPassword', 'newPassword', 'refreshToken'];
   sensitiveKeys.forEach(key => delete sanitizedBody[key]);
@@ -25,7 +19,6 @@ export const globalErrorHandler = (err, req, res, next) => {
       : 'La estructura de los datos del formulario es incorrecta.';
   }
 
-  // 2. 🔥 LOGGING DE PRECISIÓN (Oro puro para Render)
   logger.error({
     event: 'API_ERROR',
     status,
@@ -37,7 +30,7 @@ export const globalErrorHandler = (err, req, res, next) => {
     stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined
   });
 
-  // 3. 🧪 RESPUESTA EN ENTORNO DE DESARROLLO LOCAL
+  // 3.  RESPUESTA EN ENTORNO DE DESARROLLO LOCAL
   if (process.env.NODE_ENV === 'development') {
     return res.status(statusCode).json({
       status,
@@ -47,7 +40,7 @@ export const globalErrorHandler = (err, req, res, next) => {
     });
   }
 
-  // 4. 🛡️ TRADUCCIÓN PARA PRODUCCIÓN (Postgres & Supabase Auth)
+  // 4. TRADUCCIÓN PARA PRODUCCIÓN (Postgres & Supabase Auth)
   let prodMessage = message;
 
   // Errores nativos del motor PostgreSQL de Supabase
@@ -70,7 +63,7 @@ export const globalErrorHandler = (err, req, res, next) => {
     });
   }
 
-  // 5. 🔥 ERROR CRÍTICO (500 Real - Blindaje de Seguridad en la Nube)
+  // 5.  ERROR CRÍTICO (500 Real - Blindaje de Seguridad en la Nube)
   return res.status(500).json({
     status: 'error',
     message: 'Servicio en mantenimiento. Estamos trabajando en la estabilidad del Punto de Venta 🛠️'

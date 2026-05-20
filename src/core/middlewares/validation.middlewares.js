@@ -1,10 +1,5 @@
 const AppError = require('../errors/AppError');
 
-/**
- * 🎯 VALIDATION MIDDLEWARE (0 ERRORES)
- * El filtro de pureza: valida de forma asíncrona, limpia y formatea los datos de entrada.
- * Sincronizado milimétricamente con todos los esquemas Zod y enrutadores del POS.
- */
 const validationMiddleware = (schema) => async (req, _res, next) => {
   try {
     // 1. Validación Asíncrona: Soporte nativo para transformadores, refinamientos y consultas DB en esquemas Zod

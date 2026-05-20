@@ -5,10 +5,6 @@ const authRepo = require('../../modules/auth/auth.repository'); // Importación 
 const logger = require('../logger/logger');
 const { ROLES } = require('../../shared/constants/roles');
 
-/**
- * 🛡️ MIDDLEWARE DE PROTECCIÓN (OPTIMIZADO PARA PRODUCCIÓN / RENDER)
- * Valida el token localmente usando criptografía para no saturar a Supabase con peticiones HTTP repetitivas.
- */
 const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -37,7 +33,7 @@ const protect = async (req, res, next) => {
     }
 
     if (!dbUser.active) {
-      return next(new AppError('🚫 Acceso bloqueado. Esta cuenta está fuera de servicio temporalmente.', 403));
+      return next(new AppError(' Acceso bloqueado. Esta cuenta está fuera de servicio temporalmente.', 403));
     }
 
     // Identificación de la terminal de caja chica
@@ -69,9 +65,7 @@ const protect = async (req, res, next) => {
   }
 };
 
-/**
- * 🚦 MIDDLEWARE DE RESTRICCIÓN DE ROLES (JERARQUÍA COMPLETA BLINDADA)
- */
+
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
