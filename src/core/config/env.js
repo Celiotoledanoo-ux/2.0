@@ -1,4 +1,4 @@
-const dotenv = require('dotenv');
+import dotenv from 'dotenv';
 
 // 🚀 INYECCIÓN INMEDIATA: Asegura la lectura del .env antes de cualquier evaluación
 dotenv.config();
@@ -72,6 +72,7 @@ const env = Object.freeze({
 
   isDevelopment: rawEnvs.NODE_ENV === 'development',
   isProduction: rawEnvs.NODE_ENV === 'production',
+  corsOrigin: process.env.CORS_ORIGIN?.trim() // ✨ MEJORA: Centralización de CORS (ver análisis abajo)
 });
 
-module.exports = { env };
+export { env };

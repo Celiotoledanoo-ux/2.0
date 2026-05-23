@@ -1,11 +1,12 @@
 /**
- * 📦 ARCHIVO BARRIL DEL MÓDULO DE SALES (CommonJS)
+ * 📦 ARCHIVO BARRIL DEL MÓDULO DE SALES (ESM)
  * Centraliza y expone las piezas públicas para simplificar importaciones externas.
  */
-const salesRoutes = require('./sales.routes');
-const salesService = require('./sales.service');
+import salesRoutes from './sales.routes.js';
+import salesService from './sales.service.js';
 
-module.exports = {
-  salesRoutes, // Sincronizado exactamente con tu Router Maestro
+// 🎯 EXPORTACIÓN ESM NOMBRADA UNIFICADA
+export {
+  salesRoutes,
   salesService
 };

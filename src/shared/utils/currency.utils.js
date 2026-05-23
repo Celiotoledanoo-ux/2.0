@@ -11,7 +11,8 @@ const formatCurrency = (value, locale = 'es-MX', currency = 'MXN') => {
   }).format(num);
 };
 
-module.exports = {
+// 🎯  Permite importaciones nombradas en tus controladores de ventas y reportes
+export {
   roundCurrency,
   formatCurrency
 };

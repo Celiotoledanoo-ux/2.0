@@ -1,14 +1,15 @@
-const { Router } = require('express');
-const authController = require('./auth.controller');
-const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
-const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
-const { loginSchema, registerSchema } = require('./auth.schema');
-const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
+import { Router } from 'express';
+import authController from './auth.controller.js';
+import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
+import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
+import { loginSchema, registerSchema } from './auth.schema.js';
+// ⚡ RESOLUCIÓN DE RUTA: Apuntamos al archivo correcto renombrado 'roles.constants.js' con su extensión .js
+import { ROLES } from '../../shared/constants/roles.constants.js'; 
 
 const router = Router();
 
 /**
- * 🔐 RUTAS DE AUTENTICACIÓN - GLOW BEAUTY POS
+ * 🔐 RUTAS DE AUTENTICACIÓN - GLOW BEAUTY POS (ESM)
  * Cada ruta está protegida por validaciones de esquema y seguridad.
  */
 
@@ -18,15 +19,20 @@ router.post('/login', validationMiddleware(loginSchema), authController.login);
 // POST /api/v1/auth/logout -> Requiere sesión activa (Privado)
 router.post('/logout', protect, authController.logout);
 
-// POST /api/v1/auth/register -> Administrativo de alta seguridad
-// Blindado: Solo el Administrador o Gerente pueden dar de alta empleados en la boutique
+/* 
+ * ⚡ RESOLUCIÓN DE LÓGICA: Remoción del rol GERENTE.
+ * Se elimina 'ROLES.GERENTE' del middleware de restricción de accesos debido a que 
+ * dicho rol fue purgado de las constantes globales del sistema. Mantenerlo provocaría 
+ * una excepción de tipo 'undefined' al cargar Express en Render, tirando el Punto de Venta.
+ * Ahora la ruta queda estrictamente blindada para acceso exclusivo del ADMINISTRADOR.
+ */
 router.post(
   '/register',
   protect,
-  restrictTo(ROLES.ADMIN, ROLES.GERENTE), // ⚡ Ajustado a nuestro estándar de 4 roles en MAYÚSCULAS
+  restrictTo(ROLES.ADMIN), 
   validationMiddleware(registerSchema),
   authController.register
 );
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
-module.exports = router;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default router;

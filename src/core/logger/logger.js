@@ -1,5 +1,5 @@
-const pino = require('pino');
-const { env } = require('../config/env'); // Consistencia absoluta con el núcleo inmutable
+import pino from 'pino';
+import { env } from '../config/env.js'; // Consistencia absoluta con el núcleo inmutable
 
 /**
  * 👁️ LOGGER CENTRALIZADO - EL VIGILANTE DEL POS
@@ -44,5 +44,5 @@ const logger = env.isProduction
       }
     }));
 
-// Exportación en formato unificado CommonJS
-module.exports = logger;
+// Exportación en formato nativo ESM por defecto
+export default logger;

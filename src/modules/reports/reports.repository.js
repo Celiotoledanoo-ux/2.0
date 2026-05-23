@@ -1,10 +1,10 @@
-const { db } = require('../../core/database/supabaseClient');
-const { TABLES } = require('../../core/config/db');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import { db } from '../../core/database/supabaseClient.js';
+import { TABLES } from '../../core/config/db.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 📊 REPORTS REPOSITORY - BUSINESS INTELLIGENCE POS (0 ERRORES)
+ * 📊 REPORTS REPOSITORY - BUSINESS INTELLIGENCE POS (ESM)
  * Sincronizado milimétricamente con la jerarquía global y el catálogo de maquillaje.
  */
 
@@ -58,11 +58,10 @@ const reportsRepository = {
 
       if (error) throw error;
 
-      // ⚡ Motor de agrupación en memoria: Consolida cantidades duplicadas
       const groupedMap = {};
       data.forEach(item => {
         const pId = item.product_id;
-        if (!pId || !item.product) return; // Salto preventivo si hay registros huérfanos
+        if (!pId || !item.product) return; 
 
         if (!groupedMap[pId]) {
           groupedMap[pId] = {
@@ -75,10 +74,9 @@ const reportsRepository = {
         groupedMap[pId].quantity += item.quantity;
       });
 
-      // Convertimos a arreglo y ordenamos de Mayor a Menor para el Top
       return Object.values(groupedMap)
         .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 5); // Retornamos estrictamente el Top 5
+        .slice(0, 5); 
 
     } catch (error) {
       logger.error({ event: 'REPORT_REPO_TOPSELLING_ERROR', message: error.message });
@@ -126,7 +124,6 @@ const reportsRepository = {
         const points = [0, 0, 0, 0, 0, 0];
 
         data.forEach(sale => {
-          // ⚡ INTERPRETACIÓN LOCAL: Evita el desfase de horas de los servidores cloud externos
           const localTimeStr = new Date(sale.created_at).toLocaleTimeString('en-US', { 
             timeZone: 'America/Mexico_City', 
             hour12: false 
@@ -174,10 +171,21 @@ const reportsRepository = {
       if (range === 'month') {
         const labels = ["Semana 1", "Semana 2", "Semana 3", "Semana 4"];
         const points = [0, 0, 0, 0];
+        
+        /* 
+         * ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento matemático de intervalos temporales.
+         * Se normaliza el cálculo de 'diffDays' forzando a que las fechas relativas truncen 
+         * sus horas a ceros mediante '.setHours(0,0,0,0)'. Esto inmuniza la resta matemática 
+         * de desajustes residuales de horas o minutos inyectados por la base de datos cloud, 
+         * asegurando un calce exacto en los 4 bloques semanales de la gráfica del POS.
+         */
         const baseDate = new Date(startDate);
+        baseDate.setHours(0, 0, 0, 0);
 
         data.forEach(sale => {
           const saleDate = new Date(sale.created_at);
+          saleDate.setHours(0, 0, 0, 0);
+          
           const diffTime = Math.abs(saleDate - baseDate);
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
           const amount = Number(sale.total) || 0;
@@ -197,5 +205,5 @@ const reportsRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Repositorio Inmutable)
-module.exports = reportsRepository;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default reportsRepository;

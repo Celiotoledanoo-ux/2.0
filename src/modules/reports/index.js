@@ -1,11 +1,12 @@
 /**
- * 📦 ARCHIVO BARRIL DEL MÓDULO DE REPORTES (CommonJS)
+ * 📦 ARCHIVO BARRIL DEL MÓDULO DE REPORTES (ESM)
  * Centraliza y expone las piezas públicas para simplificar importaciones externas.
  */
-const reportsRoutes = require('./reports.routes');
-const reportsService = require('./reports.service');
+import reportsRoutes from './reports.routes.js';
+import reportsService from './reports.service.js';
 
-module.exports = {
-  reportsRoutes, // Sincronizado exactamente con tu Router Maestro
+// 🎯 EXPORTACIÓN ESM NOMBRADA UNIFICADA
+export {
+  reportsRoutes,
   reportsService
 };

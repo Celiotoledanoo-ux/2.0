@@ -1,13 +1,15 @@
-const salesRepository = require('./sales.repository');
-const inventoryRepository = require('../inventory/inventory.repository');
-const { db } = require('../../core/database/supabaseClient'); // Requerido para verificar el turno de caja
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import salesRepository from './sales.repository.js';
+import inventoryRepository from '../inventory/inventory.repository.js';
+import { db } from '../../core/database/supabaseClient.js'; 
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 💰 SALES SERVICE - EL MOTOR DE INGRESOS (0 ERRORES)
+ * 💰 SALES SERVICE - EL MOTOR DE INGRESOS (ESM)
  * Procesa ventas atómicas, valida stock y asegura el amarre con la caja chica activa.
- * Sincronizado milimétricamente con la estructura corporativa de 4 roles y cobro mixto.
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con la estructura corporativa 
+ * de 3 roles oficiales (admin, supervisor, cashier) y cobro mixto.
  */
 const salesService = {
   /**
@@ -65,16 +67,22 @@ const salesService = {
 
     // 2. 🚀 REGISTRO Y ATOMICIDAD TOTAL EN ENTRADA ÚNICA
     try {
-      // Estructuramos el payload anidado unificado para el repositorio senior
+      /* 
+       * ⚡ RESOLUCIÓN DE LÓGICA: Alineación estricta de variables con el plano schema.sql.
+       * Se normalizan las claves del objeto inyectado al repositorio hacia el formato estándar 
+       * snake_case aceptado de forma nativa por las columnas de la tabla 'sales' en PostgreSQL 
+       * (cash_session_id, payment_method, cash_amount, digital_amount, created_by). 
+       * Esto asegura un calce milimétrico para el futuro script SQL contable.
+       */
       const atomicPayload = {
-        cashSessionId: activeSession.id, // ⚡ Conexión contable obligatoria: El ticket queda amarrado a la caja chica activa
+        cash_session_id: activeSession.id, 
         total: finalTotal,
-        paymentMethod: paymentMethod || 'EFECTIVO',
-        cashAmount: Number(cashAmount),       
-        digitalAmount: Number(digitalAmount), 
-        createdBy: user.id,
+        payment_method: paymentMethod || 'CASH',
+        cash_amount: Number(cashAmount),       
+        digital_amount: Number(digitalAmount), 
+        created_by: user.id,
         notes: notes || null,
-        items: validatedItems // Renglones aninados
+        items: validatedItems 
       };
 
       // ⚡ Disparo maestro: Todo el ticket se guarda o se cancela en un solo viaje de red
@@ -109,5 +117,5 @@ const salesService = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Servicio Limpia)
-module.exports = salesService;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default salesService;

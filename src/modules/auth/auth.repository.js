@@ -1,15 +1,15 @@
-const { db } = require('../../core/database/supabaseClient');
-const { TABLES } = require('../../core/config/db');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger'); 
+import { db } from '../../core/database/supabaseClient.js';
+import { TABLES } from '../../core/config/db.js'; // ⚡ CORRECCIÓN: Tu archivo sí existe. Importado con .js obligatorio.
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; 
 
 /**
- * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS (0 ERRORES)
+ * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS (ESM)
  * Sincronización impecable entre Supabase Auth y nuestras tablas de negocio.
  */
 
 const USER_FIELDS = 'id, email, role, active, name';
-const TARGET_TABLE = TABLES.USERS || 'users';
+const TARGET_TABLE = TABLES?.USERS || 'users'; // Uso seguro basado en tu archivo de configuración de tablas
 
 const authRepository = {
   /**
@@ -20,8 +20,7 @@ const authRepository = {
     if (!id) return null;
 
     try {
-      // ⚡ BYPASS DE SEGURIDAD: Usa el cliente administrativo (Service Role Key) si existe para saltar las RLS en el backend
-      const client = db.admin || db;
+      const client = db;
 
       const { data, error } = await client
         .from(TARGET_TABLE)
@@ -56,8 +55,7 @@ const authRepository = {
     if (!email?.trim()) return null;
 
     try {
-      // ⚡ BYPASS DE SEGURIDAD: Usa el cliente administrativo (Service Role Key) si existe para saltar las RLS en el backend
-      const client = db.admin || db;
+      const client = db;
 
       const { data, error } = await client
         .from(TARGET_TABLE)
@@ -85,5 +83,5 @@ const authRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Repositorio Inmutable)
-module.exports = authRepository;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default authRepository;

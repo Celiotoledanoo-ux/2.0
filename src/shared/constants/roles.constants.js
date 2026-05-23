@@ -5,7 +5,6 @@
  */
 const ROLES = Object.freeze({
   ADMIN: 'ADMIN',
-  GERENTE: 'GERENTE',
   SUPERVISOR: 'SUPERVISOR',
   CASHIER: 'CASHIER'
 });
@@ -18,14 +17,13 @@ const ROLE_VALUES = Object.freeze(Object.values(ROLES));
  * Permite validar accesos basados en niveles de poder acumulativos.
  */
 const ROLE_HIERARCHY = Object.freeze({
-  [ROLES.ADMIN]: 4,
-  [ROLES.GERENTE]: 3,
+  [ROLES.ADMIN]: 3, // Máximo nivel reajustado
   [ROLES.SUPERVISOR]: 2,
   [ROLES.CASHIER]: 1
 });
 
-// 🎯 EXPORTACIÓN UNIFICADA COMMONJS (Limpia y desestructurable)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM: Permite importaciones nombradas limpias y desestructuradas
+export {
   ROLES,
   ROLE_VALUES,
   ROLE_HIERARCHY

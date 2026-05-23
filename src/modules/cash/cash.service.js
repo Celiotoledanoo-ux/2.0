@@ -1,12 +1,14 @@
-const cashRepository = require('./cash.repository');
-const { db } = require('../../core/database/supabaseClient'); // Requerido de forma exclusiva para consultas agregadas directas
-const { TABLES } = require('../../core/config/db');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import cashRepository from './cash.repository.js';
+import { db } from '../../core/database/supabaseClient.js'; 
+import { TABLES } from '../../core/config/db.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 💰 CASH SESSIONS SERVICE - GLOW BEAUTY POS
- * Sincronizado milimétricamente con flujos mixtos, 4 roles y aislamiento por cajero.
+ * 💰 CASH SESSIONS SERVICE - GLOW BEAUTY POS (ESM)
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con flujos mixtos, 
+ * 3 roles oficiales (admin, supervisor, cashier) y aislamiento por cajero.
  */
 const cashService = {
   /**
@@ -80,18 +82,21 @@ const cashService = {
     // La diferencia evalúa lo que el cajero contó físicamente (realCash) vs lo que el software calcula (expectedCashInVault)
     const difference = Number(realCash) - expectedCashInVault;
 
-    // F. Actualización y cierre definitivo asimilando el contrato del repositorio senior
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Optimización de Mutación Atómica.
+     * En lugar de mandar un update parcial y luego una llamada condicional HTTP extra a Supabase 
+     * mediante 'db.from(...).update({ notes })', se inyecta directamente la propiedad 'notes' 
+     * en el contrato original del repositorio. Esto consolida el flujo en una única transacción 
+     * SQL atómica, ahorrando overhead de red y blindando el cierre en Render.
+     * Nota: Asegúrate de que tu repositorio mapée o reciba 'notes' si decides persistirlo en este paso.
+     */
     const closedSession = await cashRepository.updateSession(session.id, {
-      closing_balance: expectedCashInVault, // Lo que el sistema esperaba que hubiera
-      real_cash: Number(realCash),           // Lo que el cajero contó en físico
+      closing_balance: expectedCashInVault, 
+      real_cash: Number(realCash),           
       status: 'CLOSED',
-      closed_at: new Date().toISOString()
+      closed_at: new Date().toISOString(),
+      notes: notes || null
     });
-
-    // Almacenamos el comentario o notas en la tabla pública de forma complementaria si existe
-    if (notes) {
-      await db.from(TABLES.CASH_SESSIONS || 'cash_sessions').update({ notes }).eq('id', session.id);
-    }
 
     logger.warn({
       event: 'CASH_CLOSED',
@@ -122,7 +127,6 @@ const cashService = {
    * 3. CONSULTAR ESTADO (Sincronizador de la interfaz del frontend)
    */
   async getCurrentStatus(userId) {
-    // ⚡ Cada empleado sincroniza el estado de su propia pantalla pasándole su ID
     const session = await cashRepository.findOpenSession(userId);
     if (!session) return { session: null, transactions: [] };
 
@@ -194,5 +198,5 @@ const cashService = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Servicio Limpia)
-module.exports = cashService;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default cashService;

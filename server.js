@@ -1,12 +1,13 @@
 /**
- * 🚀 SERVER.JS - EL MOTOR DE ARRANQUE (CommonJS)
+ * 🚀 SERVER.JS - EL MOTOR DE ARRANQUE 
  * Responsabilidad: Levantar el puerto, vigilar fallos críticos y cerrar con elegancia.
  */
 
-// Inyección limpia de dependencias mediante CommonJS
-const app = require('./app');
-const { env } = require('./src/core/config/env');
-const logger = require('./src/core/logger/logger');
+// Inyección limpia de dependencias mediante ESM
+import app from './app.js';
+import { env } from './src/core/config/env.js';
+import logger from './src/core/logger/logger.js';
+
 
 let server;
 let isShuttingDown = false;
@@ -71,5 +72,4 @@ server = app.listen(PORT, () => {
 process.on('SIGTERM', () => handleShutdown(0));
 process.on('SIGINT', () => handleShutdown(0));
 
-// Exportación modular por si se requiere para tests de integración (Supertest)
-module.exports = server;
+export default server;

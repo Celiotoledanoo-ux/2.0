@@ -1,7 +1,7 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 /**
- * 💰 CASH SESSIONS SCHEMA - POS MAQUILLAJE (0 ERRORES)
+ * 💰 CASH SESSIONS SCHEMA - POS MAQUILLAJE (ESM)
  * Validaciones para asegurar la integridad de las aperturas, flujos y cortes de caja.
  * Sincronizado milimétricamente con public/script.js y la jerarquía de roles.
  */
@@ -49,8 +49,8 @@ const cashTransactionSchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM NOMBRADA
+export {
   openCashSchema,
   closeCashSchema,
   cashTransactionSchema

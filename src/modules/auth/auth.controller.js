@@ -1,9 +1,9 @@
-const authService = require('./auth.service');
-const logger = require('../../core/logger/logger');
-const { catchAsync } = require('../../shared/utils/async.utils'); 
+import authService from './auth.service.js';
+import logger from '../../core/logger/logger.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; 
 
 /**
- * 🔐 CONTROLADOR DE AUTENTICACIÓN - GLOW BEAUTY POS
+ * 🔐 CONTROLADOR DE AUTENTICACIÓN - GLOW BEAUTY POS (ESM)
  * El puente inteligente entre la validación (Schema) y la lógica (Service).
  */
 const authController = {
@@ -40,11 +40,17 @@ const authController = {
    * 2. CIERRE DE SESIÓN CENTRAL
    */
   logout: catchAsync(async (req, res) => {
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Contexto seguro en deslogueos.
+     * En un entorno con múltiples cajeras firmadas, es recomendable pasarle los metadatos 
+     * o token al servicio si se requiere invalidación en cascada, protegiendo al logger 
+     * de marcar valores indefinidos mapeando el 'req.user' inyectado previamente.
+     */
     await authService.logout();
 
     logger.info({
       event: 'AUTH_LOGOUT',
-      userId: req.user?.id || 'unknown',
+      userId: req.user?.id || 'anonymous_cashier',
       ip: req.ip
     });
 
@@ -77,5 +83,5 @@ const authController = {
   })
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
-module.exports = authController;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default authController;

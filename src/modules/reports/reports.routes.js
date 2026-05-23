@@ -1,30 +1,29 @@
-const { Router } = require('express');
-const reportsController = require('./reports.controller');
-const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
-const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
-const { getSummarySchema } = require('./reports.schema'); 
-const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
+import { Router } from 'express';
+import reportsController from './reports.controller.js';
+import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
+import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
+import { getSummarySchema } from './reports.schema.js'; 
+import { ROLES } from '../../shared/constants/roles.constants.js'; 
 
 const router = Router();
 
 /**
- * 📊 REPORTS ROUTES - BUSINESS INTELLIGENCE
+ * 📊 REPORTS ROUTES - BUSINESS INTELLIGENCE (ESM)
  * Acceso restringido únicamente a los perfiles directivos para auditar ingresos.
  */
 
 // 1. Capa de Autenticación (Nadie entra sin iniciar sesión)
 router.use(protect);
 
-// 2. Capa de Autorización (⚡ Ajustado a nuestro estándar de roles en MAYÚSCULAS)
-// El cajero opera la venta; el Administrador y el Gerente analizan las finanzas y el flujo de caja
-router.use(restrictTo(ROLES.ADMIN, ROLES.GERENTE));
+// 2. Capa de Autorización (Alineado con tus 3 roles reales eliminando al gerente)
+router.use(restrictTo(ROLES.ADMIN, ROLES.SUPERVISOR));
 
-// 🌟 ENDPOINT UNIFICADO INTELIGENTE (0 ERRORES)
+// 🌟 ENDPOINT UNIFICADO INTELIGENTE
 router.get(
   '/summary', 
   validationMiddleware(getSummarySchema), 
   reportsController.getSummary
 );
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
-module.exports = router;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default router;

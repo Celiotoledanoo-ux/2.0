@@ -1,11 +1,12 @@
 /**
- * 📦 ARCHIVO BARRIL DEL MÓDULO DE CASH (CommonJS)
+ * 📦 ARCHIVO BARRIL DEL MÓDULO DE CASH (ESM)
  * Centraliza y expone las piezas públicas para simplificar importaciones externas.
  */
-const cashRoutes = require('./cash.routes');
-const cashService = require('./cash.service');
+import cashRoutes from './cash.routes.js';
+import cashService from './cash.service.js';
 
-module.exports = {
-  cashRoutes, // Sincronizado exactamente con tu Router Maestro
+// 🎯 EXPORTACIÓN ESM NOMBRADA UNIFICADA
+export {
+  cashRoutes,
   cashService
 };

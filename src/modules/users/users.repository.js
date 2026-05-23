@@ -1,12 +1,14 @@
-const { db } = require('../../core/database/supabaseClient');
-const { TABLES } = require('../../core/config/db');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger'); // ⚡ Inyectamos tu logger Pro
+import { db } from '../../core/database/supabaseClient.js';
+import { TABLES } from '../../core/config/db.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; 
 
 /**
- * 👥 USERS REPOSITORY - CONEXIÓN SQL DIRECTA (0 ERRORES)
+ * 👥 USERS REPOSITORY - CONEXIÓN SQL DIRECTA (ESM)
  * Encargado de la persistencia de datos del personal de la boutique cosmética.
- * Sincronizado milimétricamente con el modelo de 4 roles y el archivo schema.sql definitivo.
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con el modelo de 3 roles 
+ * vigentes (admin, supervisor, cashier) y el archivo schema.sql definitivo.
  */
 
 const USER_SELECT = 'id, email, name, role, active, created_at';
@@ -25,7 +27,7 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ CORRECCIÓN: Normalización a MAYÚSCULAS para consistencia con ROLES.*
+      // ⚡ Normalización a MAYÚSCULAS para consistencia con ROLES.*
       return (data || []).map(user => ({
         ...user,
         role: user.role?.toUpperCase().trim()
@@ -55,7 +57,7 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ CORRECCIÓN: Retorna a Node.js en MAYÚSCULAS
+      // ⚡ Retorna a Node.js en MAYÚSCULAS
       return {
         ...data,
         role: data.role?.toUpperCase().trim()
@@ -81,7 +83,7 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ CORRECCIÓN: Retorna a Node.js en MAYÚSCULAS
+      // ⚡ Retorna a Node.js en MAYÚSCULAS
       if (data) {
         data.role = data.role?.toUpperCase().trim();
       }
@@ -112,7 +114,7 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ CORRECCIÓN: Expone el resultado a los servicios en MAYÚSCULAS
+      // ⚡ Expone el resultado a los servicios en MAYÚSCULAS
       return {
         ...data,
         role: data.role?.toUpperCase().trim()
@@ -124,5 +126,5 @@ const usersRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Repositorio Inmutable)
-module.exports = usersRepository;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default usersRepository;

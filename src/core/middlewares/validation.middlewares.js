@@ -1,4 +1,4 @@
-const AppError = require('../errors/AppError');
+import AppError from '../errors/AppError.js';
 
 const validationMiddleware = (schema) => async (req, _res, next) => {
   try {
@@ -9,10 +9,10 @@ const validationMiddleware = (schema) => async (req, _res, next) => {
       params: req.params,
     });
 
-    // 2. Limpieza profunda: Solo transitan hacia el controlador los campos estrictamente definidos en el Schema Zod
-    req.body = validated.body;
-    req.query = validated.query;
-    req.params = validated.params;
+    // 2. Limpieza profunda blindada: Solo sobreescribe si Zod los validó, manteniendo los originales si no venían en el schema
+    req.body = validated.body !== undefined ? validated.body : req.body;
+    req.query = validated.query !== undefined ? validated.query : req.query;
+    req.params = validated.params !== undefined ? validated.params : req.params;
 
     next();
   } catch (error) {
@@ -34,7 +34,7 @@ const validationMiddleware = (schema) => async (req, _res, next) => {
   }
 };
 
-// Exportación en formato CommonJS homologado
-module.exports = {
+// Exportación en formato nativo ESM nombrada
+export {
   validationMiddleware
 };

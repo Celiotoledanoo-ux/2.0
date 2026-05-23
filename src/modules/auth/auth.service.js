@@ -1,10 +1,10 @@
-const { db } = require('../../core/database/supabaseClient');
-const authRepository = require('./auth.repository');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger'); 
+import { db } from '../../core/database/supabaseClient.js';
+import authRepository from './auth.repository.js'; // ⚡ Importado con extensión .js obligatoria
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; 
 
 /**
- * 🔐 AUTH SERVICE - FULL MODULE
+ * 🔐 AUTH SERVICE - FULL MODULE (ESM)
  * Perfección, limpieza y control total de sesiones con Rollback de seguridad.
  */
 const authService = {
@@ -32,12 +32,12 @@ const authService = {
 
     return {
       user: userProfile, 
-      // ⚡ CORRECCIÓN: Retornamos los nombres nativos con guion bajo e inyectamos duplicados en camelCase como fail-safe
+      // ⚡ Retornamos los nombres nativos con guion bajo e inyectamos duplicados en camelCase como fail-safe
       session: {
         access_token: data.session?.access_token,
         refresh_token: data.session?.refresh_token,
         expires_at: data.session?.expires_at,
-        accessToken: data.session?.access_token, // Doble mapeo defensivo (Fail-Safe)
+        accessToken: data.session?.access_token, 
         refreshToken: data.session?.refresh_token
       }
     };
@@ -49,6 +49,12 @@ const authService = {
   async register(userData) {
     const { email, name, role } = userData;
 
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización inmutable del flujo sin Gerentes.
+     * Al procesar el alta de personal, el valor predeterminado hereda la limpieza del 
+     * validador de esquemas Zod (users.schema), garantizando que las cuentas transiten 
+     * mapeadas únicamente bajo las 3 jerarquías oficiales vigentes (admin, supervisor o cashier).
+     */
     const cleanRole = role ? role.trim().toLowerCase() : 'cashier';
     const cleanEmail = email?.trim().toLowerCase();
 
@@ -104,7 +110,7 @@ const authService = {
       email: authUser.email,
       role: cleanRole.toUpperCase(), 
       temporaryKey: temporaryPassword,
-      message: 'Empleado dado de alta de forma exitosa en la boutique.'
+      message: 'Empleado dado de alta de forma exitosa.'
     };
   },
 
@@ -143,5 +149,5 @@ const authService = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Servicio Limpia)
-module.exports = authService;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default authService;

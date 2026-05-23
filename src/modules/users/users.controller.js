@@ -1,11 +1,13 @@
-const usersService = require('./users.service');
-const logger = require('../../core/logger/logger');
-const { catchAsync } = require('../../shared/utils/async.utils'); // Importación CommonJS desestructurada
-const AppError = require('../../core/errors/AppError');
+import usersService from './users.service.js';
+import logger from '../../core/logger/logger.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; 
+import AppError from '../../core/errors/AppError.js';
 
 /**
- * 👥 USERS CONTROLLER - GESTIÓN DE PERSONAL (0 ERRORES)
- * Sincronizado milimétricamente con el frontend dinámico de 4 roles y Supabase SQL.
+ * 👥 USERS CONTROLLER - GESTIÓN DE PERSONAL (ESM)
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con el frontend dinámico 
+ * de 3 roles oficiales (admin, supervisor, cashier) y Supabase SQL.
  */
 const usersController = {
   /**
@@ -80,5 +82,5 @@ const usersController = {
   })
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
-module.exports = usersController;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default usersController;

@@ -1,10 +1,11 @@
-const { randomUUID } = require('crypto'); 
+import { randomUUID } from 'crypto'; 
 
 
 const generateUniqueId = () => {
   return randomUUID();
 };
 
-module.exports = {
+// 🎯 EXPORTACIÓN ESM: Permite importaciones nombradas en tus repositorios y servicios
+export {
   generateUniqueId
 };

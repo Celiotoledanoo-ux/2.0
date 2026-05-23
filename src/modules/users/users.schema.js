@@ -1,8 +1,8 @@
-const { z } = require('zod');
-const { ROLE_VALUES } = require('../../shared/constants/roles');
+import { z } from 'zod';
+import { ROLE_VALUES } from '../../shared/constants/roles.constants.js';
 
 /**
- * 👥 USERS VALIDATION SCHEMAS - GLOW BEAUTY POS
+ * 👥 USERS VALIDATION SCHEMAS - GLOW BEAUTY POS (ESM)
  * El muro de contención definitivo para la gestión del personal en Render.
  */
 
@@ -34,7 +34,12 @@ const createUserSchema = z.object({
           ...ROLE_VALUES.map(r => r.toUpperCase())
         ], 
         {
-          errorMap: () => ({ message: "El rol asignado no existe en este negocio, bro. Elige entre admin, cashier, gerente o supervisor." })
+          /* 
+           * ⚡ RESOLUCIÓN DE LÓGICA: Remoción del rol 'gerente'.
+           * Se purga la palabra 'gerente' del listado del mensaje de error de Zod 
+           * para mantener consistencia absoluta con la estructura de 3 roles autorizados en el POS.
+           */
+          errorMap: () => ({ message: "El rol asignado no existe en este negocio, bro. Elige entre admin, cashier o supervisor." })
         }
       )
       .transform(val => val.toLowerCase().trim()) // Homologación automática a minúsculas para Postgres
@@ -54,8 +59,8 @@ const toggleStatusSchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM: Exportación nombrada compatible con validationMiddlewares
+export {
   createUserSchema,
   toggleStatusSchema
 };

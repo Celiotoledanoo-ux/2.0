@@ -1,9 +1,9 @@
-const inventoryService = require('./inventory.service');
-const { catchAsync } = require('../../shared/utils/async.utils'); // Importación CommonJS desestructurada
-const AppError = require('../../core/errors/AppError');
+import inventoryService from './inventory.service.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; 
+import AppError from '../../core/errors/AppError.js';
 
 /**
- * 📦 INVENTORY CONTROLLER - GESTIÓN DE PRODUCTOS (0 ERRORES)
+ * 📦 INVENTORY CONTROLLER - GESTIÓN DE PRODUCTOS (ESM)
  * Sincronizado milimétricamente con public/script.js y Supabase SQL.
  */
 const inventoryController = {
@@ -48,12 +48,19 @@ const inventoryController = {
    */
   updateStock: catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { quantity, reason } = req.body; // Consume directo desde la raíz sanitizada
+    const { quantity, reason } = req.body; 
     
     if (quantity === undefined) {
       return next(new AppError('La cantidad de ajuste es obligatoria.', 400));
     }
 
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización estricta de payloads inter-capas.
+     * Se realiza la conversión explícita a tipo numérico de la variable 'quantity' 
+     * inyectándola directamente sobre la propiedad contractual 'quantityDelta' que espera 
+     * el servicio contable. Esto garantiza una consistencia limpia de nomenclaturas de datos, 
+     * blindando la operación atómica ante mermas o reabastecimientos manuales.
+     */
     const updatedProduct = await inventoryService.adjustStock({
       productId: id, 
       quantityDelta: Number(quantity), 
@@ -69,5 +76,5 @@ const inventoryController = {
   })
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
-module.exports = inventoryController;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default inventoryController;

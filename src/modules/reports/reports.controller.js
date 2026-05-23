@@ -1,9 +1,9 @@
-const reportsService = require('./reports.service');
-const logger = require('../../core/logger/logger');
-const { catchAsync } = require('../../shared/utils/async.utils'); 
+import reportsService from './reports.service.js';
+import logger from '../../core/logger/logger.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; 
 
 /**
- * 📊 REPORTS CONTROLLER - EL TABLERO DEL DUEÑO (0 ERRORES)
+ * 📊 REPORTS CONTROLLER - EL TABLERO DEL DUEÑO (ESM)
  * Expone las métricas vitales del negocio con seguridad total.
  * Sincronizado milimétricamente con la jerarquía global y el rango dinámico del POS.
  */
@@ -27,13 +27,19 @@ const reportsController = {
       ip: req.ip
     });
 
-    // Respuesta con metadatos útiles (0 Errores de lectura en script.js)
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización inalterable de metadata temporal.
+     * Se reemplaza el uso de 'new Date().toISOString()' en el payload de respuesta 
+     * para evitar inyectar metadatos desfasados por la hora del servidor cloud en Render. 
+     * En su lugar, el objeto hereda 'summary.report_date', el cual ya transita 
+     * perfectamente homologado bajo la zona horaria real del comercio.
+     */
     return res.status(200).json({
       status: 'success',
       message: `Reporte financiero analítico generado con éxito.`,
       data: summary,
       meta: {
-        generatedAt: new Date().toISOString(),
+        generatedAt: summary.report_date,
         requestedBy: req.user?.name || 'SYSTEM',
         range: range
       }
@@ -41,5 +47,5 @@ const reportsController = {
   })
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
-module.exports = reportsController;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default reportsController;

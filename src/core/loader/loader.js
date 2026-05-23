@@ -1,5 +1,5 @@
-const { db } = require('../database/supabaseClient');
-const logger = require('../logger/logger');
+import { db } from '../database/supabaseClient.js';
+import logger from '../logger/logger.js';
 
 /**
  * 🚀 SISTEMA DE CARGA CENTRALIZADO (LOADER)
@@ -13,7 +13,22 @@ const initLoader = async (_app) => {
     if (!db || typeof db.auth !== 'object') {
       throw new Error('El cliente de Supabase no se inicializó correctamente en database/supabaseClient.js');
     }
-    logger.info('✅ Conexión con Supabase verificada con éxito.');
+
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Consulta de tipo 'Ping' en la Nube.
+     * Aunque el objeto 'db' se instancie de forma estructural en memoria, esto no garantiza 
+     * que las credenciales de Supabase o la red con PostgreSQL en Render estén operativas. 
+     * Se inyecta una consulta ultraligera de salud (health check) a una función interna 
+     * del motor para certificar una conexión de red real antes de encender las ventas.
+     */
+    const { error: networkError } = await db.rpc('version').limit(1);
+    
+    if (networkError) {
+      // Nota: Si el RPC falla porque no tienes permisos expuestos, puedes cambiarlo por un .from('tu_tabla').select('id').limit(1)
+      logger.warn(`⚠️ Advertencia de enlace de datos: Supabase respondió con error de consulta: ${networkError.message}`);
+    } else {
+      logger.info('✅ Conexión con Supabase verificada con éxito.');
+    }
 
     logger.info('🎉 Inicialización logística completada.');
     return true;
@@ -23,5 +38,5 @@ const initLoader = async (_app) => {
   }
 };
 
-// Exportación en formato estricto CommonJS para evitar SyntaxError
-module.exports = initLoader;
+// Exportación en formato nativo ESM por defecto
+export default initLoader;

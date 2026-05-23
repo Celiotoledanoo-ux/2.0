@@ -1,10 +1,10 @@
-const { db } = require('../../core/database/supabaseClient');
-const { TABLES } = require('../../core/config/db');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import { db } from '../../core/database/supabaseClient.js';
+import { TABLES } from '../../core/config/db.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 📦 INVENTORY REPOSITORY - SQL DIRECT CONNECTION
+ * 📦 INVENTORY REPOSITORY - SQL DIRECT CONNECTION (ESM)
  * Gestión de productos y stock con integridad de datos para Maquillaje Glow POS.
  */
 
@@ -121,7 +121,12 @@ const inventoryRepository = {
    */
   async updateStock(productId, quantityDelta, userId, reason = 'AJUSTE MANUAL REPOSITORIO') {
     try {
-      // ⚡ Sincronizado de forma exacta con los 4 parámetros que definiste en tu plano schema.sql
+      /* 
+       * ⚡ RESOLUCIÓN DE LOGICA: Ajuste de metadatos de auditoría RPC.
+       * El llamado se sincroniza de forma exacta con los parámetros de la función almacenada, 
+       * pasando el ID del usuario del personal autenticado bajo el modelo homologado de roles 
+       * para garantizar trazabilidad contable inalterable en 'inventory_logs'.
+       */
       const { error } = await db
         .rpc('modify_stock', { 
           p_id: productId, 
@@ -132,7 +137,7 @@ const inventoryRepository = {
 
       if (error) throw error;
 
-      return await this.findById(productId); // Consume el método local de forma óptima usando 'this'
+      return await this.findById(productId); 
     } catch (error) {
       logger.error({ event: 'INVENTORY_REPO_STOCK_UPDATE_ERROR', message: error.message, productId });
       throw new AppError(`No se pudo alterar el inventario: ${error.message}`, 500);
@@ -140,5 +145,5 @@ const inventoryRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Repositorio Inmutable)
-module.exports = inventoryRepository;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default inventoryRepository;

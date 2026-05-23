@@ -1,13 +1,19 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 /**
- * 📊 REPORTS VALIDATION SCHEMA (0 ERRORES)
+ * 📊 REPORTS VALIDATION SCHEMA (ESM)
  * Filtra y restringe los parámetros de consulta para la analítica del POS.
  * Evita inyecciones de parámetros y fuerza el tipado correcto en Render.
  */
 const getSummarySchema = z.object({
   // Validamos req.query (Query Params en la URL)
   query: z.object({
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Flexibilidad y normalización atómica de rangos.
+     * Se conserva tu excelente enum extendido a mayúsculas combinado con la transformación 
+     * automática a minúsculas. Esto garantiza un acoplamiento perfecto con las capas 
+     * internas del servicio contable, procesando de forma segura las consultas del frontend.
+     */
     range: z
       .enum(['day', 'week', 'month', 'DAY', 'WEEK', 'MONTH'], {
         errorMap: () => ({ 
@@ -19,7 +25,7 @@ const getSummarySchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM NOMBRADA
+export {
   getSummarySchema
 };

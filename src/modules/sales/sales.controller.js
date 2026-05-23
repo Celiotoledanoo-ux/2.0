@@ -1,11 +1,13 @@
-const salesService = require('./sales.service');
-const { catchAsync } = require('../../shared/utils/async.utils'); 
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import salesService from './sales.service.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; 
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 💰 SALES CONTROLLER - EL MOMENTO DEL COBRO (0 ERRORES)
- * Sincronizado milimétricamente con el nuevo esquema de pagos mixtos y 4 roles.
+ * 💰 SALES CONTROLLER - EL MOMENTO DEL COBRO (ESM)
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con el nuevo esquema 
+ * de pagos mixtos y el estándar de 3 roles oficiales (admin, supervisor, cashier).
  */
 const salesController = {
   /**
@@ -14,7 +16,7 @@ const salesController = {
   checkout: catchAsync(async (req, res, _next) => {
     // El validationMiddleware ya limpió el objeto y lo dejó directo en req.body
     const data = req.body;
-    const { items, paymentMethod, total, cashAmount = 0, digitalAmount = 0, discount = 0, notes } = data;
+    const { items, paymentMethod, cashAmount = 0, digitalAmount = 0, discount = 0, notes } = data;
 
     // 2. Validación preventiva redundante de items
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -23,11 +25,17 @@ const salesController = {
 
     // 3. Ejecución de la lógica de venta en el Service
     const sale = await salesService.createSale(
-      { items, paymentMethod, total, cashAmount, digitalAmount, discount, notes },
+      { items, paymentMethod, cashAmount, digitalAmount, discount, notes },
       req.user 
     );
 
-    // 4. Gestión Matemática del Cambio (Vuelto) para CASH y MIXED
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento y cálculo seguro de cambio.
+     * Se elimina el uso de la variable 'total' proveniente del cliente (frontend) 
+     * para el cálculo del vuelto. En su lugar, el algoritmo matemático evalúa 
+     * directamente el valor inmutable recalculado y verificado por el servidor ('sale.total'). 
+     * Esto blindará la terminal de mercado ante intentos de fraude por alteración de payloads.
+     */
     let change = 0;
     
     if (paymentMethod === 'CASH') {
@@ -38,8 +46,8 @@ const salesController = {
         throw new AppError(`Faltan $${Math.abs(change).toFixed(2)} en efectivo para completar el pago.`, 400);
       }
     } else if (paymentMethod === 'MIXED') {
-      const totalNeto = total - discount;
-      const efectivoRequerido = totalNeto - digitalAmount;
+      // Usamos el total real de la venta para calcular lo que resta en efectivo
+      const efectivoRequerido = sale.total - digitalAmount;
       
       change = cashAmount - efectivoRequerido;
 
@@ -54,7 +62,7 @@ const salesController = {
       saleId: sale.id,
       total: sale.total,
       seller: req.user.name,
-      role: req.user.role, // Trazabilidad de los 4 roles
+      role: req.user.role, // Trazabilidad homologada de los 3 roles actuales
       method: paymentMethod,
       ip: req.ip
     });
@@ -74,5 +82,5 @@ const salesController = {
   })
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
-module.exports = salesController;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default salesController;

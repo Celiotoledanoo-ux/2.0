@@ -14,5 +14,5 @@ class AppError extends Error {
   }
 }
 
-// 🎯 CORRECCIÓN SENIOR: Exportación obligatoria en CommonJS para evitar SyntaxError
-module.exports = AppError;
+// 🎯 EXPORTACIÓN ESM: Exportación por defecto nativa y limpia
+export default AppError;

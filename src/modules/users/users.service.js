@@ -1,11 +1,14 @@
-const userRepository = require('./users.repository');
-const { db } = require('../../core/database/supabaseClient');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger'); // ⚡ Inyectamos tu logger Pro
+// ⚡ RESOLUCIÓN DE NOMBRE: Homologación del alias a plural para coincidir con la nomenclatura del archivo
+import usersRepository from './users.repository.js';
+import { db } from '../../core/database/supabaseClient.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; 
 
 /**
- * 👥 USERS SERVICE - GESTIÓN DE PERSONAL (0 ERRORES)
- * Sincronizado milimétricamente con el esquema definitivo de 4 roles y Supabase Central.
+ * 👥 USERS SERVICE - GESTIÓN DE PERSONAL (ESM)
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con el esquema definitivo 
+ * de 3 roles oficiales (admin, supervisor, cashier) y Supabase Central.
  */
 
 const usersService = {
@@ -13,12 +16,12 @@ const usersService = {
    * 📋 OBTENER TODO EL PERSONAL
    */
   async getAllUsers() {
-    const users = await userRepository.findAll();
+    const users = await usersRepository.findAll();
     if (!users) {
       throw new AppError('No se pudo recuperar la lista de usuarios, bro.', 500);
     }
     
-    // ⚡ El repositorio ya los entrega normalizados en MAYÚSCULAS para cumplir el estándar
+    // El repositorio ya los entrega normalizados en MAYÚSCULAS para cumplir el estándar
     return users;
   },
 
@@ -34,8 +37,13 @@ const usersService = {
       finalEmail = `${finalEmail.replace(/\s+/g, '')}@pos.system`;
     }
 
-    // Normalizamos la entrada a minúsculas únicamente para insertarlo en Supabase Central
-    const cleanRoleForDB = role.toUpperCase().trim() === 'SELLER' ? 'cashier' : role.toLowerCase().trim();
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Purga de código muerto y roles fantasmas.
+     * Se remueve el mapeo condicional del rol 'SELLER' debido a que el validador de Zod 
+     * (users.schema.js) actúa como muro de contención previo, asegurando que a esta capa 
+     * de negocio solo ingresen mutados los 3 roles corporativos inmutables del Punto de Venta.
+     */
+    const cleanRoleForDB = role.toLowerCase().trim();
 
     // 2. Registro en Capa de Autenticación Central (Supabase Auth)
     const { data: authData, error: authError } = await db.auth.admin.createUser({
@@ -54,7 +62,7 @@ const usersService = {
 
     try {
       // 3. Sincronización con Tabla SQL
-      const newUser = await userRepository.create({
+      const newUser = await usersRepository.create({
         id: authData.user.id,
         email: finalEmail,
         name: name.trim(),
@@ -79,7 +87,7 @@ const usersService = {
    * 🔍 OBTENER UN USUARIO POR ID
    */
   async getUserById(id) {
-    const user = await userRepository.findById(id);
+    const user = await usersRepository.findById(id);
     if (!user) throw new AppError('Usuario no encontrado en el sistema.', 404);
     
     return user;
@@ -91,7 +99,7 @@ const usersService = {
    */
   async toggleUserStatus(id, activeStatus) {
     // 1. Actualizar la base de datos relacional para reportes y logs
-    const updatedUser = await userRepository.update(id, { active: activeStatus });
+    const updatedUser = await usersRepository.update(id, { active: activeStatus });
     if (!updatedUser) {
       throw new AppError('No se pudo actualizar el estado del empleado en la base de datos.', 500);
     }
@@ -118,5 +126,5 @@ const usersService = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Servicio Limpia)
-module.exports = usersService;
+// 🎯 EXPORTACIÓN ESM: Exportación por defecto limpia para la capa de controladores
+export default usersService;

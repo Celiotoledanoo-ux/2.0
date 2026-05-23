@@ -1,8 +1,8 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 /**
- * 📦 PRODUCT SCHEMA - MAQUILLAJE POS CORREGIDO
- * Sincronizado milimétricamente con el formulario dinámico del frontend.
+ * 📦 PRODUCT SCHEMA - MAQUILLAJE POS CORREGIDO (ESM)
+ * Sincronizado milimétricamente con el frontend dinámico de la terminal.
  */
 const productSchema = z.object({
   body: z.object({ 
@@ -50,7 +50,7 @@ const productSchema = z.object({
 });
 
 /**
- * 📦 STOCK ADJUSTMENT SCHEMA
+ * 📦 STOCK ADJUSTMENT SCHEMA (ESM)
  * Valida las entradas y salidas manuales de mercancía.
  */
 const stockAdjustmentSchema = z.object({
@@ -72,8 +72,8 @@ const stockAdjustmentSchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM NOMBRADA
+export {
   productSchema,
   stockAdjustmentSchema
 };

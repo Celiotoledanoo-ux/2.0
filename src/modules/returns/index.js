@@ -1,12 +1,12 @@
 /**
- * 📦 ARCHIVO BARRIL DEL MÓDULO DE RETURNS (CommonJS)
+ * 📦 ARCHIVO BARRIL DEL MÓDULO DE RETURNS (ESM)
  * Centraliza y expone las piezas públicas para simplificar importaciones externas.
  */
-const returnsRoutes = require('./returns.routes');
-const returnsService = require('./returns.service');
+import returnsRoutes from './returns.routes.js';
+import returnsService from './returns.service.js';
 
-module.exports = {
-  returnsRoutes, // Sincronizado exactamente con tu Router Maestro
+// 🎯 EXPORTACIÓN ESM NOMBRADA UNIFICADA
+export {
+  returnsRoutes,
   returnsService
 };
-

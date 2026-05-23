@@ -1,11 +1,13 @@
-const { db } = require('../../core/database/supabaseClient');
-const { TABLES } = require('../../core/config/db');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger'); // ⚡ Inyectamos tu logger Pro
+import { db } from '../../core/database/supabaseClient.js';
+import { TABLES } from '../../core/config/db.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js'; 
 
 /**
- * 💰 SALES REPOSITORY - PERSISTENCIA DE TRANSACCIONES ATÓMICAS (0 ERRORES)
- * Sincronización milimétricamente con la estructura de cobro mixto y 4 roles.
+ * 💰 SALES REPOSITORY - PERSISTENCIA DE TRANSACCIONES ATÓMICAS (ESM)
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con la estructura 
+ * de cobro mixto y el estándar de 3 roles oficiales (admin, supervisor, cashier).
  */
 
 const SALES_TABLE = TABLES.SALES || 'sales';
@@ -75,6 +77,12 @@ const salesRepository = {
   async findWithItems(saleId) {
     if (!saleId) throw new AppError('El identificador de la venta es mandatorio.', 400);
 
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Validación preventiva de relación foránea.
+     * Al consultar el ticket con sus renglones desglosados mediante 'items:sales_items', 
+     * el join secundario apunta a 'product:inventory'. Se conserva la nomenclatura de la tabla 
+     * física nativa 'inventory' garantizando consistencia absoluta con los mapeos SQL relacionales.
+     */
     const saleQuery = `
       id, cash_session_id, total, payment_method, cash_amount, digital_amount, status, notes, created_at, created_by,
       items:sales_items (
@@ -106,5 +114,5 @@ const salesRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Repositorio Inmutable)
-module.exports = salesRepository;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default salesRepository;

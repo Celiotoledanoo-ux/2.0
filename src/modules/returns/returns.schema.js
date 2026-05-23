@@ -1,13 +1,19 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 /**
- * 🔄 RETURNS VALIDATION SCHEMAS - GLOW BEAUTY POS
+ * 🔄 RETURNS VALIDATION SCHEMAS - GLOW BEAUTY POS (ESM)
  * El escudo que valida las devoluciones de mercancía antes de restaurar el stock.
  */
 const createReturnSchema = z.object({
   body: z.object({
-    // Validamos que el ticket original sea un UUID legítimo de Supabase
-    saleId: z
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Alineación estricta con la clave foránea del schema.sql.
+     * Se modifica la propiedad 'saleId' de camelCase hacia el formato estándar snake_case 
+     * ('sale_id'). Esto garantiza que los payloads que viajen desde el cliente hagan match 
+     * milimétrico con la columna relacional física que enlazará la tabla 'returns' con 'sales' 
+     * en el motor de PostgreSQL de Supabase.
+     */
+    sale_id: z
       .string({ required_error: 'El identificador de la venta original es obligatorio.' })
       .uuid('El ID de la venta debe ser un UUID válido de Supabase.'),
       
@@ -41,7 +47,7 @@ const createReturnSchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM NOMBRADA
+export {
   createReturnSchema
 };

@@ -1,14 +1,14 @@
 /**
- * 📦 ARCHIVO BARRIL DEL MÓDULO DE INVENTARIO (CommonJS)
+ * 📦 ARCHIVO BARRIL DEL MÓDULO DE INVENTARIO (ESM)
  * Centraliza y expone las piezas públicas para simplificar importaciones externas.
  */
-const inventoryRoutes = require('./inventory.routes');
-const inventoryService = require('./inventory.service');
-const inventoryRepository = require('./inventory.repository');
+import inventoryRoutes from './inventory.routes.js';
+import inventoryService from './inventory.service.js';
+import inventoryRepository from './inventory.repository.js';
 
-module.exports = {
-  inventoryRoutes, // Consumido por /src/routes/index.js
+// 🎯 EXPORTACIÓN ESM NOMBRADA UNIFICADA
+export {
+  inventoryRoutes,
   inventoryService,
   inventoryRepository
 };
-

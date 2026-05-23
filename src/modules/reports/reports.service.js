@@ -1,8 +1,8 @@
-const reportsRepository = require('./reports.repository');
-const logger = require('../../core/logger/logger');
+import reportsRepository from './reports.repository.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 📊 REPORTS SERVICE - INTELIGENCIA DE NEGOCIO (0 ERRORES)
+ * 📊 REPORTS SERVICE - INTELIGENCIA DE NEGOCIO (ESM)
  * Procesa métricas financieras y alertas de inventario de forma dinámica por rangos.
  */
 const reportsService = {
@@ -10,23 +10,29 @@ const reportsService = {
    * OBTENER RESUMEN FINANCIERO Y SEMÁFORO LOGÍSTICO
    */
   async getFinancialSummary(range = 'day') {
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Inmunización horaria ante entornos cloud.
+     * En lugar de formatear rangos basándose en '.toISOString()' (el cual hereda de forma directa 
+     * la zona horaria UTC del servidor extranjero de Render), se implementa un formateador manual 
+     * forzando el huso de 'America/Mexico_City'. Esto garantiza que los filtros diarios, 
+     * semanales y mensuales arranquen milimétricamente sincronizados con el día real del comercio.
+     */
     const now = new Date();
+    const localTodayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' }); // Retorna exactamente 'YYYY-MM-DD'
     
-    // ⚡ Garantizamos que el límite superior tome el día de hoy hasta el último segundo (23:59:59)
-    const todayStr = now.toISOString().split('T')[0];
-    const endDateISO = `${todayStr}T23:59:59.999Z`;
-    
-    // Cálculo matemático del rango de fecha inicial según la pestaña pulsada en el POS
-    let startDateISO = `${todayStr}T00:00:00.000Z`;
+    const endDateISO = `${localTodayStr}T23:59:59.999Z`;
+    let startDateISO = `${localTodayStr}T00:00:00.000Z`;
 
     if (range === 'week') {
       const pastWeek = new Date();
       pastWeek.setDate(now.getDate() - 7);
-      startDateISO = `${pastWeek.toISOString().split('T')[0]}T00:00:00.000Z`;
+      const localPastWeekStr = pastWeek.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
+      startDateISO = `${localPastWeekStr}T00:00:00.000Z`;
     } else if (range === 'month') {
       const pastMonth = new Date();
       pastMonth.setDate(now.getDate() - 30);
-      startDateISO = `${pastMonth.toISOString().split('T')[0]}T00:00:00.000Z`;
+      const localPastMonthStr = pastMonth.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
+      startDateISO = `${localPastMonthStr}T00:00:00.000Z`;
     }
 
     // ⚡ Paralelismo Optimizado con fechas absolutas e inmunes a recortes de hora
@@ -50,12 +56,11 @@ const reportsService = {
 
     // Retorno estructurado idéntico a lo que consumen las funciones asíncronas de public/script.js
     return {
-      report_date: todayStr,
+      report_date: localTodayStr,
       range: range,
       metrics: {
         total_revenue: Number((financialData.total || 0).toFixed(2)),
         sales_count: financialData.transactionCount || 0,
-        // El repositorio ya entrega el top agrupado y formateado con marca, nombre y variante
         top_products: topProducts.map(p => ({
           name: `[${p.brand}] ${p.name} (${p.tone})`,
           quantity: p.quantity
@@ -81,5 +86,5 @@ const reportsService = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Servicio Limpia)
-module.exports = reportsService;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default reportsService;

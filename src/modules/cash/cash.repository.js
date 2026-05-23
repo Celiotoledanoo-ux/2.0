@@ -1,10 +1,10 @@
-const { db } = require('../../core/database/supabaseClient');
-const { TABLES } = require('../../core/config/db');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import { db } from '../../core/database/supabaseClient.js';
+import { TABLES } from '../../core/config/db.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 💰 CASH REPOSITORY - CONTROL DE FLUJO DE EFECTIVO (0 ERRORES)
+ * 💰 CASH REPOSITORY - CONTROL DE FLUJO DE EFECTIVO (ESM)
  * Sincronización milimétricamente acoplada con el plano SQL real y aislamiento por cajero.
  */
 
@@ -70,11 +70,21 @@ const cashRepository = {
    * 3. Actualizar la sesión (Cerrar Turno o Realizar Ajustes de Arqueo)
    */
   async updateSession(id, updateData) {
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento estricto de tipos en arqueos.
+     * Se normaliza el mapeo de variables hacia la base de datos aplicando un cortocircuito 
+     * defensivo con fallbacks basados en el doble estándar (camelCase/snake_case), 
+     * blindando la petición para que transiten números reales y nunca valores undefined a PostgreSQL.
+     */
+    const closingAmt = updateData.closingBalance !== undefined ? updateData.closingBalance : updateData.closing_balance;
+    const realCashAmt = updateData.realCash !== undefined ? updateData.realCash : updateData.real_cash;
+    const closedDate = updateData.closedAt || updateData.closed_at;
+
     const payload = {
-      closing_balance: updateData.closingBalance !== undefined ? Number(updateData.closingBalance) : updateData.closing_balance,
-      real_cash: updateData.realCash !== undefined ? Number(updateData.realCash) : updateData.real_cash,
+      closing_balance: closingAmt !== undefined ? Number(closingAmt) : undefined,
+      real_cash: realCashAmt !== undefined ? Number(realCashAmt) : undefined,
       status: updateData.status,
-      closed_at: updateData.closedAt || updateData.closed_at
+      closed_at: closedDate
     };
 
     try {
@@ -139,7 +149,6 @@ const cashRepository = {
         .is('product_id', null) 
         .gte('created_at', openedAtISO);
 
-      // Si pasamos el ID del usuario, filtramos estrictamente los movimientos de su propio turno
       if (userId) {
         query = query.eq('user_id', userId);
       }
@@ -162,5 +171,5 @@ const cashRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Repositorio Inmutable)
-module.exports = cashRepository;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default cashRepository;

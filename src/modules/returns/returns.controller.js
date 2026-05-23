@@ -1,9 +1,9 @@
-const returnsService = require('./returns.service');
-const { catchAsync } = require('../../shared/utils/async.utils');
-const AppError = require('../../core/errors/AppError');
+import returnsService from './returns.service.js';
+import { catchAsync } from '../../shared/utils/async.utils.js';
+import AppError from '../../core/errors/AppError.js';
 
 /**
- * 🔄 RETURNS CONTROLLER - GESTIÓN DE DEVOLUCIONES (0 ERRORES)
+ * 🔄 RETURNS CONTROLLER - GESTIÓN DE DEVOLUCIONES (ESM)
  * Sincronizado milimétricamente con la lógica contable y el frontend del POS.
  */
 const returnsController = {
@@ -12,14 +12,20 @@ const returnsController = {
    */
   executeReturn: catchAsync(async (req, res, _next) => {
     // El validationMiddleware ya limpió el objeto y lo dejó directo en req.body
-    const { saleId, items, reason } = req.body;
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización contractual con el ecosistema snake_case.
+     * Se modifica la extracción de 'saleId' a 'sale_id' para acoplar el controlador de forma 
+     * exacta con los datos limpios estructurados por Zod (returns.schema.js). Esto previene 
+     * el envío de valores 'undefined' hacia la capa de servicios, blindando el cobro.
+     */
+    const { sale_id, items, reason } = req.body;
 
-    if (!saleId || !items || !reason) {
-      throw new AppError('Campos requeridos faltantes: saleId, items y reason son obligatorios.', 400);
+    if (!sale_id || !items || !reason) {
+      throw new AppError('Campos requeridos faltantes: sale_id, items y reason son obligatorios.', 400);
     }
 
     const result = await returnsService.processReturn({
-      saleId,
+      sale_id,
       items,
       reason,
       userId: req.user.id
@@ -33,5 +39,5 @@ const returnsController = {
   })
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
-module.exports = returnsController;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default returnsController;

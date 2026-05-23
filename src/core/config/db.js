@@ -28,8 +28,8 @@ const DB_SETTINGS = Object.freeze({
   TIMEOUT_MS: 10000 
 });
 
-// 🎯 CORRECCIÓN SENIOR: Exportación CommonJS limpia y desestructurable
-module.exports = {
+// 🎯 EXPORTACIÓN ESM: Permite importación nombrada o desestructurada
+export {
   TABLES,
   DB_SETTINGS
 };

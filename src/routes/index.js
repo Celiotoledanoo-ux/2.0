@@ -1,17 +1,17 @@
-const { Router } = require('express');
+import { Router } from 'express';
 
 // ✅ Importación de constantes del sistema
-const { HTTP_STATUS } = require('../shared/constants/httpStatusCodes');
+import { HTTP_STATUS } from '../shared/constants/httpStatusCodes.js';
 
 // ✅ Importación de módulos de negocio (Usa los archivos index.js tipo barril)
-const { authRoutes } = require('../modules/auth');
-const { usersRoutes } = require('../modules/users'); // Ajustado a 'usersRoutes' para alinearlo con tu árbol
-const { inventoryRoutes } = require('../modules/inventory');
-const { cashRoutes } = require('../modules/cash');
-const { salesRoutes } = require('../modules/sales');
-const { paymentsRoutes } = require('../modules/payments');
-const { returnsRoutes } = require('../modules/returns');
-const { reportsRoutes } = require('../modules/reports');
+import { authRoutes } from '../modules/auth/index.js';
+import { usersRoutes } from '../modules/users/index.js'; 
+import { inventoryRoutes } from '../modules/inventory/index.js';
+import { cashRoutes } from '../modules/cash/index.js';
+import { salesRoutes } from '../modules/sales/index.js';
+import { paymentsRoutes } from '../modules/payments/index.js';
+import { returnsRoutes } from '../modules/returns/index.js';
+import { reportsRoutes } from '../modules/reports/index.js';
 
 const router = Router();
 
@@ -39,5 +39,5 @@ router.use('/payments', paymentsRoutes);
 router.use('/returns', returnsRoutes);
 router.use('/reports', reportsRoutes);
 
-// Exportación en formato estricto CommonJS
-module.exports = router;
+// Exportación en formato nativo ESM por defecto
+export default router;

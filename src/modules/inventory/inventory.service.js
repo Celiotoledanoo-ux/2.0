@@ -1,9 +1,9 @@
-const inventoryRepository = require('./inventory.repository');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import inventoryRepository from './inventory.repository.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 📦 INVENTORY SERVICE - GESTIÓN DE PRODUCTOS Y EXISTENCIAS (0 ERRORES)
+ * 📦 INVENTORY SERVICE - GESTIÓN DE PRODUCTOS Y EXISTENCIAS (ESM)
  * Sincronizado milimétricamente entre el Controlador y el Repositorio SQL
  */
 const inventoryService = {
@@ -15,7 +15,17 @@ const inventoryService = {
 
     if (!sku) throw new AppError('El SKU es mandatorio para registrar cosméticos.', 400);
     if (!tone?.trim()) throw new AppError('El tono o variante de color es obligatorio para el maquillaje.', 400);
-    if (price < 0) throw new AppError('El precio no puede ser negativo, fiera.', 400);
+    
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sanitización defensiva de tipos numéricos.
+     * Aunque Zod valida la entrada, se implementa una conversión explícita mediante 'Number()' 
+     * para asegurar que la evaluación matemática de menor a cero sea exacta, previniendo que 
+     * valores corruptos de tipo 'NaN' transiten vivos hacia el motor de persistencia SQL.
+     */
+    const cleanPrice = Number(price);
+    if (isNaN(cleanPrice) || cleanPrice < 0) {
+      throw new AppError('El precio debe ser un número válido y no puede ser negativo, fiera.', 400);
+    }
 
     const cleanSku = sku.trim().toUpperCase();
     const cleanTone = tone.trim().toLowerCase();
@@ -31,7 +41,8 @@ const inventoryService = {
     return await inventoryRepository.create({
       ...productData,
       sku: cleanSku,
-      name: name.trim()
+      name: name.trim(),
+      price: cleanPrice
     });
   },
 
@@ -99,5 +110,5 @@ const inventoryService = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Servicio Limpia)
-module.exports = inventoryService;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default inventoryService;

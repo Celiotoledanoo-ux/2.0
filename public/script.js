@@ -133,11 +133,18 @@ async function processCheckoutCart() {
   const discount = parseFloat(document.getElementById('checkout-discount-input')?.value) || 0;
   const notes = document.getElementById('checkout-notes-input')?.value || ''; 
 
+  /* 
+   * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización contractual con el Backend en ESM y Supabase SQL.
+   * Se modifican las claves del objeto JSON serializado hacia la API para que utilicen de forma 
+   * estricta el estándar snake_case exigido por las columnas de la tabla 'sales' en PostgreSQL 
+   * y mapeado en tus esquemas de validaciones ('paymentMethod' cambia a 'paymentMethod' para heredar 
+   * el enum en mayúsculas, mientras que los montos se mapean como 'cash_amount' y 'digital_amount').
+   */
   const payload = {
     items: window.cartItems, 
-    paymentMethod,
-    cashAmount,
-    digitalAmount,
+    paymentMethod, // Mapeado a la firma Zod de createSaleSchema que recibe mayúsculas
+    cash_amount: cashAmount,
+    digital_amount: digitalAmount,
     discount,
     notes
   };
@@ -241,9 +248,16 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     const balance = document.getElementById('cash-opening-balance-input')?.value;
     try {
+      /* 
+       * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización contractual de aperturas.
+       * Se realiza la conversión explícita mediante 'Number()' de la variable de balance 
+       * e inyectamos la propiedad 'openingBalance'. Esto acopla la petición de forma exacta 
+       * con los disparadores lógicos del controlador del backend ('cash.controller.js'), 
+       * asegurando el inicio del turno sin fricciones.
+       */
       await apiFetch('/cash/open', {
         method: 'POST',
-        body: JSON.stringify({ openingBalance: balance })
+        body: JSON.stringify({ openingBalance: Number(balance) || 0 })
       });
       alert('¡Caja chica inicializada correctamente! 🟢');
       window.location.reload();
@@ -271,9 +285,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const notes = document.getElementById('cash-close-notes')?.value || '';
 
     try {
+      /* 
+       * ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento y caspeo numérico en arqueos.
+       * Se parsea el valor de 'realCash' utilizando 'Number()' antes de viajar por HTTP 
+       * a la nube de Render. Esto inmuniza la petición de que transiten strings corruptos 
+       * que harían fallar los cálculos de diferencias contables en la capa de servicios ('cash.service.js').
+       */
       const response = await apiFetch('/cash/close', {
         method: 'POST',
-        body: JSON.stringify({ realCash: realCash, notes: notes })
+        body: JSON.stringify({ 
+          realCash: Number(realCash) || 0, 
+          notes: notes.trim() || null 
+        })
       });
 
       alert(response.message || 'Corte de caja procesado con éxito. 🏁');

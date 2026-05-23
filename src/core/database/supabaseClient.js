@@ -1,7 +1,7 @@
-const { createClient } = require('@supabase/supabase-js');
-const { env } = require('../config/env');
-const AppError = require('../errors/AppError');
-const logger = require('../logger/logger');
+import { createClient } from '@supabase/supabase-js';
+import { env } from '../config/env.js';
+import AppError from '../errors/AppError.js';
+import logger from '../logger/logger.js';
 
 const { url, serviceRoleKey, anonKey } = env.supabase;
 
@@ -62,8 +62,8 @@ const createUserClient = (token) => {
   });
 };
 
-// Exportación unificada en CommonJS
-module.exports = {
+// Exportación unificada en formato ESM nombrada
+export {
   db,
   createUserClient
 };

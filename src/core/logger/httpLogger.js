@@ -1,6 +1,6 @@
-const pinoHttp = require('pino-http');
-const { randomUUID } = require('crypto'); // Carga nativa simplificada en CommonJS
-const logger = require('./logger');
+import pinoHttp from 'pino-http';
+import { randomUUID } from 'crypto'; // Carga nativa simplificada en ESM
+import logger from './logger.js';
 
 /**
  * 🕵️‍♂️ HTTP LOGGER - EL AUDITOR DE PETICIONES
@@ -60,5 +60,5 @@ const httpLogger = pinoHttp({
   }
 });
 
-// Exportación en formato unificado CommonJS
-module.exports = httpLogger;
+// Exportación en formato nativo ESM por defecto
+export default httpLogger;

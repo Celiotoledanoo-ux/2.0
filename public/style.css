@@ -1,3 +1,8 @@
+/* ==========================================================================
+   💄 GLOW BEAUTY POS - MASTER ARCHITECTURE STYLESHEET (ESM COMPATIBLE)
+   Sincronizado milimétricamente con index.html y public/script.js
+   ========================================================================== */
+
 :root {
     --bg-main: #F9F9FB;
     --white: #FFFFFF;
@@ -36,12 +41,12 @@ body {
     letter-spacing: -0.01em;
 }
 
-/* UTILITY */
+/* 🚦 UTILITY */
 .d-none {
     display: none !important;
 }
 
-/* AUTH */
+/* 👥 AUTH SCREEN */
 #auth-screen {
     min-height: 100vh;
     display: flex;
@@ -57,7 +62,8 @@ body {
         );
 }
 
-.auth-card {
+/* ⚡ RESOLUCIÓN DE ACOPLAMIENTO: Sincronizado exactamente con el login del HTML */
+.login-box {
     width: 100%;
     max-width: 460px;
     background: var(--white);
@@ -92,7 +98,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* INPUTS */
+/* 📥 INPUTS GLOBALES */
 .input-group {
     display: flex;
     flex-direction: column;
@@ -133,7 +139,7 @@ textarea:focus {
         0 0 0 4px rgba(212, 175, 55, 0.08);
 }
 
-/* BUTTONS */
+/* 🎯 BUTTONS CONTROLLER */
 button {
     border: none;
     cursor: pointer;
@@ -141,9 +147,10 @@ button {
     font-family: inherit;
 }
 
-#login-submit-btn,
-#cash-open-submit-btn,
-#checkout-submit-btn,
+/* ⚡ RESOLUCIÓN DE LÓGICA: Mapeo directo a las clases inyectadas en tu HTML */
+.btn-primary,
+.btn-success,
+.btn-checkout,
 #cash-close-form button {
     width: 100%;
     background: var(--gold);
@@ -155,16 +162,17 @@ button {
     box-shadow: 0 10px 30px rgba(212, 175, 55, 0.20);
 }
 
-#login-submit-btn:hover,
-#cash-open-submit-btn:hover,
-#checkout-submit-btn:hover,
+.btn-primary:hover,
+.btn-success:hover,
+.btn-checkout:hover,
 #cash-close-form button:hover {
     transform: translateY(-3px);
     box-shadow: 0 18px 40px rgba(212, 175, 55, 0.28);
 }
 
-/* OVERLAYS */
-.overlay-screen,
+/* 🔐 OVERLAYS & MODALS */
+/* ⚡ RESOLUCIÓN DE LÓGICA: Sincronizado al ID de bloqueo de caja chica */
+#cash-lock-screen,
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -175,6 +183,16 @@ button {
     padding: 24px;
     background: rgba(255,255,255,0.30);
     backdrop-filter: blur(18px);
+}
+
+.lock-box {
+    width: 100%;
+    max-width: 480px;
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    padding: 36px;
+    box-shadow: var(--shadow-hover);
+    border: 1px solid rgba(0,0,0,0.03);
 }
 
 .glass-modal {
@@ -201,7 +219,7 @@ button {
     color: var(--text-secondary);
 }
 
-/* MAIN WORKSPACE */
+/* 💻 MAIN WORKSPACE LAYOUT */
 #pos-main-workspace {
     min-height: 100vh;
     padding: 28px;
@@ -210,67 +228,66 @@ button {
     gap: 28px;
 }
 
-/* LEFT */
-.catalog-panel,
-.checkout-panel,
+/* ⚡ RESOLUCIÓN DE ACOPLAMIENTO: Sincronizado a las secciones estructurales del HTML */
+.catalog-section,
+.cart-section,
 .dashboard-card {
     background: var(--white);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-soft);
     border: 1px solid rgba(0,0,0,0.03);
-}
-
-.catalog-panel {
     padding: 28px;
 }
 
-.workspace-topbar {
+/* 📡 HEADER CONTROLLER */
+.pos-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 18px;
     margin-bottom: 28px;
+    grid-column: 1 / -1; /* Abarca todo el ancho de la rejilla */
 }
 
-.workspace-topbar h2,
+.brand-logo,
 .checkout-header h2,
 .dashboard-header h2 {
     font-size: 1.6rem;
-    margin-bottom: 6px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
-.workspace-topbar p,
+.pos-header p,
 .checkout-header p,
 .dashboard-header p {
     color: var(--text-secondary);
 }
 
-.vault-display {
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* 💰 VAULT CASH CONTROLLER */
+.badge-info {
     background: var(--rose);
-    padding: 16px 22px;
-    border-radius: var(--radius-lg);
-    min-width: 170px;
-}
-
-.vault-display span {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-#vault-cash-display {
-    font-size: 1.3rem;
     color: var(--gold);
+    padding: 12px 20px;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-size: 1.05rem;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.05);
 }
 
-/* SEARCH */
-.search-wrapper {
+/* 🔍 SEARCH ENGINE */
+.search-bar {
     margin-bottom: 26px;
 }
 
-/* PRODUCTS */
-#products-grid-container {
+/* 📦 PRODUCTS GRID */
+/* ⚡ RESOLUCIÓN DE LÓGICA: Vinculado al ID exacto receptor de las tarjetas cosméticas */
+#products-catalog-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 22px;
@@ -343,22 +360,13 @@ button {
     color: #ffffff;
 }
 
-/* CHECKOUT */
-.checkout-panel {
-    padding: 28px;
-    display: flex;
-    flex-direction: column;
-}
-
-.checkout-header {
-    margin-bottom: 22px;
-}
-
+/* 🛒 SHOPPING CART & CHECKOUT INPUTS */
 .cart-items-container {
     flex: 1;
     overflow-y: auto;
     margin-bottom: 26px;
     padding-right: 4px;
+    min-height: 200px;
 }
 
 .cart-item-row {
@@ -381,26 +389,59 @@ button {
     color: var(--text-secondary);
 }
 
-.checkout-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+.checkout-box {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 }
 
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.summary-line label {
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.summary-line input,
+.summary-line select {
+    max-width: 220px;
+    padding: 12px;
+}
+
+/* ⚡ CAPTURA MIXTA FLUIDA */
+.payment-fields-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #FCFCFD;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    padding: 14px;
+}
+
+/* 🏁 BUTTON TRIGGER CORTE DE CAJA */
 #cash-close-trigger-btn {
-    margin-top: 22px;
-    padding: 16px;
+    padding: 12px 20px;
     border-radius: var(--radius-md);
     background: #1A1A1A;
     color: #ffffff;
     font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 #cash-close-trigger-btn:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
+    background: #333333;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* ADMIN */
+/* 📊 ADMIN DASHBOARD & TABLES */
 #admin-dashboard-panel {
     min-height: 100vh;
     padding: 28px;
@@ -414,14 +455,6 @@ button {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
-}
-
-.dashboard-card {
-    padding: 28px;
-}
-
-.section-title {
-    margin-bottom: 22px;
 }
 
 table {
@@ -449,15 +482,7 @@ th {
     margin-top: 28px;
 }
 
-.flow-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 16px;
-    border-radius: var(--radius-md);
-    background: #FCFCFD;
-    margin-top: 12px;
-}
-
+/* 📊 REPORT METRICS & TABS */
 .report-tabs {
     display: flex;
     gap: 12px;
@@ -492,60 +517,3 @@ th {
 .metric-card span {
     display: block;
     margin-bottom: 10px;
-    color: var(--text-secondary);
-    font-size: 0.88rem;
-}
-
-.metric-card strong {
-    font-size: 1.5rem;
-    color: var(--gold);
-}
-
-/* RESPONSIVE */
-@media (max-width: 1200px) {
-
-    #pos-main-workspace {
-        grid-template-columns: 1fr;
-    }
-
-    .checkout-panel {
-        min-height: 700px;
-    }
-
-    .admin-grid {
-        grid-template-columns: 1fr;
-    }
-
-}
-
-@media (max-width: 768px) {
-
-    #auth-screen,
-    #admin-dashboard-panel,
-    #pos-main-workspace {
-        padding: 18px;
-    }
-
-    .auth-card,
-    .catalog-panel,
-    .checkout-panel,
-    .dashboard-card,
-    .glass-modal {
-        padding: 22px;
-    }
-
-    .workspace-topbar {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .checkout-grid,
-    .metrics-grid {
-        grid-template-columns: 1fr;
-    }
-
-    #products-grid-container {
-        grid-template-columns: 1fr;
-    }
-
-}

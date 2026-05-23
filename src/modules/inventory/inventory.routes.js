@@ -1,14 +1,15 @@
-const { Router } = require('express');
-const inventoryController = require('./inventory.controller');
-const { protect, restrictTo } = require('../../core/middlewares/auth.middlewares');
-const { validationMiddleware } = require('../../core/middlewares/validation.middlewares'); 
-const { stockAdjustmentSchema, productSchema } = require('./inventory.schema');
-const { ROLES } = require('../../shared/constants/roles'); // ⚡ Inyectamos constantes para consistencia
+import { Router } from 'express';
+import inventoryController from './inventory.controller.js';
+import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
+import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
+import { stockAdjustmentSchema, productSchema } from './inventory.schema.js';
+// ⚡ RESOLUCIÓN DE RUTA: Apuntamos al archivo de constantes renombrado 'roles.constants.js' con extensión .js
+import { ROLES } from '../../shared/constants/roles.constants.js'; 
 
 const router = Router();
 
 /**
- * 📦 RUTAS DE INVENTARIO - GLOW BEAUTY POS
+ * 📦 RUTAS DE INVENTARIO - GLOW BEAUTY POS (ESM)
  * Control de existencias y catálogo de productos.
  */
 
@@ -18,9 +19,14 @@ router.use(protect);
 // 2. Consulta de Inventario (Accesible para todos: Cajeros, Supervisores, etc.)
 router.get('/', inventoryController.getAll);
 
-// 3. Operaciones de Gestión (⚡ Ajustado a nuestro estándar unificado de roles en MAYÚSCULAS)
-// Solo perfiles directivos pueden registrar mercancía o alterar stock manualmente
-const directivosAutorizados = restrictTo(ROLES.ADMIN, ROLES.GERENTE, ROLES.SUPERVISOR);
+/* 
+ * ⚡ RESOLUCIÓN DE LÓGICA: Remoción del rol GERENTE.
+ * Se purga 'ROLES.GERENTE' del listado de directivos autorizados para evitar 
+ * excepciones de tipo 'undefined' al cargar Express en Render. La creación de productos 
+ * y los ajustes manuales de stock quedan blindados exclusivamente bajo los 2 roles 
+ * superiores reales del Punto de Venta: ADMIN y SUPERVISOR.
+ */
+const directivosAutorizados = restrictTo(ROLES.ADMIN, ROLES.SUPERVISOR);
 
 // Crear producto nuevo en catálogo
 router.post(
@@ -38,5 +44,5 @@ router.patch(
   inventoryController.updateStock
 );
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS
-module.exports = router;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default router;

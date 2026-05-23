@@ -1,10 +1,12 @@
-const cashService = require('./cash.service');
-const { catchAsync } = require('../../shared/utils/async.utils'); 
-const AppError = require('../../core/errors/AppError');
+import cashService from './cash.service.js';
+import { catchAsync } from '../../shared/utils/async.utils.js'; 
+import AppError from '../../core/errors/AppError.js';
 
 /**
- * 💰 CASH CONTROLLER - GESTIÓN DE TURNOS Y DINERO (0 ERRORES)
- * Sincronizado milimétricamente con public/script.js, flujos mixtos y 4 roles.
+ * 💰 CASH CONTROLLER - GESTIÓN DE TURNOS Y DINERO (ESM)
+ * 
+ * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con public/script.js, 
+ * flujos mixtos y el estándar de 3 roles oficiales (admin, supervisor, cashier).
  */
 const cashController = {
   /**
@@ -102,5 +104,5 @@ const cashController = {
   })
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Controlador Limpia)
-module.exports = cashController;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default cashController;

@@ -1,23 +1,44 @@
-const { db } = require('../../core/database/supabaseClient');
-const AppError = require('../../core/errors/AppError');
-const logger = require('../../core/logger/logger');
+import { db } from '../../core/database/supabaseClient.js';
+import AppError from '../../core/errors/AppError.js';
+import logger from '../../core/logger/logger.js';
 
 /**
- * 🔄 RETURNS REPOSITORY - CONTROL DE DEVOLUCIONES (0 ERRORES)
+ * 🔄 RETURNS REPOSITORY - CONTROL DE DEVOLUCIONES (ESM)
  * Sincronizado atómicamente con el inventario y el arqueo de caja chica.
  */
 const returnsRepository = {
+  /**
+   * ⚡ MEJORA SENIOR: Consulta de control de transacciones (Idempotencia)
+   * Busca si una venta ya posee un registro de devolución asociado.
+   * @param {string} saleId - UUID de la venta original.
+   */
+  async findBySaleId(saleId) {
+    if (!saleId) return null;
+    try {
+      const { data, error } = await db
+        .from('returns')
+        .select('id')
+        .eq('sale_id', saleId)
+        .maybeSingle(); // Retorna pacíficamente null si no se encuentra registrado
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      logger.error({ event: 'RETURNS_REPO_CHECK_IDEMPOTENCY_FAIL', message: error.message, saleId });
+      throw new AppError('Error al verificar el historial contable de este ticket.', 500);
+    }
+  },
+
   /**
    * Registra una devolución en cascada atómica (Cabecera + Ítems devueltos)
    * @param {Object} returnData - Datos de la devolución
    */
   async createAtomicReturn(returnData) {
     const payload = {
-      sale_id: returnData.saleId,
+      sale_id: returnData.sale_id,
       reason: returnData.reason.toUpperCase().trim(),
       refund_total: Number(returnData.refundTotal),
       created_by: returnData.createdBy,
-      // Insertamos los renglones de los productos que reingresan a vitrina
       return_items: returnData.items.map(item => ({
         product_id: item.productId,
         quantity: parseInt(item.quantity, 10)
@@ -37,7 +58,7 @@ const returnsRepository = {
       if (error) throw error;
       return data;
     } catch (error) {
-      logger.error({ event: 'RETURNS_REPO_ATOMIC_FAIL', message: error.message, saleId: returnData.saleId });
+      logger.error({ event: 'RETURNS_REPO_ATOMIC_FAIL', message: error.message, saleId: returnData.sale_id });
       throw new AppError(`Error al procesar la devolución en la base de datos: ${error.message}`, 400);
     }
   },
@@ -65,5 +86,5 @@ const returnsRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Estructura de Repositorio Inmutable)
-module.exports = returnsRepository;
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
+export default returnsRepository;

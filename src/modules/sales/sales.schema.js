@@ -1,8 +1,9 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 /**
- * 💰 SALES VALIDATION SCHEMA (0 ERRORES)
+ * 💰 SALES VALIDATION SCHEMA (ESM)
  * Asegura que los datos de la transacción sean íntegros antes de tocar el stock.
+ * Mantiene el control analítico de métodos de pago externos para conciliación de caja.
  */
 const createSaleSchema = z.object({
   body: z.object({
@@ -24,12 +25,12 @@ const createSaleSchema = z.object({
       quantity: item.quantity
     }))),
 
-    // Agregado 'MIXED' y normalizado a camelCase en conformidad con script.js
+    // Se conservan todos los métodos para el control contable de váuchers externos
     paymentMethod: z.enum(['CASH', 'CARD', 'TRANSFER', 'MIXED'], {
       errorMap: () => ({ message: 'Ese método de pago no lo aceptamos aquí.' })
     }).default('CASH'),
 
-    // Captura de flujos para pagos combinados en el POS
+    // Captura de flujos para desglose de pagos combinados en el mostrador
     cashAmount: z.coerce
       .number()
       .nonnegative('El monto en efectivo no puede ser negativo.')
@@ -52,7 +53,7 @@ const createSaleSchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable para validationMiddleware)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM NOMBRADA
+export {
   createSaleSchema
 };

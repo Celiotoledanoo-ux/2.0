@@ -1,13 +1,14 @@
 /**
- * 📦 ARCHIVO BARRIL DEL MÓDULO DE AUTENTICACIÓN (CommonJS)
+ * 📦 ARCHIVO BARRIL DEL MÓDULO DE AUTENTICACIÓN (ESM)
  * Centraliza y expone las piezas públicas para simplificar importaciones externas.
  */
-const authRoutes = require('./auth.routes');
-const authService = require('./auth.service');
+import authRoutes from './auth.routes.js';
+import authService from './auth.service.js';
 
-// 🎯 CORRECCIÓN SENIOR: Transpilación exacta de export { default as authRoutes }
-module.exports = {
+// 🎯 EXPORTACIÓN ESM NOMBRADA UNIFICADA
+export {
   authRoutes,
   authService
 };
+
 

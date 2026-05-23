@@ -1,4 +1,3 @@
-
 const getCurrentISOString = () => {
   return new Date().toISOString();
 };
@@ -22,7 +21,8 @@ const getISODate = (date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
-module.exports = {
+// 🎯 EXPORTACIÓN ESM: Permite importaciones nombradas y desestructuradas limpias
+export {
   getCurrentISOString,
   formatLocalDate,
   getISODate

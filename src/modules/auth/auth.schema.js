@@ -1,8 +1,9 @@
-const { z } = require('zod');
-const { ROLE_VALUES } = require('../../shared/constants/roles');
+import { z } from 'zod';
+// ⚡ RESOLUCIÓN DE RUTA: Ajustado para apuntar al archivo renombrado oficial y con extensión .js obligatoria en ESM
+import { ROLE_VALUES } from '../../shared/constants/roles.constants.js';
 
 /**
- * 🔐 AUTH VALIDATION SCHEMAS - GLOW BEAUTY POS (4 ROLES)
+ * 🔐 AUTH VALIDATION SCHEMAS - GLOW BEAUTY POS (3 ROLES)
  * Sincronizado milimétricamente con el frontend y tu base de datos Supabase.
  */
 
@@ -50,8 +51,12 @@ const registerSchema = z.object({
           ...ROLE_VALUES.map(r => r.toUpperCase())
         ], 
         {
-          // CORRECCIÓN: Cambiado de error_map a errorMap (Nativo de Zod)
-          errorMap: () => ({ message: "Rol inválido. Elige entre admin, cashier, gerente o supervisor." })
+          /* 
+           * ⚡ RESOLUCIÓN DE LOGICA: Remoción del rol 'gerente'.
+           * Se purga la palabra 'gerente' del mensaje de error de Zod para salvaguardar 
+           * la coherencia con tu nuevo esquema operativo reducido a 3 roles en el POS.
+           */
+          errorMap: () => ({ message: "Rol inválido. Elige entre admin, cashier o supervisor." })
         }
       )
       .transform(val => val.toLowerCase().trim()) 
@@ -59,8 +64,8 @@ const registerSchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM NOMBRADA
+export {
   loginSchema,
   registerSchema
 };

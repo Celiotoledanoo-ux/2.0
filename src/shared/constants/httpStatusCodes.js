@@ -23,7 +23,7 @@ const HTTP_STATUS = Object.freeze({
   SERVICE_UNAVAILABLE: 503
 });
 
-// 🎯 EXPORTACIÓN EN FORMATO STRICTO COMMONJS (Desestructurable)
-module.exports = {
+// 🎯 EXPORTACIÓN ESM: Permite importaciones nombradas o desestructuradas
+export {
   HTTP_STATUS
 };
