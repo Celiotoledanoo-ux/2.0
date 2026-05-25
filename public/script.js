@@ -45,7 +45,8 @@ async function handleLogin(emailOrIdentifier, password) {
   try {
     const response = await apiFetch('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ identifier: emailOrIdentifier, password })
+      body: JSON.stringify({ email: emailOrIdentifier.trim(), 
+        password: password })
     });
 
     localStorage.setItem('glow_pos_token', response.token);
