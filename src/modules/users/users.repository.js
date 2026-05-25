@@ -6,9 +6,6 @@ import logger from '../../core/logger/logger.js';
 /**
  * 👥 USERS REPOSITORY - CONEXIÓN SQL DIRECTA (ESM)
  * Encargado de la persistencia de datos del personal de la boutique cosmética.
- * 
- * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con el modelo de 3 roles 
- * vigentes (admin, supervisor, cashier) y el archivo schema.sql definitivo.
  */
 
 const USER_SELECT = 'id, email, name, role, active, created_at';
@@ -16,7 +13,7 @@ const TARGET_TABLE = TABLES.USERS || 'users';
 
 const usersRepository = {
   /**
-   * 1. Obtener todos los usuarios (Lista de Personal para el Administrador)
+   * 1. Obtener todos los usuarios
    */
   async findAll() {
     try {
@@ -27,7 +24,6 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ Normalización a MAYÚSCULAS para consistencia con ROLES.*
       return (data || []).map(user => ({
         ...user,
         role: user.role?.toUpperCase().trim()
@@ -39,13 +35,18 @@ const usersRepository = {
   },
 
   /**
-   * 2. Crear registro sincronizado (Invocado tras crear la credencial en Supabase Auth)
+   * 2. Crear registro sincronizado
    */
   async create(userData) {
-    // Garantizamos que vaya a Postgres en minúsculas por el ENUM del schema.sql
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Alineación estricta al Tipo ENUM del schema.sql.
+     * Se elimina el '.toLowerCase()' erróneo. El payload transmite el rol estrictamente 
+     * en MAYÚSCULAS ('ADMIN', 'SUPERVISOR', 'CASHIER') haciendo match milimétrico 
+     * con las restricciones de la base de datos física en Supabase.
+     */
     const payload = {
       ...userData,
-      role: userData.role?.toLowerCase().trim()
+      role: userData.role?.toUpperCase().trim()
     };
 
     try {
@@ -57,7 +58,6 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ Retorna a Node.js en MAYÚSCULAS
       return {
         ...data,
         role: data.role?.toUpperCase().trim()
@@ -83,7 +83,6 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ Retorna a Node.js en MAYÚSCULAS
       if (data) {
         data.role = data.role?.toUpperCase().trim();
       }
@@ -95,13 +94,17 @@ const usersRepository = {
   },
 
   /**
-   * 4. Actualizar datos (Cambio de nombre, rol o Baja Lógica de Personal)
+   * 4. Actualizar datos (Cambio de nombre, rol o Baja Lógica)
    */
   async update(id, updateData) {
     const normalizedData = { ...updateData };
-    // Almacena en la base de datos relacional estrictamente en minúsculas
+    
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización inalterable en mutaciones.
+     * Se normaliza el rol para que viaje siempre en MAYÚSCULAS al motor relacional de Postgres.
+     */
     if (normalizedData.role) {
-      normalizedData.role = normalizedData.role.toLowerCase().trim();
+      normalizedData.role = normalizedData.role.toUpperCase().trim();
     }
 
     try {
@@ -114,7 +117,6 @@ const usersRepository = {
 
       if (error) throw error;
 
-      // ⚡ Expone el resultado a los servicios en MAYÚSCULAS
       return {
         ...data,
         role: data.role?.toUpperCase().trim()
@@ -126,5 +128,4 @@ const usersRepository = {
   }
 };
 
-// 🎯 EXPORTACIÓN ESM POR DEFECTO
 export default usersRepository;
