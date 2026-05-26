@@ -7,7 +7,7 @@ import logger from '../../core/logger/logger.js';
  * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS (ESM)
  * Sincronización impecable entre Supabase Auth y nuestras tablas de negocio.
  * 
- * 🎯 MISION DE BLINDAJE: Rigidez exacta de caracteres para el inicio de sesión.
+ * 🎯 MISION DE BLINDAJE: Consistencia y normalización total de accesos corporativos.
  */
 
 const USER_FIELDS = 'id, email, role, active, name';
@@ -45,22 +45,24 @@ const authRepository = {
 
   /**
    * Busca un usuario por su correo electrónico.
-   * @param {string} email - Correo exacto ingresado en el formulario
+   * @param {string} email - Correo ingresado en el formulario
    */
   async findByEmail(email) {
     if (!email?.trim()) return null;
 
     try {
       /* 
-       * ⚡ RESOLUCIÓN DE LÓGICA: Comparación estricta y literal de correos.
-       * Se remueve el '.toLowerCase()' del filtro. La consulta evalúa el string 
-       * bit por bit de forma exacta en PostgreSQL, respetando las mayúsculas y minúsculas 
-       * tal como el usuario las definió en su registro, garantizando consistencia pura.
+       * ⚡ RESOLUCIÓN DE LÓGICA: Búsqueda Insensible a Mayúsculas/Minúsculas.
+       * Se aplica '.toLowerCase()' al string de entrada. Esto garantiza compatibilidad 
+       * absoluta con la normalización nativa de Supabase Auth y previene bloqueos de acceso 
+       * si el personal ingresa caracteres capitalizados accidentalmente en la terminal de cobro.
        */
+      const normalizedEmail = email.trim().toLowerCase();
+
       const { data, error } = await db
         .from(TARGET_TABLE)
         .select(USER_FIELDS)
-        .eq('email', email.trim())
+        .eq('email', normalizedEmail)
         .maybeSingle();
 
       if (error) throw error;
@@ -81,4 +83,3 @@ const authRepository = {
 
 // 🎯 EXPORTACIÓN ESM POR DEFECTO
 export default authRepository;
-

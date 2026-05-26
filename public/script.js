@@ -40,13 +40,7 @@ async function apiFetch(endpoint, options = {}) {
 // 🛠️ CAPA 2: INTERFACES DE CONTROL DE LOS MÓDULOS DE NEGOCIO
 // ==========================================================================
 
-// --- MÓDULO 1: /AUTH (Inicio de Sesión Extricto por Correo) ---
-/* 
- * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización contractual estricta por Email.
- * Se elimina por completo el parámetro 'identifier' de acuerdo a tu loginSchema.
- * Se captura el par de tokens contables (access y refresh) para automatizar 
- * la renovación de las sesiones de las cajeras sin deslogueos ciegos en Render.
- */
+// --- MÓDULO 1: /AUTH (Inicio de Sesión Estricto por Correo) ---
 async function handleLogin(email, password) {
   try {
     const response = await apiFetch('/auth/login', {
@@ -86,11 +80,6 @@ async function syncCashRegisterUI() {
       return;
     }
 
-    /* 
-     * ⚡ RESOLUCIÓN DE SINTAXIS: Corrección de API nativa del DOM.
-     * Se corrige 'authScreen?.add' por 'authScreen?.classList.add'. Esto sana la manipulación 
-     * de estilos, evitando que Express lance excepciones de tipo que congelen el arranque.
-     */
     authScreen?.classList.add('d-none');
 
     const response = await apiFetch('/cash/status');
@@ -125,8 +114,12 @@ async function syncCashRegisterUI() {
         });
       }
       
-      // Cargar los módulos dinámicos adicionales tras abrir la caja chica
-      await fetchAndRenderEmployees();
+      // 🔒 CONTROL DE SEGURIDAD: Evita romper la app si la función aún no se carga
+      if (typeof fetchAndRenderEmployees === 'function') {
+        await fetchAndRenderEmployees();
+      } else {
+        console.warn('[WARNING]: fetchAndRenderEmployees() no está disponible todavía.');
+      }
 
     } else {
       mainWorkspace?.classList.add('d-none');
@@ -138,6 +131,7 @@ async function syncCashRegisterUI() {
     alert(`❌ Error cargando estado de caja:\n${err.message}`);
   }
 }
+
 // --- MÓDULO 3: /SALES (Procesamiento del Carrito de Ventas) ---
 async function processCheckoutCart() {
   if (!window.cartItems || window.cartItems.length === 0) {
@@ -186,10 +180,6 @@ async function fetchAndRenderAnalytics(range = 'day') {
     const response = await apiFetch(`/reports/summary?range=${range}`);
     const payload = response.data || response || {};
     
-    /* 
-     * ⚡ RESOLUCIÓN DE LÓGICA: Cortocircuitos defensivos de analíticas vacías.
-     * Se inyectan objetos por defecto si Supabase regresa métricas vacías al iniciar el mes.
-     */
     const metrics = payload.metrics || { total_revenue: 0, sales_count: 0 };
     const business_status = payload.business_status || { health_score: 'EXCELLENT', message: 'Sistema listo' };
 
@@ -218,13 +208,7 @@ async function fetchAndRenderAnalytics(range = 'day') {
     alert(`❌ Error al cargar los reportes analíticos:\n${err.message}`);
   }
 }
-
 // --- MÓDULO 5: /USERS (Renderizado Dinámico de la Plantilla de Personal) ---
-/* 
- * ⚡ RESOLUCIÓN DE LÓGICA: Acoplamiento de Personal en Vivo.
- * Esta nueva función jala a los empleados reales guardados en Supabase PostgreSQL.
- * Mapea los datos y limpia el listado estático, pintando sus roles oficiales en MAYÚSCULAS.
- */
 async function fetchAndRenderEmployees() {
   try {
     const employeeTableBody = document.getElementById('employees-table-body');
@@ -268,20 +252,16 @@ function initializeAdminDashboardListeners() {
     });
   });
 
+  // 🔒 DEFENSA: Solo inicializa analíticas por defecto si el usuario ya está autenticado
+  const token = localStorage.getItem('glow_pos_token');
   const defaultTab = document.querySelector('.report-range-tab[data-range="day"]');
-  if (defaultTab) {
+  if (defaultTab && token) {
     defaultTab.classList.add('active-tab');
     fetchAndRenderAnalytics('day');
   }
 }
 
 // --- MÓDULO 6: /INVENTORY (Buscador Avanzado e Inyección del Catálogo) ---
-/* 
- * ⚡ RESOLUCIÓN DE LÓGICA: Motor de Búsqueda Idempotente con Debounce.
- * Se implementa una variable de control 'searchTimeout' para retrasar la petición HTTP 
- * 300 milisegundos mientras la cajera escribe. Esto previene que cada teclazo sature 
- * la red en Render, permitiendo lecturas limpias con la pistola de códigos de barra.
- */
 let searchTimeout;
 
 function initializeProductSearch() {
@@ -303,7 +283,6 @@ async function fetchAndRenderCatalog(searchQuery = '') {
     const catalogGrid = document.getElementById('products-catalog-grid');
     if (!catalogGrid) return;
 
-    // Si no hay búsqueda, se consulta el catálogo plano; si hay query, se pasa el parámetro sanitizado
     const endpoint = searchQuery 
       ? `/inventory?search=${encodeURIComponent(searchQuery)}` 
       : '/inventory';
@@ -346,6 +325,58 @@ async function fetchAndRenderCatalog(searchQuery = '') {
   }
 }
 
+// ==========================================================================
+// 🛒 CAPA ADICIONAL: GESTIÓN INTERNA DEL CARRITO (SINCRO GLOBAL)
+// ==========================================================================
+/* 
+ * ⚡ ADICIÓN OBLIGATORIA: Se expone la función de forma global asignándola a 'window'.
+ * Permite que los botones inyectados dinámicamente mediante cadenas HTML ('onclick')
+ * interactúen con el estado del carrito sin romper la encapsulación de variables.
+ */
+window.addProductToCart = function(id, name, price) {
+  const existingItem = window.cartItems.find(item => item.product_id === id);
+
+  if (existingItem) {
+    existingItem.quantity += 1;
+  } else {
+    window.cartItems.push({
+      product_id: id,
+      name: name,
+      price: parseFloat(price),
+      quantity: 1
+    });
+  }
+  renderCartUI();
+};
+
+function renderCartUI() {
+  const cartContainer = document.querySelector('.cart-items-container');
+  if (!cartContainer) return;
+
+  cartContainer.innerHTML = '';
+
+  window.cartItems.forEach((item, index) => {
+    const div = document.createElement('div');
+    div.className = 'cart-item-row';
+    div.style = 'display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center;';
+    div.innerHTML = `
+      <div>
+        <span>${item.name}</span> <small style="color: var(--text-secondary)">x${item.quantity}</small>
+      </div>
+      <div>
+        <strong>$${(item.price * item.quantity).toFixed(2)}</strong>
+        <button type="button" style="background: none; border: none; color: red; margin-left: 8px; cursor: pointer;" onclick="removeCartItem(${index})">❌</button>
+      </div>
+    `;
+    cartContainer.appendChild(div);
+  });
+}
+
+window.removeCartItem = function(index) {
+  window.cartItems.splice(index, 1);
+  renderCartUI();
+};
+
 
 // ==========================================================================
 // 🔌 CAPA 3: INICIALIZACIÓN GLOBAL Y CAPTURA DE EVENTOS DEL DOM
@@ -354,12 +385,7 @@ window.cartItems = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   
-  // 1. Escuchar el Formulario de Login (Sincronizado Contractualmente)
-  /* 
-   * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización con el Input legítimo de Correo.
-   * Se purga la variable 'identifier' sustituyéndola por 'email'. Esto amarra el flujo 
-   * con 'login-email' del HTML de forma simétrica, enviando el string exacto a Zod.
-   */
+  // 1. Escuchar el Formulario de Login
   document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login-email')?.value.trim();
@@ -422,8 +448,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Inicializar los disparadores del panel de analíticas administrativas
+  // 🛠️ ACTIVACIONES DE MOTORES CORE:
   initializeAdminDashboardListeners();
+  initializeProductSearch(); // <- Agregado para habilitar la barra de búsqueda y lector de barras
+  
+  // Condición de arranque
+  const token = localStorage.getItem('glow_pos_token');
+  if (token) {
+    fetchAndRenderCatalog(); // <- Renderiza el catálogo plano solo si ya se está logueado
+  }
 
   // Determinar qué pantalla pintar en el arranque de la terminal
   syncCashRegisterUI();

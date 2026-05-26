@@ -3,7 +3,7 @@ import { env } from '../config/env.js';
 import AppError from '../errors/AppError.js';
 import logger from '../logger/logger.js';
 
-const { url, serviceRoleKey, anonKey } = env.supabase;
+const { url, serviceRoleKey, anonKey } = env?.supabase || {};
 
 // Garantizamos de forma estricta que las variables críticas existan antes de inicializar
 if (!url || !serviceRoleKey || !anonKey) {
@@ -40,16 +40,26 @@ const db = createClient(url, serviceRoleKey, {
 /**
  * 👤 FACTORÍA DE CLIENTES DE USUARIO DE CONTEXTO REAL
  * Utiliza la anonKey e inyecta el token JWT del empleado autenticado en el POS.
- * USO RECOMENDADO: En repositorios donde desees que las políticas RLS de Supabase 
- * identifiquen exactamente qué cajero está realizando la venta o alterando el stock.
  */
 const createUserClient = (token) => {
   if (!token) {
     throw new AppError('Acceso denegado. Token de seguridad requerido.', 401);
   }
 
+  /* 
+   * ⚡ RESOLUCIÓN DE TIPADO DEFENSIVO: Normalización de entrada.
+   * Si el middleware inyectó el token como un Array debido al split de cabeceras, 
+   * se extrae el string del JWT de la última posición. Si ya es un String, se procesa directo.
+   * Esto sana de raíz la excepción 'token.replace is not a function'.
+   */
+  let jwtString = Array.isArray(token) ? (token[1] || token[0]) : token;
+
+  if (typeof jwtString !== 'string') {
+    throw new AppError('Formato de token inválido para la factoría de Supabase.', 401);
+  }
+
   // Sanitización estricta del token de autorización HTTP
-  const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
+  const cleanToken = jwtString.replace(/^Bearer\s+/i, '').trim();
 
   return createClient(url, anonKey, {
     global: { 

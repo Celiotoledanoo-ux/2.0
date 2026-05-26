@@ -54,12 +54,12 @@
             <form id="cash-open-form">
                 <div class="input-group">
                     <label for="cash-opening-balance-input">Monto Inicial en Efectivo ($)</label>
-                    /* 
-                     * ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento y purga de inputs encimados redundantes.
-                     * Se eliminan los tags duplicados de cobro y arqueo que estaban amontonados 
-                     * dentro de este contenedor. Esto restaura la interfaz estética limpia de la boutique 
-                     * y previene colisiones de lectura de IDs en el DOM que alteraban el cálculo de vueltos.
-                     */
+                    <!-- 
+                      ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento y purga de inputs encimados redundantes.
+                      Se eliminan los tags duplicados de cobro y arqueo que estaban amontonados 
+                      dentro de este contenedor. Esto restaura la interfaz estética limpia de la boutique 
+                      y previene colisiones de lectura de IDs en el DOM que alteraban el cálculo de vueltos.
+                    -->
                     <input 
                         type="number" 
                         inputmode="decimal" 
@@ -177,24 +177,16 @@
                     <input 
                         type="number" 
                         inputmode="decimal" 
-                        id="cash-real-cash-counted" 
-                        placeholder="$0.00" 
-                        step="0.01" 
+                        id="cash-real-cash-counted"
                         required
                     >
                 </div>
-
-                <div class="input-group">
-                    <label for="cash-close-notes">Comentarios</label>
-                    <textarea id="cash-close-notes" placeholder="Observaciones del corte..."></textarea>
-                </div>
-
-                <button type="submit" class="btn-primary">Confirmar Corte</button>
+                <button type="submit" class="btn-danger">Finalizar Turno</button>
             </form>
         </div>
     </section>
 
-    <!-- ==========================================================================
+     <!-- ==========================================================================
       5. PANEL ADMINISTRATIVO (id="admin-dashboard-panel")
     ========================================================================== -->
     <section id="admin-dashboard-panel" class="d-none">
@@ -220,12 +212,12 @@
                                 <th>Estado</th>
                             </tr>
                         </thead>
-                        /* 
-                         * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización de Plantilla Dinámica.
-                         * Se purga la fila de maqueta estática. Este nodo 'tbody' actúa ahora como 
-                         * receptor limpio para la función 'fetchAndRenderEmployees()', listando en vivo 
-                         * al personal real de Supabase con sus jerarquías oficiales en MAYÚSCULAS.
-                         */
+                        <!-- 
+                          ⚡ RESOLUCIÓN DE LÓGICA: Sincronización de Plantilla Dinámica.
+                          Se purga la fila de maqueta estática. Este nodo 'tbody' actúa ahora como 
+                          receptor limpio para la función 'fetchAndRenderEmployees()', listando en vivo 
+                          al personal real de Supabase con sus jerarquías oficiales en MAYÚSCULAS.
+                        -->
                         <tbody id="employees-table-body">
                             <!-- Inyección dinámica de empleados por JS -->
                         </tbody>

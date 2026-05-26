@@ -3,7 +3,7 @@ import authController from './auth.controller.js';
 import { protect, restrictTo } from '../../core/middlewares/auth.middlewares.js';
 import { validationMiddleware } from '../../core/middlewares/validation.middlewares.js'; 
 import { loginSchema, registerSchema } from './auth.schema.js';
-// ⚡ RESOLUCIÓN DE RUTA: Apuntamos al archivo correcto renombrado 'roles.constants.js' con su extensión .js
+// ⚡ RESOLUCIÓN DE RUTA: Importación simétrica del objeto global de roles autorizados
 import { ROLES } from '../../shared/constants/roles.constants.js'; 
 
 const router = Router();
@@ -16,7 +16,7 @@ const router = Router();
 // POST /api/v1/auth/login -> Entrada libre (Público)
 router.post('/login', validationMiddleware(loginSchema), authController.login);
 
-// POST /api/v1/auth/logout -> Requiere sesión activa (Privado)
+// POST /api/v1/auth/logout -> Requiere sesión activa (Privado - Protegido)
 router.post('/logout', protect, authController.logout);
 
 /* 
@@ -33,6 +33,13 @@ router.post(
   validationMiddleware(registerSchema),
   authController.register
 );
+
+/**
+ * 🔄 REFRESH TOKEN ENDPOINT -> Entrada libre (Público)
+ * ⚡ ADICIÓN OBLIGATORIA: Expone el endpoint de refresco hacia el exterior. El frontend 
+ * enviará peticiones automáticas aquí para renovar las sesiones de las cajeras sin cierres ciegos.
+ */
+router.post('/refresh-token', authController.refreshSession);
 
 // 🎯 EXPORTACIÓN ESM POR DEFECTO
 export default router;

@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa'; // ⚡ INYECCIÓN DE SEGURIDAD ASIMÉTRICA JWKS
 import AppError from '../errors/AppError.js';
 import { env } from '../config/env.js';
-import usersRepo from '../../modules/users/users.repository.js'; 
+import { db } from '../database/supabaseClient.js'; // 🛠️ Solución a la dependencia circular: Acceso directo a DB
 import logger from '../logger/logger.js';
 import { ROLES } from '../../shared/constants/roles.constants.js'; 
 
@@ -63,10 +63,19 @@ const protect = async (req, res, next) => {
     // El ID del usuario en los tokens de Supabase viene de forma estandarizada en la propiedad 'sub'
     const userId = decoded.sub;
 
-    // Sincronización con PostgreSQL local para validar estado en tiempo real
-    const dbUser = await usersRepo.findById(userId);
+    /* 
+     * ⚡ OPTIMIZACIÓN CONTRA DEPENDENCIAS CÍCLICAS:
+     * Se realiza la consulta directa a Supabase utilizando la conexión de 'db'. 
+     * Esto blinda el arranque del core del servidor evitando acoplamientos con los 
+     * repositorios comerciales del directorio '/src/modules/'.
+     */
+    const { data: dbUser, error: dbError } = await db
+      .from('users')
+      .select('id, email, role, active, name')
+      .eq('id', userId)
+      .maybeSingle();
 
-    if (!dbUser) {
+    if (dbError || !dbUser) {
       return next(new AppError('Tu perfil de empleado ya no existe en nuestro sistema SQL.', 401));
     }
 
@@ -89,7 +98,7 @@ const protect = async (req, res, next) => {
       role: dbUser.role?.toUpperCase().trim(), // Normalizado para cuadrar con ROLES.ADMIN
       caja: displayCaja,
       name: dbUser.name,
-      token // Guardamos el token limpio para poder pasárselo a createUserClient()
+      token 
     });
 
     next();
@@ -113,8 +122,10 @@ const restrictTo = (...roles) => {
     const allowedRoles = roles.map(role => role.toUpperCase().trim());
     const userRole = req.user.role;
 
-    // Obtener de forma segura el rol administrador de la constante compartida
-    const adminRole = ROLES?.ADMIN?.toUpperCase().trim() || 'ADMIN';
+    // Obtener de forma segura el rol administrador de la constante compartida con fallback defensivo
+    const adminRole = typeof ROLES === 'object' && ROLES?.ADMIN 
+      ? ROLES.ADMIN.toUpperCase().trim() 
+      : 'ADMIN';
 
     if (allowedRoles.includes(userRole) || userRole === adminRole) {
       return next();

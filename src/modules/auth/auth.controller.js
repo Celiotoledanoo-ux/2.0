@@ -11,10 +11,8 @@ const authController = {
    * 1. INICIO DE SESIÓN DE EMPLEADOS
    */
   login: catchAsync(async (req, res) => {
-    // El validationMiddleware ya limpió el objeto y lo dejó directo en req.body
     const { email, password } = req.body;
 
-    // Ejecutamos la lógica de negocio pasando directamente el correo sanitizado literal
     const result = await authService.login(email, password);
 
     logger.info({
@@ -24,19 +22,13 @@ const authController = {
       ip: req.ip
     });
 
-    /* 
-     * ⚡ RESOLUCIÓN DE PAYLOAD: Amarre Contable de Sesión y Refresh Tokens.
-     * Se inyecta la propiedad 'refreshToken' en la respuesta JSON para que la interfaz 
-     * en el cliente pueda automatizar los ciclos de refresco de tokens en Render. 
-     * Se añade cortocircuito seguro en el split del nombre para mitigar excepciones de tipo null.
-     */
     const fallbackName = result.user?.name ? result.user.name.split(' ')[0] : 'fiera';
 
     return res.status(200).json({
       status: 'success',
       message: `¡Qué onda, ${fallbackName}! Ya puedes operar.`,
       token: result.session?.access_token, 
-      refreshToken: result.session?.refresh_token, // Llave mandatoria para el BI Engine del frontend
+      refreshToken: result.session?.refresh_token, 
       user: result.user,   
       data: result
     });
@@ -50,6 +42,7 @@ const authController = {
 
     logger.info({
       event: 'AUTH_LOGOUT',
+      // NOTA: Asegúrate de añadir tu authMiddleware en auth.routes.js para poblar req.user
       userId: req.user?.id || 'anonymous_cashier',
       ip: req.ip
     });
@@ -78,6 +71,29 @@ const authController = {
       status: 'success',
       message: 'Empleado registrado con éxito en el sistema.',
       data: { user: newUser }
+    });
+  }),
+
+  /**
+   * 4. 🔄 RENOVACIÓN AUTOMÁTICA DE SESIÓN (EVITA LOGOUTS CIEGOS)
+   * ⚡ ADICIÓN OBLIGATORIA: Conecta el ciclo de persistencia del frontend (script.js)
+   * con el backend para intercambiar el refresh token antes de que expire la sesión.
+   */
+  refreshSession: catchAsync(async (req, res) => {
+    const { refreshToken } = req.body;
+
+    const sessionData = await authService.refreshSession(refreshToken);
+
+    logger.info({
+      event: 'AUTH_TOKEN_REFRESHED',
+      ip: req.ip
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      token: sessionData.access_token,
+      refreshToken: sessionData.refresh_token,
+      data: sessionData
     });
   })
 };

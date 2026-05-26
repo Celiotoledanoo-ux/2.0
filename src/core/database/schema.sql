@@ -172,28 +172,32 @@ DECLARE
     v_product_tone VARCHAR;
     v_current_stock INTEGER;
 BEGIN
-    FOR item IN SELECT product_id, quantity, price_at_sale FROM sales_items WHERE sale_id = NEW.id LOOP
+    -- Ciclo para iterar cada renglón del ticket de venta
+    FOR item IN (SELECT product_id, quantity, price_at_sale FROM sales_items WHERE sale_id = NEW.id) LOOP
         
         SELECT name, brand, tone, stock INTO v_product_name, v_product_brand, v_product_tone, v_current_stock 
         FROM inventory WHERE id = item.product_id;
 
+        -- Control defensivo: Evita ventas en negativo si el frontend se desfasa
         IF v_current_stock < item.quantity THEN
             RAISE EXCEPTION 'Stock insuficiente en vitrina para [%] % (%)! Solo quedan % piezas.', 
                 v_product_brand, v_product_name, v_product_tone, v_current_stock;
         END IF;
 
+        -- Modificación atómica de stock e inyección en el Kardex
         PERFORM modify_stock(
             item.product_id, 
             -item.quantity, 
             NEW.created_by, 
             'VENTA REGISTRADA TICKET ID: ' || NEW.id
         );
-
-END LOOP;
+    END LOOP; -- 🛠️ CORRECCIÓN: Cierre explícito y limpio del bucle FOR en PostgreSQL
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Destrucción y recreación limpia del disparador para evitar colisiones en migraciones
 DROP TRIGGER IF EXISTS tr_update_stock_on_sale ON sales;
 CREATE TRIGGER tr_update_stock_on_sale
     AFTER INSERT ON sales

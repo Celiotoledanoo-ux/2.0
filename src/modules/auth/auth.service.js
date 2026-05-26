@@ -14,7 +14,7 @@ const authService = {
    * 🛒 INICIO DE SESIÓN DE EMPLEADOS (Sincronizado Contractualmente)
    */
   async login(email, password) {
-    const cleanEmail = email?.trim();
+    const cleanEmail = email?.trim().toLowerCase(); // Normalización consistente con el repositorio
     if (!cleanEmail || !password) {
       throw new AppError('Email y contraseña requeridos.', 400);
     }
@@ -51,17 +51,11 @@ const authService = {
   async register(userData) {
     const { email, name, role, password } = userData;
 
-    /* 
-     * ⚡ RESOLUCIÓN DE LÓGICA: Remoción de redundancias y valores por defecto.
-     * Se purga la asignación automática 'CASHIER'. Si el rol o la contraseña no transitan 
-     * desde el payload sanitizado por Zod, el sistema aborta de inmediato. Se respeta 
-     * la contraseña exacta provista por el dueño en el registro eliminando claves genéricas.
-     */
     if (!role) throw new AppError('El rol del empleado es mandatorio.', 400);
     if (!password) throw new AppError('La contraseña de registro es obligatoria.', 400);
 
     const cleanRole = role.trim().toUpperCase();
-    const cleanEmail = email?.trim();
+    const cleanEmail = email?.trim().toLowerCase(); // Sincronizado con Supabase Auth nativo
 
     const existing = await authRepository.findByEmail(cleanEmail);
     if (existing) throw new AppError('Este correo ya está registrado en el Punto de Venta.', 400);
@@ -69,7 +63,7 @@ const authService = {
     // 1. Crear usuario en Supabase Auth con las credenciales literales exactas
     const { data, error: signUpError } = await db.auth.signUp({
       email: cleanEmail,
-      password: password, // Usa la clave real escrita por el administrador
+      password: password, 
       options: { 
         data: { 
           full_name: name.trim(), 
@@ -96,15 +90,29 @@ const authService = {
         }
       ]);
 
-    // 🛡️ MECANISMO DE ROLLBACK ATÓMICO SENIOR
+    // 🛡️ MECANISMO DE ROLLBACK ATÓMICO DEFENSIVO
     if (profileError) {
       logger.warn({
         event: 'AUTH_REGISTRATION_ROLLBACK_TRIGGERED',
-        message: `Falló perfil en DB, eliminando cuenta de Auth: ${profileError.message}`,
+        message: `Falló perfil en DB, intentando purgar cuenta de Auth: ${profileError.message}`,
         userId: authUser.id
       });
 
-      await db.auth.admin.deleteUser(authUser.id);
+      try {
+        /* 
+         * ⚡ ENCAPSULACIÓN DE SEGURIDAD: Evita el desplome por falta de Service Role Key.
+         * Si tu cliente 'db' estándar no posee privilegios 'admin' (Service Key), el borrado 
+         * fallará de manera silenciosa en Node.js, registrando el log pero permitiendo que el 
+         * AppError principal se comunique correctamente hacia el cliente sin congelar el hilo.
+         */
+        await db.auth.admin.deleteUser(authUser.id);
+      } catch (adminError) {
+        logger.error({
+          event: 'AUTH_ROLLBACK_PRIVILEGE_ERROR',
+          message: `No se pudo eliminar el usuario de Auth por falta de permisos de administrador: ${adminError.message}`
+        });
+      }
+
       throw new AppError('No se pudo completar el alta del empleado en la base de datos relacional.', 500);
     }
 

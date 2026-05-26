@@ -6,8 +6,6 @@ import logger from '../../core/logger/logger.js';
 /**
  * 📦 INVENTORY REPOSITORY - SQL DIRECT CONNECTION (ESM)
  * Gestión de productos y stock con integridad de datos para Maquillaje Glow POS.
- * 
- * 🎯 MISION DE BLINDAJE: Motor de búsqueda multiparámetro unificado (Texto + SKU).
  */
 
 const PRODUCT_SELECT = 'id, name, brand, tone, sku, price, stock, min_stock, active, category_id, category:categories(name)';
@@ -56,10 +54,10 @@ const inventoryRepository = {
         .from(TARGET_TABLE)
         .select(PRODUCT_SELECT)
         .eq('sku', sku.toUpperCase().trim())
-        .eq('active', true);
+        .eq('active', true); // Solo listamos los que están vigentes en vitrina
 
       if (error) throw error;
-      return data || []; 
+      return data || []; // Retorna arreglo para tolerar múltiples variantes de color del mismo SKU
     } catch (error) {
       logger.error({ event: 'INVENTORY_REPO_SKU_ERROR', message: error.message });
       throw new AppError('Error al buscar por SKU en el almacén.', 500);
@@ -86,7 +84,7 @@ const inventoryRepository = {
   },
 
   /**
-   * 4. Listado con Filtros Dinámicos (Buscador Inteligente de Mostrador)
+   * 4. Listado con Filtros Dinámicos (Buscador Inteligente del POS)
    */
   async findAll(filters = {}) {
     try {
@@ -96,25 +94,17 @@ const inventoryRepository = {
         query = query.eq('sku', filters.sku.toUpperCase().trim());
       }
       
-      /* 
-       * ⚡ RESOLUCIÓN DE LÓGICA: Amalgama multiparámetro de coincidencia asíncrona.
-       * Se acopla la consulta extendiendo el operador '.or()' para que admita evaluaciones 
-       * parciales e insensibles por 'sku.ilike'. Si la cajera teclea una marca o escanea un código 
-       * con la pistola, la base de datos de Supabase resolverá el match en un solo viaje de red.
-       */
       if (filters.name) {
         const cleanSearch = filters.name.trim();
-        query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%,tone.ilike.%${cleanSearch}%,sku.ilike.%${cleanSearch}%`);
+        query = query.or(`name.ilike.%${cleanSearch}%,brand.ilike.%${cleanSearch}%,tone.ilike.%${cleanSearch}%`);
       }
 
       if (filters.category_id || filters.categoryId) {
         query = query.eq('category_id', filters.category_id || filters.categoryId);
       }
 
-      // Restricción defensiva: Solo listamos cosméticos vigentes ('active', true) en el catálogo público
-      query = query.eq('active', true);
-
       const { data, error } = await query
+        .order('active', { ascending: false }) 
         .order('brand', { ascending: true })
         .order('name', { ascending: true });
 
@@ -127,10 +117,16 @@ const inventoryRepository = {
   },
 
   /**
-   * 5. Ajuste de Stock Atómico (Postgres RPC)
+   * 5. Ajuste de Stock Atómico (Blindado con Auditoría de Logs integrada en Postgres RPC)
    */
   async updateStock(productId, quantityDelta, userId, reason = 'AJUSTE MANUAL REPOSITORIO') {
     try {
+      /* 
+       * ⚡ RESOLUCIÓN DE LOGICA: Ajuste de metadatos de auditoría RPC.
+       * El llamado se sincroniza de forma exacta con los parámetros de la función almacenada, 
+       * pasando el ID del usuario del personal autenticado bajo el modelo homologado de roles 
+       * para garantizar trazabilidad contable inalterable en 'inventory_logs'.
+       */
       const { error } = await db
         .rpc('modify_stock', { 
           p_id: productId, 

@@ -67,8 +67,14 @@ const registerSchema = z.object({
           ...ROLE_VALUES.map(r => r.toUpperCase())
         ], 
         {
-          required_error: "El rol del empleado es mandatorio, fiera.",
-          errorMap: () => ({ message: "Rol inválido. Elige entre admin, cashier o supervisor." })
+          // 🛠️ CORRECCIÓN DE SINTAXIS: Se centralizan todos los mensajes dentro del errorMap.
+          // Esto evita que Zod arroje el error de colisión de tipos en el constructor.
+          errorMap: (issue, ctx) => {
+            if (issue.code === z.ZodIssueCode.invalid_enum_value) {
+              return { message: "Rol inválido. Elige entre admin, cashier o supervisor, fiera." };
+            }
+            return { message: "El rol del empleado es mandatorio, fiera." };
+          }
         }
       )
       /* 

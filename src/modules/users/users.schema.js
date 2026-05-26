@@ -34,7 +34,7 @@ const createUserSchema = z.object({
       .regex(/[A-Z]/, 'La contraseña debe incluir al menos una letra mayúscula.')
       .regex(/[0-9]/, 'La contraseña debe incluir al menos un número.'),
     
-    // Consumo dinámico de constantes compartidas soportando mayúsculas y minúsculas
+        // Consumo dinámico de constantes compartidas soportando mayúsculas y minúsculas
     role: z
       .enum(
         [
@@ -42,10 +42,17 @@ const createUserSchema = z.object({
           ...ROLE_VALUES.map(r => r.toUpperCase())
         ], 
         {
-          required_error: "El rol asignado es mandatorio para dar de alta al empleado.",
-          errorMap: () => ({ message: "El rol asignado no existe en este negocio, bro. Elige entre admin, cashier o supervisor." })
+          // 🛠️ RESOLUCIÓN: Se centralizan todos los mensajes dentro del errorMap.
+          // Esto evita la colisión de parámetros de configuración en el constructor de Zod.
+          errorMap: (issue, ctx) => {
+            if (issue.code === 'invalid_enum_value') {
+              return { message: "El rol asignado no existe en este negocio, bro. Elige entre admin, cashier o supervisor." };
+            }
+            return { message: "El rol asignado es mandatorio para dar de alta al empleado." };
+          }
         }
       )
+
       /* 
        * ⚡ RESOLUCIÓN DE LÓGICA: Homologación y Remoción de Valores por Defecto.
        * Se elimina '.default()' para forzar la selección consciente del rango del empleado.
