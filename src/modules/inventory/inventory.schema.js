@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * 📦 PRODUCT SCHEMA - MAQUILLAJE POS CORREGIDO (ESM)
- * Sincronizado milimétricamente con el frontend dinámico de la terminal.
+ * Sincronizado milimétricamente con el frontend dinámico de la terminal y Supabase SQL.
  */
 const productSchema = z.object({
   body: z.object({ 
@@ -29,9 +29,15 @@ const productSchema = z.object({
       .toUpperCase()
       .min(4, 'El SKU debe tener mínimo 4 caracteres.'),
     
+    /* 
+     * ⚡ RESOLUCIÓN DE INTEGRIDAD: Calce exacto con la restricción de Postgres (price >= 0).
+     * Se reemplaza '.positive()' por '.nonnegative()'. Esto permite registrar cosméticos promocionales 
+     * o muestras gratis a costo cero en el mostrador sin romper el esquema de validación previo, 
+     * heredando la flexibilidad real instalada en tu SQL Editor.
+     */
     price: z.coerce
       .number({ invalid_type_error: 'El precio debe ser un número.' })
-      .positive('¿Gratis? El precio debe ser mayor a 0.'),
+      .nonnegative('El precio no puede ser un número negativo, fiera.'),
     
     stock: z.coerce
       .number({ invalid_type_error: 'El stock inicial debe ser un número.' })

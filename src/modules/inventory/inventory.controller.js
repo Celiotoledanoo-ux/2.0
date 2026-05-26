@@ -5,6 +5,8 @@ import AppError from '../../core/errors/AppError.js';
 /**
  * 📦 INVENTORY CONTROLLER - GESTIÓN DE PRODUCTOS (ESM)
  * Sincronizado milimétricamente con public/script.js y Supabase SQL.
+ * 
+ * 🎯 MISION DE BLINDAJE: Transmisión limpia de consultas de red multiparámetro.
  */
 const inventoryController = {
   /**
@@ -34,6 +36,7 @@ const inventoryController = {
    * 2. LISTAR INVENTARIO / BUSCADOR INTELIGENTE DEL POS
    */
   getAll: catchAsync(async (req, res) => {
+    // Consume req.query capturando de forma flexible la variable 'search' provista por el frontend
     const products = await inventoryService.getProducts(req.query);
 
     return res.status(200).json({

@@ -12,12 +12,10 @@ const authController = {
    */
   login: catchAsync(async (req, res) => {
     // El validationMiddleware ya limpió el objeto y lo dejó directo en req.body
-    const { email, identifier, password } = req.body;
-    
-    const loginUser = identifier || email;
+    const { email, password } = req.body;
 
-    // Ejecutamos la lógica de negocio
-    const result = await authService.login(loginUser, password);
+    // Ejecutamos la lógica de negocio pasando directamente el correo sanitizado literal
+    const result = await authService.login(email, password);
 
     logger.info({
       event: 'AUTH_LOGIN_SUCCESS',
@@ -26,11 +24,19 @@ const authController = {
       ip: req.ip
     });
 
-    // Mantenemos el formato de respuesta limpia sincronizado con tu script.js
+    /* 
+     * ⚡ RESOLUCIÓN DE PAYLOAD: Amarre Contable de Sesión y Refresh Tokens.
+     * Se inyecta la propiedad 'refreshToken' en la respuesta JSON para que la interfaz 
+     * en el cliente pueda automatizar los ciclos de refresco de tokens en Render. 
+     * Se añade cortocircuito seguro en el split del nombre para mitigar excepciones de tipo null.
+     */
+    const fallbackName = result.user?.name ? result.user.name.split(' ')[0] : 'fiera';
+
     return res.status(200).json({
       status: 'success',
-      message: `¡Qué onda, ${result.user.name.split(' ')[0]}! Ya puedes operar.`,
-      token: result.session?.access_token || result.token, // Mapeo real de Supabase access_token
+      message: `¡Qué onda, ${fallbackName}! Ya puedes operar.`,
+      token: result.session?.access_token, 
+      refreshToken: result.session?.refresh_token, // Llave mandatoria para el BI Engine del frontend
       user: result.user,   
       data: result
     });
@@ -40,12 +46,6 @@ const authController = {
    * 2. CIERRE DE SESIÓN CENTRAL
    */
   logout: catchAsync(async (req, res) => {
-    /* 
-     * ⚡ RESOLUCIÓN DE LÓGICA: Contexto seguro en deslogueos.
-     * En un entorno con múltiples cajeras firmadas, es recomendable pasarle los metadatos 
-     * o token al servicio si se requiere invalidación en cascada, protegiendo al logger 
-     * de marcar valores indefinidos mapeando el 'req.user' inyectado previamente.
-     */
     await authService.logout();
 
     logger.info({
@@ -64,7 +64,6 @@ const authController = {
    * 3. REGISTRO / ALTA DE PERSONAL (ADMIN ONLY)
    */
   register: catchAsync(async (req, res) => {
-    // Parsea los datos limpios de la raíz gracias al validationMiddleware
     const newUser = await authService.register(req.body);
 
     logger.info({

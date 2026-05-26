@@ -1,18 +1,20 @@
 import { db } from '../../core/database/supabaseClient.js';
-import authRepository from './auth.repository.js'; // ⚡ Importado con extensión .js obligatoria
+import authRepository from './auth.repository.js'; 
 import AppError from '../../core/errors/AppError.js';
 import logger from '../../core/logger/logger.js'; 
 
 /**
  * 🔐 AUTH SERVICE - FULL MODULE (ESM)
  * Perfección, limpieza y control total de sesiones con Rollback de seguridad.
+ * 
+ * 🎯 MISION DE BLINDAJE: Rigidez literal de caracteres y roles 100% explícitos.
  */
 const authService = {
   /**
-   * 🛒 INICIO DE SESIÓN DE EMPLEADOS
+   * 🛒 INICIO DE SESIÓN DE EMPLEADOS (Sincronizado Contractualmente)
    */
-  async login(identifier, password) {
-    const cleanEmail = identifier?.trim().toLowerCase();
+  async login(email, password) {
+    const cleanEmail = email?.trim();
     if (!cleanEmail || !password) {
       throw new AppError('Email y contraseña requeridos.', 400);
     }
@@ -26,13 +28,13 @@ const authService = {
       throw new AppError('Credenciales incorrectas. Verifica tus datos.', 401);
     }
 
+    // Consulta limpia al repositorio unificado en MAYÚSCULAS
     const userProfile = await authRepository.findById(data.user.id);
     if (!userProfile) throw new AppError('Perfil no encontrado en el sistema.', 404);
     if (!userProfile.active) throw new AppError('Esta cuenta está desactivada, bro.', 403);
 
     return {
       user: userProfile, 
-      // ⚡ Retornamos los nombres nativos con guion bajo e inyectamos duplicados en camelCase como fail-safe
       session: {
         access_token: data.session?.access_token,
         refresh_token: data.session?.refresh_token,
@@ -44,29 +46,30 @@ const authService = {
   },
 
   /**
-   * 👤 ALTA DE PERSONAL CON CONTRASEÑA TEMPORAL
+   * 👤 ALTA DE PERSONAL (Contraseña y Rol Mandatorios)
    */
   async register(userData) {
-    const { email, name, role } = userData;
+    const { email, name, role, password } = userData;
 
     /* 
-     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización inmutable del flujo sin Gerentes.
-     * Al procesar el alta de personal, el valor predeterminado hereda la limpieza del 
-     * validador de esquemas Zod (users.schema), garantizando que las cuentas transiten 
-     * mapeadas únicamente bajo las 3 jerarquías oficiales vigentes (admin, supervisor o cashier).
+     * ⚡ RESOLUCIÓN DE LÓGICA: Remoción de redundancias y valores por defecto.
+     * Se purga la asignación automática 'CASHIER'. Si el rol o la contraseña no transitan 
+     * desde el payload sanitizado por Zod, el sistema aborta de inmediato. Se respeta 
+     * la contraseña exacta provista por el dueño en el registro eliminando claves genéricas.
      */
-    const cleanRole = role ? role.trim().toLowerCase() : 'cashier';
-    const cleanEmail = email?.trim().toLowerCase();
+    if (!role) throw new AppError('El rol del empleado es mandatorio.', 400);
+    if (!password) throw new AppError('La contraseña de registro es obligatoria.', 400);
+
+    const cleanRole = role.trim().toUpperCase();
+    const cleanEmail = email?.trim();
 
     const existing = await authRepository.findByEmail(cleanEmail);
     if (existing) throw new AppError('Este correo ya está registrado en el Punto de Venta.', 400);
 
-    const temporaryPassword = `GlowPos${new Date().getFullYear()}*`;
-
-    // 1. Crear usuario en Supabase Auth
+    // 1. Crear usuario en Supabase Auth con las credenciales literales exactas
     const { data, error: signUpError } = await db.auth.signUp({
       email: cleanEmail,
-      password: temporaryPassword,
+      password: password, // Usa la clave real escrita por el administrador
       options: { 
         data: { 
           full_name: name.trim(), 
@@ -93,7 +96,7 @@ const authService = {
         }
       ]);
 
-    // 🛡️ MECANISMO DE ROLLBACK SENIOR 
+    // 🛡️ MECANISMO DE ROLLBACK ATÓMICO SENIOR
     if (profileError) {
       logger.warn({
         event: 'AUTH_REGISTRATION_ROLLBACK_TRIGGERED',
@@ -108,9 +111,8 @@ const authService = {
     return {
       id: authUser.id,
       email: authUser.email,
-      role: cleanRole.toUpperCase(), 
-      temporaryKey: temporaryPassword,
-      message: 'Empleado dado de alta de forma exitosa.'
+      role: cleanRole, 
+      message: 'Empleado dado de alta de forma exitosa en el sistema.'
     };
   },
 

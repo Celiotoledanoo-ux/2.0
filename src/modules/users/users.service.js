@@ -1,4 +1,3 @@
-// ⚡ RESOLUCIÓN DE NOMBRE: Homologación del alias a plural para coincidir con la nomenclatura del archivo
 import usersRepository from './users.repository.js';
 import { db } from '../../core/database/supabaseClient.js';
 import AppError from '../../core/errors/AppError.js';
@@ -7,8 +6,7 @@ import logger from '../../core/logger/logger.js';
 /**
  * 👥 USERS SERVICE - GESTIÓN DE PERSONAL (ESM)
  * 
- * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con el esquema definitivo 
- * de 3 roles oficiales (admin, supervisor, cashier) y Supabase Central.
+ * 🎯 MISION DE BLINDAJE: Rigidez literal de caracteres y sincronización en MAYÚSCULAS.
  */
 
 const usersService = {
@@ -20,8 +18,6 @@ const usersService = {
     if (!users) {
       throw new AppError('No se pudo recuperar la lista de usuarios, bro.', 500);
     }
-    
-    // El repositorio ya los entrega normalizados en MAYÚSCULAS para cumplir el estándar
     return users;
   },
 
@@ -29,23 +25,20 @@ const usersService = {
    * 👤 REGISTRO DE USUARIO (ADMIN ONLY)
    */
   async registerUser(userData) {
-    const { email, password, name, role = 'CASHIER' } = userData;
-
-    // 1. Normalización de Email/Identificador
-    let finalEmail = email.trim().toLowerCase();
-    if (!finalEmail.includes('@')) {
-      finalEmail = `${finalEmail.replace(/\s+/g, '')}@pos.system`;
-    }
+    const { email, password, name, role } = userData;
 
     /* 
-     * ⚡ RESOLUCIÓN DE LÓGICA: Purga de código muerto y roles fantasmas.
-     * Se remueve el mapeo condicional del rol 'SELLER' debido a que el validador de Zod 
-     * (users.schema.js) actúa como muro de contención previo, asegurando que a esta capa 
-     * de negocio solo ingresen mutados los 3 roles corporativos inmutables del Punto de Venta.
+     * ⚡ RESOLUCIÓN DE LÓGICA: Preservación de la capitalización exacta y roles explícitos.
+     * Se remueven las transformaciones '.toLowerCase()' y los fallbacks automáticos de cadenas. 
+     * El email y password viajan idénticos y literales a la autenticación de Supabase Auth Central, 
+     * y el rol se homologa a MAYÚSCULAS para acoplarse fielmente al tipo ENUM de schema.sql.
      */
-    const cleanRoleForDB = role.toLowerCase().trim();
+    if (!role) throw new AppError('El rol del empleado es mandatorio.', 400);
 
-    // 2. Registro en Capa de Autenticación Central (Supabase Auth)
+    const finalEmail = email.trim();
+    const cleanRoleForDB = role.trim().toUpperCase();
+
+    // 2. Registro en Capa de Autenticación Central (Supabase Auth GoTrue)
     const { data: authData, error: authError } = await db.auth.admin.createUser({
       email: finalEmail,
       password: password,
@@ -61,12 +54,12 @@ const usersService = {
     }
 
     try {
-      // 3. Sincronización con Tabla SQL
+      // 3. Sincronización atómica con Tabla SQL
       const newUser = await usersRepository.create({
         id: authData.user.id,
         email: finalEmail,
         name: name.trim(),
-        role: cleanRoleForDB, // El repositorio se encarga de guardarlo en minúscula y retornarlo en MAYÚSCULA
+        role: cleanRoleForDB
       });
 
       return newUser;
@@ -95,7 +88,6 @@ const usersService = {
 
   /**
    * ⚡ ACTIVAR/DESACTIVAR EMPLEADO (BAJA LÓGICA DE PERSONAL)
-   * Sincroniza el bloqueo tanto en PostgreSQL como en Supabase Auth Central para revocación inmediata de accesos.
    */
   async toggleUserStatus(id, activeStatus) {
     // 1. Actualizar la base de datos relacional para reportes y logs
@@ -105,7 +97,7 @@ const usersService = {
     }
 
     try {
-      // 2. Sincronización Senior Central: Si se desactiva, bloqueamos la capacidad de inicio de sesión en Supabase Auth
+      // 2. Sincronización Central: Bloqueo inmediato de accesos GoTrue en Supabase
       await db.auth.admin.updateUserById(id, {
         user_metadata: { 
           active: activeStatus,
@@ -113,8 +105,6 @@ const usersService = {
         }
       });
     } catch (authError) {
-      // Registramos en el logger pero no bloqueamos la respuesta, ya que el middleware 'protect' 
-      // de igual forma rebotará al usuario al leer el campo 'active' modificado en la base de datos relacional.
       logger.error({
         event: 'SUPABASE_AUTH_USER_UPDATE_WARNING',
         message: authError.message,
@@ -126,5 +116,4 @@ const usersService = {
   }
 };
 
-// 🎯 EXPORTACIÓN ESM: Exportación por defecto limpia para la capa de controladores
 export default usersService;

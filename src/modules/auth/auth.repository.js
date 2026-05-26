@@ -6,6 +6,8 @@ import logger from '../../core/logger/logger.js';
 /**
  * 🔐 AUTH REPOSITORY - EL GUARDIÁN DE LOS DATOS (ESM)
  * Sincronización impecable entre Supabase Auth y nuestras tablas de negocio.
+ * 
+ * 🎯 MISION DE BLINDAJE: Rigidez exacta de caracteres para el inicio de sesión.
  */
 
 const USER_FIELDS = 'id, email, role, active, name';
@@ -14,6 +16,7 @@ const TARGET_TABLE = TABLES?.USERS || 'users';
 const authRepository = {
   /**
    * Busca un usuario por su ID único.
+   * @param {string} id - UUID de Supabase Auth
    */
   async findById(id) {
     if (!id) return null;
@@ -27,6 +30,7 @@ const authRepository = {
 
       if (error) throw error;
       
+      // Normalización a MAYÚSCULAS para consistencia total con ROLES.constants
       if (data) {
         data.role = data.role?.toUpperCase().trim();
       }
@@ -41,15 +45,17 @@ const authRepository = {
 
   /**
    * Busca un usuario por su correo electrónico.
+   * @param {string} email - Correo exacto ingresado en el formulario
    */
   async findByEmail(email) {
     if (!email?.trim()) return null;
 
     try {
       /* 
-       * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización exacta de emails contables.
-       * Mantiene la consulta limpia comparando directamente la cadena sanitizada. 
-       * Al retornar el nodo, el rol se expone en MAYÚSCULAS de forma inmutable.
+       * ⚡ RESOLUCIÓN DE LÓGICA: Comparación estricta y literal de correos.
+       * Se remueve el '.toLowerCase()' del filtro. La consulta evalúa el string 
+       * bit por bit de forma exacta en PostgreSQL, respetando las mayúsculas y minúsculas 
+       * tal como el usuario las definió en su registro, garantizando consistencia pura.
        */
       const { data, error } = await db
         .from(TARGET_TABLE)
@@ -59,6 +65,7 @@ const authRepository = {
 
       if (error) throw error;
       
+      // Normalización a MAYÚSCULAS para consistencia total con ROLES.constants
       if (data) {
         data.role = data.role?.toUpperCase().trim();
       }
@@ -72,4 +79,6 @@ const authRepository = {
   }
 };
 
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
 export default authRepository;
+

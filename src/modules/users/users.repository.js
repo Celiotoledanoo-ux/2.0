@@ -6,6 +6,8 @@ import logger from '../../core/logger/logger.js';
 /**
  * 👥 USERS REPOSITORY - CONEXIÓN SQL DIRECTA (ESM)
  * Encargado de la persistencia de datos del personal de la boutique cosmética.
+ * 
+ * 🎯 MISION DE BLINDAJE: Sincronización inmutable en MAYÚSCULAS para Postgres.
  */
 
 const USER_SELECT = 'id, email, name, role, active, created_at';
@@ -128,4 +130,5 @@ const usersRepository = {
   }
 };
 
+// 🎯 EXPORTACIÓN ESM POR DEFECTO
 export default usersRepository;

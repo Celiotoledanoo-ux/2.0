@@ -40,16 +40,25 @@ async function apiFetch(endpoint, options = {}) {
 // 🛠️ CAPA 2: INTERFACES DE CONTROL DE LOS MÓDULOS DE NEGOCIO
 // ==========================================================================
 
-// --- MÓDULO 1: /AUTH (Inicio de Sesión) ---
-async function handleLogin(emailOrIdentifier, password) {
+// --- MÓDULO 1: /AUTH (Inicio de Sesión Extricto por Correo) ---
+/* 
+ * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización contractual estricta por Email.
+ * Se elimina por completo el parámetro 'identifier' de acuerdo a tu loginSchema.
+ * Se captura el par de tokens contables (access y refresh) para automatizar 
+ * la renovación de las sesiones de las cajeras sin deslogueos ciegos en Render.
+ */
+async function handleLogin(email, password) {
   try {
     const response = await apiFetch('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: emailOrIdentifier.trim(), 
-        password: password })
+      body: JSON.stringify({ 
+        email: email.trim(), 
+        password: password 
+      })
     });
 
     localStorage.setItem('glow_pos_token', response.token);
+    localStorage.setItem('glow_pos_refresh_token', response.refreshToken || '');
     localStorage.setItem('glow_pos_user', JSON.stringify(response.user));
 
     alert(response.message || `¡Bienvenida de vuelta! 💄`);
@@ -77,6 +86,11 @@ async function syncCashRegisterUI() {
       return;
     }
 
+    /* 
+     * ⚡ RESOLUCIÓN DE SINTAXIS: Corrección de API nativa del DOM.
+     * Se corrige 'authScreen?.add' por 'authScreen?.classList.add'. Esto sana la manipulación 
+     * de estilos, evitando que Express lance excepciones de tipo que congelen el arranque.
+     */
     authScreen?.classList.add('d-none');
 
     const response = await apiFetch('/cash/status');
@@ -110,6 +124,9 @@ async function syncCashRegisterUI() {
           tbody.appendChild(tr);
         });
       }
+      
+      // Cargar los módulos dinámicos adicionales tras abrir la caja chica
+      await fetchAndRenderEmployees();
 
     } else {
       mainWorkspace?.classList.add('d-none');
@@ -121,7 +138,6 @@ async function syncCashRegisterUI() {
     alert(`❌ Error cargando estado de caja:\n${err.message}`);
   }
 }
-
 // --- MÓDULO 3: /SALES (Procesamiento del Carrito de Ventas) ---
 async function processCheckoutCart() {
   if (!window.cartItems || window.cartItems.length === 0) {
@@ -134,16 +150,9 @@ async function processCheckoutCart() {
   const discount = parseFloat(document.getElementById('checkout-discount-input')?.value) || 0;
   const notes = document.getElementById('checkout-notes-input')?.value || ''; 
 
-  /* 
-   * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización contractual con el Backend en ESM y Supabase SQL.
-   * Se modifican las claves del objeto JSON serializado hacia la API para que utilicen de forma 
-   * estricta el estándar snake_case exigido por las columnas de la tabla 'sales' en PostgreSQL 
-   * y mapeado en tus esquemas de validaciones ('paymentMethod' cambia a 'paymentMethod' para heredar 
-   * el enum en mayúsculas, mientras que los montos se mapean como 'cash_amount' y 'digital_amount').
-   */
   const payload = {
     items: window.cartItems, 
-    paymentMethod, // Mapeado a la firma Zod de createSaleSchema que recibe mayúsculas
+    paymentMethod, 
     cash_amount: cashAmount,
     digital_amount: digitalAmount,
     discount,
@@ -171,36 +180,75 @@ async function processCheckoutCart() {
   }
 }
 
-// --- MÓDULO 4: /REPORTS (Business Intelligence del Panel de Control) ---
+// --- MÓDULO 4: /REPORTS (Business Intelligence y Analíticas Defensivas) ---
 async function fetchAndRenderAnalytics(range = 'day') {
   try {
     const response = await apiFetch(`/reports/summary?range=${range}`);
     const payload = response.data || response || {};
-    const { metrics, business_status } = payload;
+    
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Cortocircuitos defensivos de analíticas vacías.
+     * Se inyectan objetos por defecto si Supabase regresa métricas vacías al iniciar el mes.
+     */
+    const metrics = payload.metrics || { total_revenue: 0, sales_count: 0 };
+    const business_status = payload.business_status || { health_score: 'EXCELLENT', message: 'Sistema listo' };
 
     const revenueDisplay = document.getElementById('metric-revenue-display');
     const salesCountDisplay = document.getElementById('metric-sales-count');
     const healthScoreDisplay = document.getElementById('metric-health-score');
 
     if (revenueDisplay) {
-      const revenue = metrics?.total_revenue != null ? Number(metrics.total_revenue) : 0;
+      const revenue = metrics.total_revenue != null ? Number(metrics.total_revenue) : 0;
       revenueDisplay.innerText = `$${revenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
     }
 
     if (salesCountDisplay) {
-      salesCountDisplay.innerText = metrics?.sales_count != null ? metrics.sales_count : 0;
+      salesCountDisplay.innerText = metrics.sales_count != null ? metrics.sales_count : 0;
     }
 
     if (healthScoreDisplay) {
-      const score = business_status?.health_score || 'EXCELLENT';
+      const score = business_status.health_score || 'EXCELLENT';
       healthScoreDisplay.innerText = score === 'EXCELLENT' ? '🟢 100%' : score === 'WARNING' ? '🟡 75%' : '🔴 40%';
-      healthScoreDisplay.title = business_status?.message || '';
+      healthScoreDisplay.title = business_status.message || '';
     }
 
     console.log(`[BI_ENGINE] Analíticas del rango [${range.toUpperCase()}] renderizadas.`);
   } catch (err) {
     console.error('fetchAndRenderAnalytics ERROR:', err);
     alert(`❌ Error al cargar los reportes analíticos:\n${err.message}`);
+  }
+}
+
+// --- MÓDULO 5: /USERS (Renderizado Dinámico de la Plantilla de Personal) ---
+/* 
+ * ⚡ RESOLUCIÓN DE LÓGICA: Acoplamiento de Personal en Vivo.
+ * Esta nueva función jala a los empleados reales guardados en Supabase PostgreSQL.
+ * Mapea los datos y limpia el listado estático, pintando sus roles oficiales en MAYÚSCULAS.
+ */
+async function fetchAndRenderEmployees() {
+  try {
+    const employeeTableBody = document.getElementById('employees-table-body');
+    if (!employeeTableBody) return;
+
+    const response = await apiFetch('/users');
+    const employees = response.data || response || [];
+
+    employeeTableBody.innerHTML = '';
+
+    employees.forEach(emp => {
+      const tr = document.createElement('tr');
+      tr.className = emp.active ? 'employee-row-active' : 'employee-row-disabled';
+      tr.innerHTML = `
+        <td>${emp.name} ${emp.active ? '' : '🚫'}</td>
+        <td style="font-weight: bold; color: var(--gold);">${emp.role?.toUpperCase()}</td>
+        <td>${emp.active ? '🟢 Activo' : '🔴 Suspendido'}</td>
+      `;
+      employeeTableBody.appendChild(tr);
+    });
+
+    console.log('[STAFF_ENGINE] Lista de empleados dinamizada desde Supabase con éxito.');
+  } catch (err) {
+    console.error('fetchAndRenderEmployees ERROR:', err);
   }
 }
 
@@ -227,20 +275,97 @@ function initializeAdminDashboardListeners() {
   }
 }
 
+// --- MÓDULO 6: /INVENTORY (Buscador Avanzado e Inyección del Catálogo) ---
+/* 
+ * ⚡ RESOLUCIÓN DE LÓGICA: Motor de Búsqueda Idempotente con Debounce.
+ * Se implementa una variable de control 'searchTimeout' para retrasar la petición HTTP 
+ * 300 milisegundos mientras la cajera escribe. Esto previene que cada teclazo sature 
+ * la red en Render, permitiendo lecturas limpias con la pistola de códigos de barra.
+ */
+let searchTimeout;
+
+function initializeProductSearch() {
+  const searchInput = document.getElementById('product-search-input');
+  if (!searchInput) return;
+
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+
+    searchTimeout = setTimeout(async () => {
+      await fetchAndRenderCatalog(query);
+    }, 300);
+  });
+}
+
+async function fetchAndRenderCatalog(searchQuery = '') {
+  try {
+    const catalogGrid = document.getElementById('products-catalog-grid');
+    if (!catalogGrid) return;
+
+    // Si no hay búsqueda, se consulta el catálogo plano; si hay query, se pasa el parámetro sanitizado
+    const endpoint = searchQuery 
+      ? `/inventory?search=${encodeURIComponent(searchQuery)}` 
+      : '/inventory';
+
+    const response = await apiFetch(endpoint);
+    const products = response.data || response || [];
+
+    catalogGrid.innerHTML = '';
+
+    if (products.length === 0) {
+      catalogGrid.innerHTML = `
+        <div class="no-products-fallback" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">
+          ❌ No se encontraron cosméticos con ese criterio, fiera.
+        </div>`;
+      return;
+    }
+
+    products.forEach(product => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML = `
+        <div class="product-card-top">
+          <span class="product-brand">${product.brand}</span>
+          <span class="product-sku">${product.sku}</span>
+        </div>
+        <h3>${product.name}</h3>
+        <div class="product-meta">Tono: <strong>${product.tone}</strong></div>
+        <div class="product-card-footer">
+          <strong>$${Number(product.price).toFixed(2)}</strong>
+          <button class="add-product-btn" onclick="addProductToCart('${product.id}', '${product.name.replace(/'/g, "\\'")}', ${product.price})">
+            Agregar ➕
+          </button>
+        </div>
+      `;
+      catalogGrid.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error('[CATALOG_ENGINE] Error al renderizar catálogo:', err.message);
+  }
+}
+
+
 // ==========================================================================
 // 🔌 CAPA 3: INICIALIZACIÓN GLOBAL Y CAPTURA DE EVENTOS DEL DOM
 // ==========================================================================
-window.cartItems = []; // Memoria volátil del carrito en mostrador
+window.cartItems = []; 
 
 document.addEventListener('DOMContentLoaded', () => {
   
-  // 1. Escuchar el Formulario de Login
+  // 1. Escuchar el Formulario de Login (Sincronizado Contractualmente)
+  /* 
+   * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización con el Input legítimo de Correo.
+   * Se purga la variable 'identifier' sustituyéndola por 'email'. Esto amarra el flujo 
+   * con 'login-email' del HTML de forma simétrica, enviando el string exacto a Zod.
+   */
   document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const identifier = document.getElementById('login-identifier')?.value.trim();
+    const email = document.getElementById('login-email')?.value.trim();
     const password = document.getElementById('login-password')?.value;
-    if (identifier && password) {
-      await handleLogin(identifier, password);
+    if (email && password) {
+      await handleLogin(email, password);
     }
   });
 
@@ -249,13 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     const balance = document.getElementById('cash-opening-balance-input')?.value;
     try {
-      /* 
-       * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización contractual de aperturas.
-       * Se realiza la conversión explícita mediante 'Number()' de la variable de balance 
-       * e inyectamos la propiedad 'openingBalance'. Esto acopla la petición de forma exacta 
-       * con los disparadores lógicos del controlador del backend ('cash.controller.js'), 
-       * asegurando el inicio del turno sin fricciones.
-       */
       await apiFetch('/cash/open', {
         method: 'POST',
         body: JSON.stringify({ openingBalance: Number(balance) || 0 })
@@ -286,12 +404,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const notes = document.getElementById('cash-close-notes')?.value || '';
 
     try {
-      /* 
-       * ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento y caspeo numérico en arqueos.
-       * Se parsea el valor de 'realCash' utilizando 'Number()' antes de viajar por HTTP 
-       * a la nube de Render. Esto inmuniza la petición de que transiten strings corruptos 
-       * que harían fallar los cálculos de diferencias contables en la capa de servicios ('cash.service.js').
-       */
       const response = await apiFetch('/cash/close', {
         method: 'POST',
         body: JSON.stringify({ 
@@ -303,14 +415,14 @@ document.addEventListener('DOMContentLoaded', () => {
       alert(response.message || 'Corte de caja procesado con éxito. 🏁');
       document.getElementById('cash-close-modal')?.classList.add('d-none');
       
-      localStorage.clear(); // Seguridad total: Limpia credenciales al terminar turno
+      localStorage.clear(); 
       window.location.reload(); 
     } catch (err) {
       alert(`❌ Error al asentar el corte de caja: ${err.message}`);
     }
   });
 
-  // 🌟 Inicializar los disparadores del panel de analíticas administrativas
+  // Inicializar los disparadores del panel de analíticas administrativas
   initializeAdminDashboardListeners();
 
   // Determinar qué pantalla pintar en el arranque de la terminal

@@ -5,9 +5,9 @@ import AppError from '../../core/errors/AppError.js';
 
 /**
  * 👥 USERS CONTROLLER - GESTIÓN DE PERSONAL (ESM)
+ * El puente inteligente entre la validación (Schema) y la lógica (Service).
  * 
- * ⚡ RESOLUCIÓN DE TEXTO: Sincronizado milimétricamente con el frontend dinámico 
- * de 3 roles oficiales (admin, supervisor, cashier) y Supabase SQL.
+ * 🎯 MISION DE BLINDAJE: Transmisión transparente de payloads exactos.
  */
 const usersController = {
   /**

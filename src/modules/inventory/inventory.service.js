@@ -4,7 +4,9 @@ import logger from '../../core/logger/logger.js';
 
 /**
  * 📦 INVENTORY SERVICE - GESTIÓN DE PRODUCTOS Y EXISTENCIAS (ESM)
- * Sincronizado milimétricamente entre el Controlador y el Repositorio SQL
+ * Sincronizado milimétricamente entre el Controlador y el Repositorio SQL.
+ * 
+ * 🎯 MISION DE BLINDAJE: Rigidez literal de caracteres y acoplamiento de variables de red.
  */
 const inventoryService = {
   /**
@@ -17,10 +19,9 @@ const inventoryService = {
     if (!tone?.trim()) throw new AppError('El tono o variante de color es obligatorio para el maquillaje.', 400);
     
     /* 
-     * ⚡ RESOLUCIÓN DE LÓGICA: Sanitización defensiva de tipos numéricos.
-     * Aunque Zod valida la entrada, se implementa una conversión explícita mediante 'Number()' 
-     * para asegurar que la evaluación matemática de menor a cero sea exacta, previniendo que 
-     * valores corruptos de tipo 'NaN' transiten vivos hacia el motor de persistencia SQL.
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización con el Costo Muestra Cero.
+     * Se permite la inyección de costos a '$0.00' de forma exacta para calzar con la restricción 
+     * física de la base de datos (price >= 0) y el productSchema, controlando que no viajen valores negativos.
      */
     const cleanPrice = Number(price);
     if (isNaN(cleanPrice) || cleanPrice < 0) {
@@ -28,11 +29,17 @@ const inventoryService = {
     }
 
     const cleanSku = sku.trim().toUpperCase();
-    const cleanTone = tone.trim().toLowerCase();
+    
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Preservación de la Capitalización Literal en Tonos.
+     * Se remueve el '.toLowerCase()' erróneo. El tono se evalúa bit por bit de forma exacta 
+     * en la validación compuesta de duplicados, respetando mayúsculas y minúsculas ingresadas.
+     */
+    const cleanTone = tone.trim();
 
-    // ⚡ Validación de seguridad compuesta (SKU + Tono) según la restricción SQL
+    // Validación de seguridad compuesta (SKU + Tono) según la restricción SQL
     const variants = await inventoryRepository.findBySku(cleanSku);
-    const isDuplicate = variants.some(v => v.tone?.toLowerCase().trim() === cleanTone);
+    const isDuplicate = variants.some(v => v.tone?.trim() === cleanTone);
     
     if (isDuplicate) {
       throw new AppError(`El SKU [${cleanSku}] con el tono [${tone}] ya está registrado en el catálogo.`, 409);
@@ -42,7 +49,8 @@ const inventoryService = {
       ...productData,
       sku: cleanSku,
       name: name.trim(),
-      price: cleanPrice
+      price: cleanPrice,
+      tone: cleanTone
     });
   },
 
@@ -50,8 +58,16 @@ const inventoryService = {
    * --- 2. BÚSQUEDA ---
    */
   async getProducts(filters = {}) {
+    /* 
+     * ⚡ RESOLUCIÓN DE PAYLOAD: Acoplamiento contractual con public/script.js.
+     * Se mapea de forma flexible 'filters.search' o 'filters.name'. Esto garantiza que 
+     * la variable 'search' enviada por el endpoint del frontend se traduzca de forma limpia 
+     * hacia la propiedad que espera tu repositorio, disparando el filtro multiparámetro ILIKE.
+     */
+    const activeSearch = filters.search || filters.name;
+
     const cleanFilters = {
-      name: filters.name?.trim(),
+      name: activeSearch?.trim(),
       sku: filters.sku?.trim()?.toUpperCase(),
       category_id: filters.category_id || filters.categoryId
     };
@@ -59,7 +75,6 @@ const inventoryService = {
     const products = await inventoryRepository.findAll(cleanFilters);
     if (!products) throw new AppError('Error al cargar el inventario del almacén.', 500);
     
-    // Si necesitas filtrar por activos en el servicio, lo hacemos de forma fail-safe
     if (filters.activeOnly === 'true' || filters.activeOnly === true) {
       return products.filter(p => p.active);
     }
@@ -76,16 +91,13 @@ const inventoryService = {
     const product = await inventoryRepository.findById(productId);
     if (!product) throw new AppError('El producto no existe en el catálogo de inventario.', 404);
 
-    // Validación de seguridad: No podemos vender o retirar lo que no tenemos en vitrina
     const newStock = product.stock + quantityDelta;
     if (newStock < 0) {
       throw new AppError(`Operación rechazada por insuficiencia. Stock actual: ${product.stock} pz, intento de retiro: ${Math.abs(quantityDelta)} pz.`, 400);
     }
 
-    // ⚡ Envío completo de los 4 parámetros que exige el repositorio senior y la base de datos
     const updatedProduct = await inventoryRepository.updateStock(productId, quantityDelta, userId, reason);
 
-    // Log de auditoría de seguridad para Render / Monitoreo
     logger.info({
       event: 'STOCK_ADJUSTMENT',
       productId,
@@ -95,7 +107,6 @@ const inventoryService = {
       reason: reason.toUpperCase()
     });
 
-    // Alerta preventiva de Stock Bajo
     if (updatedProduct.stock <= (updatedProduct.min_stock || 5)) {
       logger.warn({
         event: 'LOW_STOCK_ALERT',

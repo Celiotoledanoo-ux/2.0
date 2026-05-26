@@ -4,6 +4,8 @@ import { ROLE_VALUES } from '../../shared/constants/roles.constants.js';
 /**
  * 👥 USERS VALIDATION SCHEMAS - GLOW BEAUTY POS (ESM)
  * El muro de contención definitivo para la gestión del personal en Render.
+ * 
+ * 🎯 MISION DE BLINDAJE: Roles explícitos y coincidencia estricta con el ENUM de Postgres.
  */
 
 const createUserSchema = z.object({
@@ -12,13 +14,19 @@ const createUserSchema = z.object({
       .string({ required_error: 'El nombre completo es obligatorio.' })
       .trim()
       .min(3, 'El nombre debe tener al menos 3 caracteres.')
-      .max(50, 'El nombre es demasiado largo.')
+      .max(50, 'El nombre is demasiado largo.')
       .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'El nombre solo permite letras y espacios.'),
     
+    /* 
+     * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización Estricta de Identidades con Supabase Auth.
+     * Se reemplaza la validación genérica de miniatura por el método '.email()' de Zod. 
+     * Esto blinda el flujo de altas en la frontera, asegurando que solo transiten correos 
+     * válidos que cumplan con la sintaxis rigurosa que exige GoTrue en la nube.
+     */
     email: z
       .string({ required_error: 'El identificador o correo electrónico es requerido.' })
       .trim()
-      .min(3, 'El identificador es demasiado corto.'),
+      .email('Eso no parece un correo real, fiera.'),
     
     password: z
       .string({ required_error: 'La contraseña es obligatoria.' })
@@ -26,7 +34,7 @@ const createUserSchema = z.object({
       .regex(/[A-Z]/, 'La contraseña debe incluir al menos una letra mayúscula.')
       .regex(/[0-9]/, 'La contraseña debe incluir al menos un número.'),
     
-    // ⚡ MEJORA SENIOR: Consumo dinámico de constantes compartidas soportando mayúsculas y minúsculas
+    // Consumo dinámico de constantes compartidas soportando mayúsculas y minúsculas
     role: z
       .enum(
         [
@@ -34,16 +42,17 @@ const createUserSchema = z.object({
           ...ROLE_VALUES.map(r => r.toUpperCase())
         ], 
         {
-          /* 
-           * ⚡ RESOLUCIÓN DE LÓGICA: Remoción del rol 'gerente'.
-           * Se purga la palabra 'gerente' del listado del mensaje de error de Zod 
-           * para mantener consistencia absoluta con la estructura de 3 roles autorizados en el POS.
-           */
+          required_error: "El rol asignado es mandatorio para dar de alta al empleado.",
           errorMap: () => ({ message: "El rol asignado no existe en este negocio, bro. Elige entre admin, cashier o supervisor." })
         }
       )
-      .transform(val => val.toLowerCase().trim()) // Homologación automática a minúsculas para Postgres
-      .default('cashier')
+      /* 
+       * ⚡ RESOLUCIÓN DE LÓGICA: Homologación y Remoción de Valores por Defecto.
+       * Se elimina '.default()' para forzar la selección consciente del rango del empleado.
+       * Se modifica el transformador para que normalice el string estrictamente a MAYÚSCULAS 
+       * (.toUpperCase()), haciendo un match perfecto con el tipo ENUM físico de PostgreSQL.
+       */
+      .transform(val => val.toUpperCase().trim())
   })
 });
 
@@ -59,7 +68,7 @@ const toggleStatusSchema = z.object({
   })
 });
 
-// 🎯 EXPORTACIÓN ESM: Exportación nombrada compatible con validationMiddlewares
+// 🎯 EXPORTACIÓN ESM NOMBRADA
 export {
   createUserSchema,
   toggleStatusSchema

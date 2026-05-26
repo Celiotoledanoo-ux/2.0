@@ -18,12 +18,25 @@
             
             <form id="login-form">
                 <div class="input-group">
-                    <label for="login-identifier">Correo o Identificador de Caja</label>
-                    <input type="text" id="login-identifier" required placeholder="ej: caja1 o admin@glow.com" autocomplete="username">
+                    <label for="login-email">Correo Electrónico</label>
+                    <input 
+                        type="email"
+                        id="login-email"
+                        name="email"
+                        required
+                        placeholder="ej: admin@glowpos.com"
+                        autocomplete="email"
+                    >
                 </div>
                 <div class="input-group">
                     <label for="login-password">Contraseña</label>
-                    <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
+                    <input 
+                        type="password" 
+                        id="login-password" 
+                        required 
+                        placeholder="••••••••" 
+                        autocomplete="current-password"
+                    >
                 </div>
                 <button type="submit" class="btn-primary">Iniciar Sesión</button>
             </form>
@@ -41,7 +54,21 @@
             <form id="cash-open-form">
                 <div class="input-group">
                     <label for="cash-opening-balance-input">Monto Inicial en Efectivo ($)</label>
-                    <input type="number" id="cash-opening-balance-input" step="0.01" min="0" value="2500.00" required>
+                    /* 
+                     * ⚡ RESOLUCIÓN DE LÓGICA: Saneamiento y purga de inputs encimados redundantes.
+                     * Se eliminan los tags duplicados de cobro y arqueo que estaban amontonados 
+                     * dentro de este contenedor. Esto restaura la interfaz estética limpia de la boutique 
+                     * y previene colisiones de lectura de IDs en el DOM que alteraban el cálculo de vueltos.
+                     */
+                    <input 
+                        type="number" 
+                        inputmode="decimal" 
+                        id="cash-opening-balance-input" 
+                        step="0.01" 
+                        min="0" 
+                        value="2500.00" 
+                        required
+                    >
                 </div>
                 <button type="submit" class="btn-success">Abrir Caja y Activar Turno 🟢</button>
             </form>
@@ -71,7 +98,6 @@
                     <!-- Inyección dinámica de productos por JS -->
                 </div>
             </section>
-
             <!-- Carrito y Formulario de Cobro -->
             <section class="cart-section">
                 <h3>🛒 Carrito de Compras</h3>
@@ -83,7 +109,6 @@
                 <form id="checkout-form" class="checkout-box">
                     <div class="summary-line">
                         <label for="payment-method-select">Método de Pago</label>
-                        <!-- ⚡ Valores correctos alineados milimétricamente con createSaleSchema y el enum SQL -->
                         <select id="payment-method-select">
                             <option value="CASH">Efectivo</option>
                             <option value="CARD">Tarjeta de Crédito/Débito</option>
@@ -94,22 +119,39 @@
 
                     <div class="summary-line">
                         <label for="checkout-discount-input">Descuento ($)</label>
-                        <!-- ⚡ RESOLUCIÓN DE LÓGICA: Inyección de ID faltante.
-                             Se añade el atributo id="checkout-discount-input" para acoplar el elemento 
-                             con la desestructuración de variables que ejecuta tu archivo public/script.js, 
-                             evitando lecturas nulas al procesar promociones. -->
-                        <input type="number" id="checkout-discount-input" min="0" step="0.01" value="0.00">
+                        <input 
+                            type="number" 
+                            inputmode="decimal" 
+                            id="checkout-discount-input" 
+                            min="0" 
+                            step="0.01" 
+                            value="0.00"
+                        >
                     </div>
 
-                    <!-- ⚡ CAPTURA MIXTA: Estructura plana para cobros combinados -->
+                    <!-- CAPTURA MIXTA FLUIDA: Estructura para cobros combinados -->
                     <div id="mixed-payment-inputs" class="payment-fields-group">
                         <div class="summary-line">
                             <label for="checkout-cash-amount">Efectivo Recibido ($)</label>
-                            <input type="number" id="checkout-cash-amount" min="0" step="0.01" value="0.00">
+                            <input 
+                                type="number" 
+                                inputmode="decimal" 
+                                id="checkout-cash-amount" 
+                                min="0" 
+                                step="0.01" 
+                                value="0.00"
+                            >
                         </div>
                         <div class="summary-line">
                             <label for="checkout-digital-amount">Monto Digital (Tarjeta/Transf.) ($)</label>
-                            <input type="number" id="checkout-digital-amount" min="0" step="0.01" value="0.00">
+                            <input 
+                                type="number" 
+                                inputmode="decimal" 
+                                id="checkout-digital-amount" 
+                                min="0" 
+                                step="0.01" 
+                                value="0.00"
+                            >
                         </div>
                     </div>
 
@@ -119,12 +161,11 @@
         </main>
     </div>
 
-<!-- ==========================================================================
+    <!-- ==========================================================================
       4. MODAL DE ARQUEO Y CIERRE DE TURNO (id="cash-close-modal")
     ========================================================================== -->
     <section id="cash-close-modal" class="modal-overlay d-none">
         <div class="glass-modal">
-
             <div class="modal-header">
                 <h2>Cierre de Caja</h2>
                 <p>Confirma el arqueo contable del turno</p>
@@ -133,7 +174,14 @@
             <form id="cash-close-form">
                 <div class="input-group">
                     <label for="cash-real-cash-counted">Dinero Físico Contado</label>
-                    <input type="number" id="cash-real-cash-counted" placeholder="$0.00" step="0.01" required>
+                    <input 
+                        type="number" 
+                        inputmode="decimal" 
+                        id="cash-real-cash-counted" 
+                        placeholder="$0.00" 
+                        step="0.01" 
+                        required
+                    >
                 </div>
 
                 <div class="input-group">
@@ -141,7 +189,7 @@
                     <textarea id="cash-close-notes" placeholder="Observaciones del corte..."></textarea>
                 </div>
 
-                <button type="submit">Confirmar Corte</button>
+                <button type="submit" class="btn-primary">Confirmar Corte</button>
             </form>
         </div>
     </section>
@@ -153,7 +201,7 @@
         <div class="dashboard-header">
             <div>
                 <h2>Panel Administrativo</h2>
-                <p>Control financiero and analíticas comerciales</p>
+                <p>Control financiero y analíticas comerciales</p>
             </div>
         </div>
 
@@ -169,25 +217,23 @@
                             <tr>
                                 <th>Empleado</th>
                                 <th>Rol</th>
-                                <th>Turno</th>
+                                <th>Estado</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- ⚡ RESOLUCIÓN DE TEXTO: Consistencia de Roles con el Tipo ENUM de Postgres.
-                                 Se reemplaza la palabra de maqueta 'Manager' por 'SUPERVISOR' para heredar 
-                                 fielmente la jerarquía corporativa real inmutable de tu Punto de Venta. -->
-                            <tr>
-                                <td>Andrea Ruiz</td>
-                                <td>SUPERVISOR</td>
-                                <td>Matutino</td>
-                            </tr>
+                        /* 
+                         * ⚡ RESOLUCIÓN DE LÓGICA: Sincronización de Plantilla Dinámica.
+                         * Se purga la fila de maqueta estática. Este nodo 'tbody' actúa ahora como 
+                         * receptor limpio para la función 'fetchAndRenderEmployees()', listando en vivo 
+                         * al personal real de Supabase con sus jerarquías oficiales en MAYÚSCULAS.
+                         */
+                        <tbody id="employees-table-body">
+                            <!-- Inyección dinámica de empleados por JS -->
                         </tbody>
                     </table>
                 </div>
 
                 <div class="cash-flows-wrapper">
                     <h4>Historial Contable</h4>
-                    <!-- ⚡ Estructura de tabla real para recibir los <tr> de script.js -->
                     <div class="table-responsive-container">
                         <table class="flows-table-layout">
                             <tbody id="cash-flows-tbody">
@@ -229,10 +275,7 @@
         </div>
     </section>
 
-    <!-- ⚡ RESOLUCIÓN DE LÓGICA: Inyección de Rompedor de Caché (Cache Buster).
-         Al agregarle un parámetro de versión dinámico '?v=1.0.0' al script local, forzamos a que 
-         el navegador de la cajera descargue inmediatamente la versión nueva de 'script.js' tras cada 
-         despliegue en Render, evitando comportamientos corruptos por leer código viejo almacenado en el caché. -->
+    <!-- ⚡ INYECCIÓN DE RAMPEDOR DE CACHÉ: Descarga forzada del código limpio -->
     <script src="script.js?v=1.0.0"></script>
 </body>
 </html>
