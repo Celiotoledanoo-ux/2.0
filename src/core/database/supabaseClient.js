@@ -3,7 +3,7 @@ import { env } from '../config/env.js';
 import AppError from '../errors/AppError.js';
 import logger from '../logger/logger.js';
 
-const { url, serviceRoleKey, anonKey } = env?.supabase || {};
+const { url, serviceRoleKey, anonKey } = env.supabase;
 
 // Garantizamos de forma estricta que las variables críticas existan antes de inicializar
 if (!url || !serviceRoleKey || !anonKey) {
@@ -72,8 +72,15 @@ const createUserClient = (token) => {
   });
 };
 
-// Exportación unificada en formato ESM nombrada
+// ... Todo tu código original de supabaseClient.js intacto ...
+
+// Añade este cliente dedicado exclusivamente al login/registro en el backend
+const authClient = createClient(url, anonKey, {
+  auth: { persistSession: false, autoRefreshToken: false }
+});
+
 export {
-  db,
-  createUserClient
+  db,               // El maestro con Service Role Key (vuelve a dejarlo como estaba)
+  authClient,       // El cliente de autenticación inicial
+  createUserClient  // Tu factoría dinámica con JWT
 };
